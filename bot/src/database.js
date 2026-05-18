@@ -142,8 +142,61 @@ function getLeaderboard(limit = 10) {
     .slice(0, limit);
 }
 
+function logJoin(inviterId, inviterUsername, inviteeId, inviteeUsername, code, status) {
+  const db = loadDB();
+  if (!db.joinLogs) db.joinLogs = [];
+  db.joinLogs.push({
+    inviterId,
+    inviterUsername,
+    inviteeId,
+    inviteeUsername,
+    code,
+    status,
+    timestamp: new Date().toISOString()
+  });
+  saveDB(db);
+}
+
+function handleLeaveAndGetInviter(inviteeId) {
+  const db = loadDB();
+  if (!db.leftMembers) db.leftMembers = [];
+  if (!db.leftMembers.includes(inviteeId)) db.leftMembers.push(inviteeId);
+
+  if (!db.joinLogs) db.joinLogs = [];
+  const log = [...db.joinLogs].reverse().find(l => l.inviteeId === inviteeId && l.status === 'VALID');
+  if (log) {
+    log.status = 'LEFT';
+    if (db.invites[log.inviterId] && db.invites[log.inviterId].count > 0) {
+      db.invites[log.inviterId].count -= 1;
+    }
+    saveDB(db);
+    return log;
+  }
+  saveDB(db);
+  return null;
+}
+
+function getJoinLogs(inviterId) {
+  const db = loadDB();
+  return (db.joinLogs || []).filter(l => l.inviterId === inviterId);
+}
+
+function setSetting(key, val) {
+  const db = loadDB();
+  if (!db.settings) db.settings = {};
+  db.settings[key] = val;
+  saveDB(db);
+}
+
+function getSetting(key, defaultVal) {
+  const db = loadDB();
+  if (!db.settings) return defaultVal;
+  return db.settings[key] !== undefined ? db.settings[key] : defaultVal;
+}
+
 module.exports = {
   loadDB, saveDB, getUser, addInvite, getInviteCount, deductInvites,
   addStock, getStockCount, claimFromStock, generateCode, getAllStockCounts, getLeaderboard,
-  getUserStats, addFakeInvite, addRejoinInvite, trackLeave, wasLeftMember
+  getUserStats, addFakeInvite, addRejoinInvite, trackLeave, wasLeftMember,
+  logJoin, handleLeaveAndGetInviter, getJoinLogs, setSetting, getSetting
 };

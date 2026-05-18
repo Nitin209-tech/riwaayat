@@ -4,10 +4,64 @@ const { Client, GatewayIntentBits, Partials, ActivityType, EmbedBuilder,
 require('dotenv').config();
 const db = require('./database');
 const { REWARDS, getRewardById, emojiStr } = require('./rewards');
+const https = require('https');
+const http = require('http');
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const GUILD_ID = process.env.DISCORD_GUILD_ID;
+
+// ─── STABLE HTTPS/HTTP SYNC BRIDGE ──────────────────────────────────
+function syncCodeToBackend(code, category) {
+  const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+  let url;
+  try {
+    url = new URL(`${BACKEND_URL}/api/rewards/sync-bot-code`);
+  } catch (e) {
+    console.error(`[SYNC_CRASH] Invalid BACKEND_URL format: ${BACKEND_URL}`);
+    return;
+  }
+  
+  const payload = JSON.stringify({ code, category });
+  
+  const options = {
+    hostname: url.hostname,
+    port: url.port || (url.protocol === 'https:' ? 443 : 80),
+    path: url.pathname,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(payload),
+      'x-bot-token': BOT_TOKEN
+    }
+  };
+
+  const client = url.protocol === 'https:' ? https : http;
+  
+  const req = client.request(options, (res) => {
+    let data = '';
+    res.on('data', (chunk) => { data += chunk; });
+    res.on('end', () => {
+      try {
+        const parsed = JSON.parse(data);
+        if (parsed.success) {
+          console.log(`[SYNC_SUCCESS] Synchronized code ${code} securely to database.`);
+        } else {
+          console.error(`[SYNC_FAILED] Sync endpoint returned error:`, parsed.error);
+        }
+      } catch (e) {
+        console.error(`[SYNC_ERROR] Response parsing crashed:`, data);
+      }
+    });
+  });
+
+  req.on('error', (err) => {
+    console.error(`[SYNC_CRASH] HTTP sync transport failed:`, err.message);
+  });
+
+  req.write(payload);
+  req.end();
+}
 
 // ─── SLASH COMMAND DEFINITIONS ─────────────────────────────────────
 const commands = [
@@ -56,6 +110,15 @@ const commands = [
     .setDescription('Remove invites from a user (Admin only)')
     .addUserOption(opt => opt.setName('user').setDescription('Target user').setRequired(true))
     .addIntegerOption(opt => opt.setName('amount').setDescription('Number of invites to remove').setRequired(true)),
+  new SlashCommandBuilder().setName('welcomemsg')
+    .setDescription('Set custom welcome greeting message (Admin only)')
+    .addStringOption(opt => opt.setName('message').setDescription('Greeting string. Variables: {user}, {username}, {inviter}, {invites}').setRequired(true)),
+  new SlashCommandBuilder().setName('welcomechannel')
+    .setDescription('Set custom welcome greeting channel (Admin only)')
+    .addChannelOption(opt => opt.setName('channel').setDescription('Target channel').setRequired(true)),
+  new SlashCommandBuilder().setName('event1invite')
+    .setDescription('Toggle 1-invite event (Admin only)')
+    .addBooleanOption(opt => opt.setName('enabled').setDescription('Enable or disable 1-invite event').setRequired(true)),
 ].map(cmd => cmd.toJSON());
 
 // ─── BOT CLIENT ────────────────────────────────────────────────────
@@ -88,7 +151,6 @@ client.once('ready', async () => {
   console.log('══════════════════════════════════════════════════════\n');
   client.user.setActivity('RIWAAYAT Rewards', { type: ActivityType.Watching });
 
-  // Register slash commands for all guilds the bot is in
   for (const [guildId, guild] of client.guilds.cache) {
     await registerCommands(guildId);
     try {
@@ -101,54 +163,86 @@ client.once('ready', async () => {
   }
 });
 
-// ─── INVITE TRACKER ────────────────────────────────────────────────
+// ─── INVITE TRACKER (With logging & telemetry) ────────────────────
 client.on('guildMemberAdd', async (member) => {
   try {
-    // Check if this is a rejoin
     const isRejoin = db.wasLeftMember(member.user.id);
-
     const cached = guildInvites.get(member.guild.id);
     const current = await member.guild.invites.fetch();
 
     let inviterUser = null;
+    let usedInviteCode = 'DIRECT';
     for (const [code, invite] of current) {
       const prev = cached?.get(code) || 0;
       if (invite.uses > prev) {
         inviterUser = invite.inviter;
+        usedInviteCode = code;
         cached?.set(code, invite.uses);
         break;
       }
     }
 
+    let inviterInvites = 0;
+
     if (inviterUser) {
       if (inviterUser.id === member.user.id) {
-        // Self-invite = fake
         db.addFakeInvite(inviterUser.id, inviterUser.username);
+        db.logJoin(inviterUser.id, inviterUser.username, member.user.id, member.user.username, usedInviteCode, 'FAKE');
         console.log(`[FAKE] @${inviterUser.username} self-invited (fake +1)`);
+        inviterInvites = db.getInviteCount(inviterUser.id);
       } else if (isRejoin) {
-        // Rejoin invite
         db.addRejoinInvite(inviterUser.id, inviterUser.username);
+        db.logJoin(inviterUser.id, inviterUser.username, member.user.id, member.user.username, usedInviteCode, 'REJOIN');
         console.log(`[REJOIN] @${member.user.username} rejoined (inviter: @${inviterUser.username})`);
+        inviterInvites = db.getInviteCount(inviterUser.id);
       } else {
-        // Valid invite
         const userData = db.addInvite(inviterUser.id, inviterUser.username);
+        db.logJoin(inviterUser.id, inviterUser.username, member.user.id, member.user.username, usedInviteCode, 'VALID');
         console.log(`[INVITE] @${inviterUser.username} gained +1 invite (total: ${userData.count})`);
+        inviterInvites = userData.count;
       }
     }
 
     guildInvites.set(member.guild.id, new Map(current.map(inv => [inv.code, inv.uses])));
+
+    // Greet / Welcome Broadcast
+    const welcomeChannelId = db.getSetting('welcomeChannel');
+    if (welcomeChannelId) {
+      const welcomeChannel = member.guild.channels.cache.get(welcomeChannelId);
+      if (welcomeChannel) {
+        let rawMsg = db.getSetting('welcomeMessage', 'Welcome {user} to RIWAAYAT! You were invited by {inviter} (who now has {invites} invites).');
+        const inviterText = inviterUser ? `${inviterUser}` : 'Direct Join';
+
+        const formatted = rawMsg
+          .replace(/{user}/g, `${member}`)
+          .replace(/{username}/g, member.user.username)
+          .replace(/{inviter}/g, inviterText)
+          .replace(/{invites}/g, inviterInvites.toString());
+
+        await welcomeChannel.send({ content: formatted }).catch(err => console.error('[WELCOME_SEND_ERROR]', err.message));
+      }
+    }
   } catch (err) {
     console.error('[INVITE_ERROR]', err.message);
   }
 });
 
-// ─── MEMBER LEAVE TRACKER (for rejoin detection) ───────────────────
-client.on('guildMemberRemove', (member) => {
-  db.trackLeave(member.user.id);
-  console.log(`[LEAVE] @${member.user.username} left the server`);
+// ─── MEMBER LEAVE TRACKER ──────────────────────────────────────────
+client.on('guildMemberRemove', async (member) => {
+  try {
+    const leaveLog = db.handleLeaveAndGetInviter(member.user.id);
+    if (leaveLog) {
+      console.log(`[LEAVE] @${member.user.username} left the server. Deducted 1 invite from inviter @${leaveLog.inviterUsername}`);
+    } else {
+      db.trackLeave(member.user.id);
+      console.log(`[LEAVE] @${member.user.username} left the server (no inviter found)`);
+    }
+  } catch (err) {
+    console.error('[LEAVE_ERROR]', err.message);
+  }
 });
 
-// ─── SLASH COMMAND HANDLER ─────────────────────────────────────────
+// ─── INTERACTION HANDLER ───────────────────────────────────────────
 client.on('interactionCreate', async (interaction) => {
 
   // ── SLASH COMMANDS ──
@@ -169,33 +263,74 @@ client.on('interactionCreate', async (interaction) => {
           { name: '📦 `/stock add`', value: 'Add reward code to stock (Admin)' },
           { name: '🔧 `/stock generate`', value: 'Auto-generate codes (Admin)' },
           { name: '📋 `/stock view`', value: 'View stock levels (Admin)' },
-          { name: '➕ `/addinvites`', value: 'Give invites to a user (Admin)' }
+          { name: '➕ `/addinvites`', value: 'Give invites to a user (Admin)' },
+          { name: '💬 `/welcomemsg`', value: 'Set custom greeting message (Admin)' },
+          { name: '📺 `/welcomechannel`', value: 'Set custom greeting channel (Admin)' },
+          { name: '⚡ `/event1invite`', value: 'Toggle 1-invite events mode (Admin)' }
         )
         .setFooter({ text: 'RIWAAYAT • Invite to Earn Platform' });
       return interaction.reply({ embeds: [embed] });
     }
 
+    // /welcomemsg
+    if (commandName === 'welcomemsg') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', ephemeral: true });
+      }
+      const msg = interaction.options.getString('message');
+      db.setSetting('welcomeMessage', msg);
+      return interaction.reply({ content: `✅ Custom greeting message saved successfully:\n\`\`\`\n${msg}\n\`\`\``, ephemeral: true });
+    }
+
+    // /welcomechannel
+    if (commandName === 'welcomechannel') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', ephemeral: true });
+      }
+      const channel = interaction.options.getChannel('channel');
+      db.setSetting('welcomeChannel', channel.id);
+      return interaction.reply({ content: `✅ Welcome message target channel updated to: ${channel}!`, ephemeral: true });
+    }
+
+    // /event1invite
+    if (commandName === 'event1invite') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', ephemeral: true });
+      }
+      const enabled = interaction.options.getBoolean('enabled');
+      db.setSetting('event1invite', enabled);
+      return interaction.reply({ content: `✅ **1-Invite Special Event** has been **${enabled ? 'ENABLED ⚡ (All rewards cost 1 invite & no 30s timeouts)' : 'DISABLED ❌'}**!`, ephemeral: true });
+    }
+
     // /invites
     if (commandName === 'invites') {
       const count = db.getInviteCount(interaction.user.id);
+      const is1Inv = db.getSetting('event1invite', false);
       const embed = new EmbedBuilder()
         .setColor('#1d4ed8')
         .setTitle('📊 Your Invite Balance')
         .setDescription(`**@${interaction.user.username}**\n\n🎟️ Available Invites: **${count}**`)
-        .addFields({ name: 'Reward Costs', value: REWARDS.map(r => `${r.emoji} ${r.label.split(' ').slice(1).join(' ')} — **${r.invites} invites**`).join('\n') })
+        .addFields({ 
+          name: 'Reward Costs' + (is1Inv ? ' [⚡ 1-INVITE EVENT ACTIVE]' : ''), 
+          value: REWARDS.map(r => `${r.emoji} ${r.label.split(' ').slice(1).join(' ')} — **${is1Inv ? 1 : r.invites} invites**`).join('\n') 
+        })
         .setFooter({ text: 'Invite friends to earn more!' });
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
-    // /claim — show reward dropdown
+    // /claim
     if (commandName === 'claim') {
       const count = db.getInviteCount(interaction.user.id);
-      const options = REWARDS.map(r => ({
-        label: r.label,
-        description: `${r.invites} invites needed ${count >= r.invites ? '✓' : '✕'}`,
-        value: r.id,
-        emoji: { id: r.emojiId, name: r.emojiName, animated: r.animated }
-      }));
+      const is1Inv = db.getSetting('event1invite', false);
+      const options = REWARDS.map(r => {
+        const cost = is1Inv ? 1 : r.invites;
+        return {
+          label: r.label,
+          description: `${cost} invites needed ${count >= cost ? '✓' : '✕'}`,
+          value: r.id,
+          emoji: { id: r.emojiId, name: r.emojiName, animated: r.animated }
+        };
+      });
 
       const row = new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
@@ -231,7 +366,7 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.reply({ embeds: [embed] });
     }
 
-    // /panel (Admin) — post claim panel embed with button
+    // /panel
     if (commandName === 'panel') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
         return interaction.reply({ content: '❌ Admin only command.', ephemeral: true });
@@ -240,7 +375,7 @@ client.on('interactionCreate', async (interaction) => {
       const embed = new EmbedBuilder()
         .setColor('#2b2d31')
         .setTitle('⩩﹕ᨒ﹒click here to create ticket')
-        .setDescription('<a:hwart:1504576453730242570> To create a ticket use the Create ticket button')
+        .setDescription('<a:hwart:1504576267788357742> To create a ticket use the Create ticket button')
         .setFooter({ text: 'RIWAAYAT — Invite to Earn' });
 
       const row = new ActionRowBuilder().addComponents(
@@ -269,25 +404,7 @@ client.on('interactionCreate', async (interaction) => {
         db.addStock(category, code);
         const count = db.getStockCount(category);
 
-        // --- SYNC WITH BACKEND DATABASE ---
-        const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
-        fetch(`${BACKEND_URL}/api/rewards/sync-bot-code`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-bot-token': BOT_TOKEN
-          },
-          body: JSON.stringify({
-            code: code,
-            category: category
-          })
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) console.log(`[SYNC] Admin added code ${code} synced successfully.`);
-          else console.error(`[SYNC_ERROR] Admin sync failed: ${data.error}`);
-        })
-        .catch(err => console.error(`[SYNC_CRASH] Admin sync connection failed:`, err.message));
+        syncCodeToBackend(code, category);
 
         return interaction.reply({ content: `✅ Code added to **${category}** stock! Current stock: **${count}**`, ephemeral: true });
       }
@@ -296,30 +413,13 @@ client.on('interactionCreate', async (interaction) => {
         const category = interaction.options.getString('category');
         const count = Math.min(50, Math.max(1, interaction.options.getInteger('count')));
         const codes = [];
-        const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 
         for (let i = 0; i < count; i++) {
           const code = db.generateCode();
           db.addStock(category, code);
           codes.push(code);
 
-          // --- SYNC GENERATED CODE TO BACKEND ---
-          fetch(`${BACKEND_URL}/api/rewards/sync-bot-code`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-bot-token': BOT_TOKEN
-            },
-            body: JSON.stringify({
-              code: code,
-              category: category
-            })
-          })
-          .then(res => res.json())
-          .then(data => {
-            if (!data.success) console.error(`[SYNC_ERROR] Admin gen sync failed: ${data.error}`);
-          })
-          .catch(err => console.error(`[SYNC_CRASH] Admin gen sync connection failed:`, err.message));
+          syncCodeToBackend(code, category);
         }
         const total = db.getStockCount(category);
         const embed = new EmbedBuilder()
@@ -348,7 +448,7 @@ client.on('interactionCreate', async (interaction) => {
       }
     }
 
-    // /addinvites (Admin)
+    // /addinvites
     if (commandName === 'addinvites') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
         return interaction.reply({ content: '❌ Admin only.', ephemeral: true });
@@ -363,7 +463,7 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.reply({ content: `✅ Added **${amount}** invites to **@${targetUser.username}**. New balance: **${user.count}**`, ephemeral: true });
     }
 
-    // /removeinvites (Admin)
+    // /removeinvites
     if (commandName === 'removeinvites') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
         return interaction.reply({ content: '❌ Admin only.', ephemeral: true });
@@ -384,21 +484,31 @@ client.on('interactionCreate', async (interaction) => {
   // ── BUTTON INTERACTIONS ──
   if (interaction.isButton()) {
 
-    // Open Ticket button
+    // 📩 Create Ticket Button
     if (interaction.customId === 'open_ticket') {
       await interaction.deferReply({ ephemeral: true });
 
-      const existing = interaction.guild.channels.cache.find(
-        c => c.name === `claim-${interaction.user.username.toLowerCase().replace(/[^a-z0-9]/g, '')}`
-      );
+      const ticketName = `claim-${interaction.user.username.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+      const existing = interaction.guild.channels.cache.find(c => c.name === ticketName);
       if (existing) {
         return interaction.editReply({ content: `❌ You already have an open ticket: ${existing}` });
       }
 
       try {
+        // Parent category checks (Max 50 channels limit check)
+        const parentCategory = interaction.guild.channels.cache.get('1485628775277269092');
+        let parentId = null;
+        if (parentCategory && parentCategory.type === ChannelType.GuildCategory) {
+          const childCount = interaction.guild.channels.cache.filter(c => c.parentId === parentCategory.id).size;
+          if (childCount < 50) {
+            parentId = parentCategory.id;
+          }
+        }
+
         const ticketChannel = await interaction.guild.channels.create({
-          name: `claim-${interaction.user.username.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+          name: ticketName,
           type: ChannelType.GuildText,
+          parent: parentId,
           permissionOverwrites: [
             { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
             { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
@@ -406,106 +516,22 @@ client.on('interactionCreate', async (interaction) => {
           ]
         });
 
-        // Ping user
-        await ticketChannel.send({ content: `${interaction.user}` });
-
-        const stats = db.getUserStats(interaction.user.id);
-        const eligible = REWARDS.filter(r => stats.valid >= r.invites);
-
-        // ── STEP 1: Welcome Embed ──
+        // Step 1: Combined Ping & Welcome Embed in ONE message
         const welcomeEmbed = new EmbedBuilder()
           .setColor('#2b2d31')
           .setTitle('<a:Event:1504576267788357742> RIWAAYAT — Welcome!')
-          .setDescription(`<a:nyt_zwelcome:1504591019436544010> Hey **${interaction.user.username}**!\n<a:hwart:1504576453730242570> We're glad you're here!\n\nYour claim ticket has been created. Please wait while we check your invites...`)
-          .setTimestamp();
-        await ticketChannel.send({ embeds: [welcomeEmbed] });
+          .setDescription(`<a:nyt_zwelcome:1504591019436544010> Hey **${interaction.user.username}**!\n<a:hwart:1504576453730242570> We're glad you're here!\n\nYour claim ticket has been created. Click **Continue** below to verify your invites, or **Expand** to view detailed referral telemetry logs.`);
 
-        // Small delay for effect
-        await new Promise(r => setTimeout(r, 1500));
+        const actionRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId('continue_claim').setLabel('Continue').setStyle(ButtonStyle.Success),
+          new ButtonBuilder().setCustomId('expand_invites').setLabel('Expand Logs').setStyle(ButtonStyle.Secondary)
+        );
 
-        // ── STEP 2: Invite Checking Embed ──
-        const inviteEmbed = new EmbedBuilder()
-          .setColor('#2b2d31')
-          .setTitle('<:member:1505974580626591976> Invite Dispatching')
-          .setDescription(`<a:emoji_25:1504806993280503810> **Valid Invites** — __**\`${stats.valid}\`**__\n\n> <a:emoji_25:1504806993280503810>**Total  = ** ${stats.total}\n> <a:emoji_25:1504806993280503810>**Left =    ** ${stats.left}\n> <a:emoji_25:1504806993280503810>**Fake =   ** ${stats.fake}\n> <a:emoji_25:1504806993280503810>**Rejoin = ** ${stats.rejoin}`);
-        await ticketChannel.send({ embeds: [inviteEmbed] });
-
-        await new Promise(r => setTimeout(r, 1000));
-
-        // ── STEP 3: Reward Selection or Not Enough ──
-        if (eligible.length === 0) {
-          // Not enough invites — inform user
-          const noRewardEmbed = new EmbedBuilder()
-            .setColor('#ef4444')
-            .setTitle('❌ Not Enough Invites')
-            .setDescription(`You have **${stats.valid}** invite(s). No rewards are available at this level.\n\n**Minimum requirement:** **2 invites**\n\nInvite **${2 - stats.valid}** more friend(s) to unlock rewards!`);
-          await ticketChannel.send({ embeds: [noRewardEmbed] });
-
-          const closeRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger)
-          );
-          await ticketChannel.send({ components: [closeRow] });
-        } else {
-          // Build reward showcase — only eligible rewards
-          const grouped = {};
-          for (const r of eligible) {
-            if (!grouped[r.invites]) grouped[r.invites] = [];
-            grouped[r.invites].push(r);
-          }
-          let rewardLines = '';
-          for (const [inv, rewards] of Object.entries(grouped).sort((a,b) => a[0]-b[0])) {
-            const lines = rewards.map(r => `**${inv} INVITE** ≫ **${r.label.toUpperCase()}** ${emojiStr(r)}`).join('\n');
-            rewardLines += lines + '\n\n';
-          }
-
-          // Component V2 with dropdown (only eligible rewards)
-          const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
-          await rest.post(`/channels/${ticketChannel.id}/messages`, {
-            body: {
-              flags: 32768,
-              components: [
-                {
-                  type: 17,
-                  components: [
-                    {
-                      type: 10,
-                      content: `<a:Event:1504576267788357742> **AVAILABLE REWARDS**\n\n${rewardLines.trim()}`
-                    },
-                    { type: 14, spacing: 2 },
-                    {
-                      type: 10,
-                      content: `Select a reward from the dropdown below. Your invites will be deducted upon claim.`
-                    },
-                    {
-                      type: 1,
-                      components: [
-                        {
-                          type: 3,
-                          custom_id: 'claim_reward_ticket',
-                          placeholder: 'Select your rewards',
-                          min_values: 1,
-                          max_values: 1,
-                          options: eligible.map(r => ({
-                            label: r.label,
-                            value: r.id,
-                            description: `${r.invites} invites needed`,
-                            emoji: { id: r.emojiId, name: r.emojiName, animated: r.animated }
-                          }))
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-          });
-
-          const btnRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('refresh_invites').setLabel('🔄 Refresh Invites').setStyle(ButtonStyle.Secondary)
-          );
-          await ticketChannel.send({ components: [btnRow] });
-        }
+        await ticketChannel.send({
+          content: `👋 Hey ${interaction.user}! Welcome to your claim ticket channel.`,
+          embeds: [welcomeEmbed],
+          components: [actionRow]
+        });
 
         return interaction.editReply({ content: `✅ Ticket created: ${ticketChannel}` });
       } catch (err) {
@@ -514,25 +540,187 @@ client.on('interactionCreate', async (interaction) => {
       }
     }
 
-    // Check Invites button (from panel)
-    if (interaction.customId === 'check_invites_btn') {
-      const count = db.getInviteCount(interaction.user.id);
+    // 📂 Expand Logs Button
+    if (interaction.customId === 'expand_invites') {
+      const logs = db.getJoinLogs(interaction.user.id);
+      const stats = db.getUserStats(interaction.user.id);
+      const is1Inv = db.getSetting('event1invite', false);
+
+      const validList = logs.filter(l => l.status === 'VALID').map(l => `@${l.inviteeUsername} (Link: ${l.code})`).join('\n') || 'None';
+
+      const expandEmbed = new EmbedBuilder()
+        .setColor('#2b2d31')
+        .setTitle('📂 Detailed Referral Telemetry')
+        .setDescription(`**🎟️ Valid Balance:** **${stats.valid}**` + (is1Inv ? ' [⚡ 1-INVITE EVENT ACTIVE]' : '') + `\n**👥 Total Joins:** **${stats.total}**\n**❌ Fake Joins:** **${stats.fake}**\n**🔄 Rejoins:** **${stats.rejoin}**`)
+        .addFields({
+          name: '✅ Active Referrals',
+          value: `\`\`\`\n${validList.slice(0, 1000)}\n\`\`\``
+        })
+        .setFooter({ text: 'Select a filter category below to view specific users.' });
+
+      const filterRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('filter_left').setLabel('Left Users').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('filter_rejoin').setLabel('Rejoined').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('filter_fake').setLabel('Fake Users').setStyle(ButtonStyle.Secondary)
+      );
+
+      const continueRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('continue_claim').setLabel('Continue to Payout').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger)
+      );
+
       return interaction.reply({
-        content: `📊 **@${interaction.user.username}** — You have **${count}** invite(s).`,
+        embeds: [expandEmbed],
+        components: [filterRow, continueRow],
         ephemeral: true
       });
     }
 
-    // Close ticket button
+    // Filter left users
+    if (interaction.customId === 'filter_left') {
+      const logs = db.getJoinLogs(interaction.user.id);
+      const list = logs.filter(l => l.status === 'LEFT').map(l => `@${l.inviteeUsername}`).join('\n') || 'None';
+      return interaction.reply({
+        content: `👥 **Users who left after joining:**\n\`\`\`\n${list.slice(0, 1800)}\n\`\`\``,
+        ephemeral: true
+      });
+    }
+
+    // Filter rejoined users
+    if (interaction.customId === 'filter_rejoin') {
+      const logs = db.getJoinLogs(interaction.user.id);
+      const list = logs.filter(l => l.status === 'REJOIN').map(l => `@${l.inviteeUsername}`).join('\n') || 'None';
+      return interaction.reply({
+        content: `🔄 **Users who rejoined:**\n\`\`\`\n${list.slice(0, 1800)}\n\`\`\``,
+        ephemeral: true
+      });
+    }
+
+    // Filter fake users
+    if (interaction.customId === 'filter_fake') {
+      const logs = db.getJoinLogs(interaction.user.id);
+      const list = logs.filter(l => l.status === 'FAKE').map(l => `@${l.inviteeUsername}`).join('\n') || 'None';
+      return interaction.reply({
+        content: `❌ **Users flagged as fake/self-invites:**\n\`\`\`\n${list.slice(0, 1800)}\n\`\`\``,
+        ephemeral: true
+      });
+    }
+
+    // ⚡ Continue Claim Button
+    if (interaction.customId === 'continue_claim') {
+      const stats = db.getUserStats(interaction.user.id);
+      const is1Inv = db.getSetting('event1invite', false);
+      const minRequired = is1Inv ? 1 : 2;
+
+      // Send dispatching invite check embed
+      const checkingEmbed = new EmbedBuilder()
+        .setColor('#2b2d31')
+        .setTitle('<:member:1505974580626591976> Dispatching Invite Telemetry...')
+        .setDescription(`Please wait while we cross-reference invite logs inside cores...`);
+
+      const checkingMsg = await interaction.channel.send({ embeds: [checkingEmbed] });
+
+      await new Promise(r => setTimeout(r, 1500));
+
+      const inviteEmbed = new EmbedBuilder()
+        .setColor('#2b2d31')
+        .setTitle('<:member:1505974580626591976> Invite Telemetry Results')
+        .setDescription(`<a:emoji_25:1504806993280503810> **Valid Referrals** — __**\`${stats.valid}\`**__\n\n> **Total Joins  = ** ${stats.total}\n> **Left Server = ** ${stats.left}\n> **Fake Joins   = ** ${stats.fake}\n> **Rejoined     = ** ${stats.rejoin}`);
+
+      await checkingMsg.edit({ embeds: [inviteEmbed] });
+
+      await new Promise(r => setTimeout(r, 1000));
+
+      if (stats.valid < minRequired) {
+        // Not enough invites
+        const notEnoughEmbed = new EmbedBuilder()
+          .setColor('#ef4444')
+          .setTitle('❌ Invite Threshold Not Met')
+          .setDescription(`You have **${stats.valid}** valid invite(s).\n\n**Minimum requirement:** **${minRequired} invites**\n\nTicket will **automatically close in 30 seconds** due to insufficient refer balance.`);
+
+        await interaction.channel.send({ embeds: [notEnoughEmbed] });
+
+        const closeRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger)
+        );
+        await interaction.channel.send({ components: [closeRow] });
+
+        // Auto close timer in 30 seconds
+        setTimeout(() => {
+          interaction.channel.delete().catch(() => {});
+        }, 30000);
+      } else {
+        // Enough invites! Show eligible rewards
+        const eligible = REWARDS.filter(r => {
+          const cost = is1Inv ? 1 : r.invites;
+          return stats.valid >= cost;
+        });
+
+        const grouped = {};
+        for (const r of eligible) {
+          const cost = is1Inv ? 1 : r.invites;
+          if (!grouped[cost]) grouped[cost] = [];
+          grouped[cost].push(r);
+        }
+
+        let rewardLines = '';
+        for (const [inv, rewards] of Object.entries(grouped).sort((a,b) => a[0]-b[0])) {
+          const lines = rewards.map(r => `**${inv} INVITE** ≫ **${r.label.toUpperCase()}** ${emojiStr(r)}`).join('\n');
+          rewardLines += lines + '\n\n';
+        }
+
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        await rest.post(`/channels/${interaction.channel.id}/messages`, {
+          body: {
+            flags: 32768,
+            components: [
+              {
+                type: 17,
+                components: [
+                  {
+                    type: 10,
+                    content: `<a:Event:1504576267788357742> **ELIGIBLE ACTIVE REWARDS**\n\n${rewardLines.trim()}`
+                  },
+                  { type: 14, spacing: 2 },
+                  {
+                    type: 10,
+                    content: `Select a reward from the dropdown menu. Your invite balance will be deducted upon claim.`
+                  },
+                  {
+                    type: 1,
+                    components: [
+                      {
+                        type: 3,
+                        custom_id: 'claim_reward_ticket',
+                        placeholder: '🎁 Select your premium prize...',
+                        min_values: 1,
+                        max_values: 1,
+                        options: eligible.map(r => ({
+                          label: r.label,
+                          value: r.id,
+                          description: `${is1Inv ? 1 : r.invites} invites cost`,
+                          emoji: { id: r.emojiId, name: r.emojiName, animated: r.animated }
+                        }))
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        });
+
+        const btnRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger)
+        );
+        await interaction.channel.send({ components: [btnRow] });
+      }
+    }
+
+    // Close Ticket action
     if (interaction.customId === 'close_ticket') {
       await interaction.reply('🔒 Closing this ticket in 5 seconds...');
       setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
-    }
-
-    // Refresh invites in ticket
-    if (interaction.customId === 'refresh_invites') {
-      const count = db.getInviteCount(interaction.user.id);
-      return interaction.reply({ content: `📊 Updated invite count: **${count}**`, ephemeral: true });
     }
   }
 
@@ -544,22 +732,24 @@ client.on('interactionCreate', async (interaction) => {
       if (!reward) return interaction.reply({ content: '❌ Invalid reward.', ephemeral: true });
 
       const invCount = db.getInviteCount(interaction.user.id);
+      const is1Inv = db.getSetting('event1invite', false);
+      const cost = is1Inv ? 1 : reward.invites;
 
-      if (invCount < reward.invites) {
+      if (invCount < cost) {
         const embed = new EmbedBuilder()
           .setColor('#ef4444')
           .setTitle('❌ Not Enough Invites')
-          .setDescription(`You need **${reward.invites}** invites for **${reward.label}**.\nYou currently have **${invCount}** invite(s).\n\n📢 Invite **${reward.invites - invCount}** more friend(s) to claim!`);
+          .setDescription(`You need **${cost}** invites for **${reward.label}**.\nYou currently have **${invCount}** invite(s).\n\n📢 Invite **${cost - invCount}** more friend(s) to claim!`);
         return interaction.reply({ embeds: [embed], ephemeral: true });
       }
 
       // Deduct invites
-      const deducted = db.deductInvites(interaction.user.id, reward.invites);
+      const deducted = db.deductInvites(interaction.user.id, cost);
       if (!deducted) {
         return interaction.reply({ content: '❌ Failed to process. Try again.', ephemeral: true });
       }
 
-      // Generate code + save
+      // Generate code + local log
       const code = db.generateCode();
       const dbData = db.loadDB();
       if (!dbData.redemptions) dbData.redemptions = [];
@@ -574,29 +764,7 @@ client.on('interactionCreate', async (interaction) => {
       db.saveDB(dbData);
 
       // --- SYNC WITH BACKEND DATABASE ---
-      const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
-      fetch(`${BACKEND_URL}/api/rewards/sync-bot-code`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-bot-token': BOT_TOKEN
-        },
-        body: JSON.stringify({
-          code: code,
-          category: reward.category
-        })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          console.log(`[SYNC] Code ${code} synced successfully to website database.`);
-        } else {
-          console.error(`[SYNC_ERROR] Failed to sync: ${data.error}`);
-        }
-      })
-      .catch(err => {
-        console.error(`[SYNC_CRASH] Error connecting to backend for sync:`, err.message);
-      });
+      syncCodeToBackend(code, reward.category);
 
       // ── PAYOUT in spoiler format ──
       await interaction.reply({
