@@ -6,7 +6,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'cyber-riwaayat-premium-jwt-super-s
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '1485034551108702268';
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || 'mock_secret';
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || 'mock_bot_token';
-const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID || '1411327756968661125';
 
 /**
  * Capture Visitor IP, User Agent, and Country details
@@ -53,7 +52,7 @@ async function handleDiscordCallback(req, res) {
         grant_type: 'authorization_code',
         code: code,
         redirect_uri: redirect_uri,
-        scope: 'identify guilds.join'
+        scope: 'identify'
       }),
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     });
@@ -75,21 +74,8 @@ async function handleDiscordCallback(req, res) {
       return res.status(400).json({ success: false, error: 'Failed to retrieve Discord profile' });
     }
 
-    // Auto-Join Discord Server using Bot PUT endpoint
-    let joinedServer = false;
-    try {
-      const joinResponse = await fetch(`https://discord.com/api/guilds/${DISCORD_GUILD_ID}/members/${userData.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ access_token: access_token }),
-        headers: {
-          Authorization: `Bot ${DISCORD_BOT_TOKEN}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      joinedServer = joinResponse.status === 201 || joinResponse.status === 204;
-    } catch (err) {
-      console.warn('Bot auto-join failed:', err.message);
-    }
+    // User has successfully authenticated
+    const joinedServer = true;
 
     // Save/Upsert Discord user data securely
     const user = await prisma.user.upsert({

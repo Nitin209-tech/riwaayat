@@ -109,7 +109,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const loginWithDiscord = () => {
     const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || '1505965176413880371';
     const redirectUri = encodeURIComponent(window.location.origin + '/');
-    const scope = encodeURIComponent('identify guilds.join');
+    const scope = encodeURIComponent('identify');
     const discordUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
     window.location.href = discordUrl;
   };
