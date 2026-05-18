@@ -11,6 +11,44 @@ const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const GUILD_ID = process.env.DISCORD_GUILD_ID;
 
+// ─── DIRECT DATABASE (POSTGRESQL) POOL CONNECTION ───────────────────
+const { Pool } = require('pg');
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
+
+async function checkDirectDBHealth() {
+  try {
+    const client = await pool.connect();
+    try {
+      await client.query('SELECT 1 as test');
+      return { database: 'ONLINE', error: null };
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    return { database: 'OFFLINE', error: err.message };
+  }
+}
+
+async function pullRedemptionsDirectly() {
+  try {
+    const client = await pool.connect();
+    try {
+      const res = await client.query('SELECT * FROM "RedeemHistory" ORDER BY "claimedAt" DESC LIMIT 10');
+      return res.rows;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Direct PostgreSQL pull failed:', err);
+    throw err;
+  }
+}
+
 // ─── STABLE HTTPS/HTTP SYNC BRIDGE ──────────────────────────────────
 function syncCodeToBackend(code, category) {
   const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
@@ -464,7 +502,7 @@ client.on('interactionCreate', async (interaction) => {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       
       try {
-        const redemptions = await pullRedemptionsFromBackend();
+        const redemptions = await pullRedemptionsDirectly();
         if (redemptions.length === 0) {
           const embed = new EmbedBuilder()
             .setColor('#3b82f6')
@@ -477,7 +515,7 @@ client.on('interactionCreate', async (interaction) => {
         const embed = new EmbedBuilder()
           .setColor('#3b82f6')
           .setTitle('🌐 RIWAAYAT WEBSITE REDEMPTIONS')
-          .setDescription(`📋 Successfully pulled the last **${redemptions.length}** prize claims from the production database.`)
+          .setDescription(`📋 Successfully pulled the last **${redemptions.length}** prize claims directly from the PostgreSQL database.`)
           .setTimestamp();
           
         redemptions.forEach((r, idx) => {
@@ -503,7 +541,7 @@ client.on('interactionCreate', async (interaction) => {
       
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       
-      const health = await checkHealthFromBackend();
+      const health = await checkDirectDBHealth();
       
       const embed = new EmbedBuilder()
         .setTitle('🗄️ DATABASE CONNECTION STATUS')
@@ -511,16 +549,16 @@ client.on('interactionCreate', async (interaction) => {
         
       if (health.database === 'ONLINE') {
         embed.setColor('#10b981') // emerald green
-          .setDescription('🟢 **PostgreSQL Connection is ONLINE & HEALTHY!**\n\nThe bot and website are successfully connected to your Supabase production database. All payouts, stock levels, and user claims are synchronizing perfectly in real-time!')
+          .setDescription('🟢 **PostgreSQL Connection is ONLINE & HEALTHY!**\n\nThe Discord bot is successfully connected **directly** to your Supabase PostgreSQL database. No intermediate APIs are required!')
           .addFields(
-            { name: '🔌 Connection Mode', value: 'Direct TCP Port 5432', inline: true },
-            { name: '📡 Server Status', value: '🟢 HEALTHY (UP)', inline: true }
+            { name: '🔌 Connection Mode', value: 'Direct TCP Port 6543 (Pooler)', inline: true },
+            { name: '📡 Connection Status', value: '🟢 HEALTHY (UP)', inline: true }
           );
       } else {
         embed.setColor('#ef4444') // red
-          .setDescription('🔴 **PostgreSQL Connection is OFFLINE!**\n\nThe backend server is active but failed to connect to the Supabase database. Please check your database connection credentials on Railway!')
+          .setDescription('🔴 **PostgreSQL Connection is OFFLINE!**\n\nThe Discord bot failed to connect directly to the Supabase database. Please check your DATABASE_URL configuration!')
           .addFields(
-            { name: '🔌 Connection Mode', value: 'Direct TCP Port 5432', inline: true },
+            { name: '🔌 Connection Mode', value: 'Direct TCP Port 6543 (Pooler)', inline: true },
             { name: '⚠️ Error Message', value: `\`\`\`\n${health.error || 'Unknown Connection Failure'}\n\`\`\`` }
           );
       }
