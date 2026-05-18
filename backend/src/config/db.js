@@ -1,20 +1,35 @@
 const { PrismaClient } = require('@prisma/client');
 
-let prisma;
+let activeClient;
 
-try {
-  prisma = new PrismaClient();
-  // Quick test connection
-  prisma.$connect()
-    .then(() => console.log('📡 Database connection established successfully.'))
-    .catch((err) => {
-      console.warn('⚠️ PostgreSQL database is offline. Sandbox mock client mode active.');
-      prisma = createMockPrisma();
-    });
-} catch (e) {
-  console.warn('⚠️ Prisma engine error. Falling back to sandbox mock.');
-  prisma = createMockPrisma();
+const hasValidDB = process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('localhost') && !process.env.DATABASE_URL.includes('127.0.0.1');
+
+if (hasValidDB) {
+  try {
+    activeClient = new PrismaClient();
+    activeClient.$connect()
+      .then(() => console.log('📡 Database connection established successfully.'))
+      .catch((err) => {
+        console.warn('⚠️ PostgreSQL database is offline. Sandbox mock client active.');
+        activeClient = createMockPrisma();
+      });
+  } catch (e) {
+    console.warn('⚠️ Prisma engine error. Falling back to sandbox mock.');
+    activeClient = createMockPrisma();
+  }
+} else {
+  console.log('⚠️ No production DATABASE_URL provided. Sandbox mock client mode active.');
+  activeClient = createMockPrisma();
 }
+
+// Dynamic Proxy to route queries to active client seamlessly
+const prismaProxy = new Proxy({}, {
+  get(target, prop) {
+    return activeClient[prop];
+  }
+});
+
+module.exports = prismaProxy;
 
 function createMockPrisma() {
   const store = {
@@ -94,5 +109,3 @@ function createMockPrisma() {
     }
   };
 }
-
-module.exports = prisma;
