@@ -63,6 +63,51 @@ function syncCodeToBackend(code, category) {
   req.end();
 }
 
+// ─── GREET & WELCOME TELEMETRY DISPATCHER ───────────────────────────
+async function triggerWelcomeAndGreets(member, inviterUser, inviterInvites) {
+  // 1. Permanent Welcome Message
+  const welcomeChannelId = db.getSetting('welcomeChannel');
+  if (welcomeChannelId) {
+    const welcomeChannel = member.guild.channels.cache.get(welcomeChannelId);
+    if (welcomeChannel) {
+      let rawMsg = db.getSetting('welcomeMessage', 'Welcome {user} to RIWAAYAT! You were invited by {inviter} (who now has {invites} invites).');
+      const inviterText = inviterUser ? `${inviterUser}` : 'Direct Join';
+
+      const formatted = rawMsg
+        .replace(/{user}/g, `${member}`)
+        .replace(/{username}/g, member.user.username)
+        .replace(/{inviter}/g, inviterText)
+        .replace(/{invites}/g, inviterInvites.toString());
+
+      await welcomeChannel.send({ content: formatted }).catch(err => console.error('[WELCOME_SEND_ERROR]', err.message));
+    }
+  }
+
+  // 2. 5-Second Self-Deleting Greet Messages in Multiple Channels
+  const greetChannels = db.getSetting('greetChannels', []);
+  if (Array.isArray(greetChannels) && greetChannels.length > 0) {
+    const rawGreetMsg = db.getSetting('greetMessage', '⚡ Welcome {user}! You were invited by {inviter}.');
+    const inviterText = inviterUser ? `${inviterUser}` : 'Direct Join';
+
+    const formattedGreet = rawGreetMsg
+      .replace(/{user}/g, `${member}`)
+      .replace(/{username}/g, member.user.username)
+      .replace(/{inviter}/g, inviterText)
+      .replace(/{invites}/g, inviterInvites.toString());
+
+    for (const channelId of greetChannels) {
+      const greetChannel = member.guild.channels.cache.get(channelId);
+      if (greetChannel) {
+        greetChannel.send({ content: formattedGreet })
+          .then(msg => {
+            setTimeout(() => msg.delete().catch(() => {}), 5000);
+          })
+          .catch(err => console.error('[GREET_SEND_ERROR]', err.message));
+      }
+    }
+  }
+}
+
 // ─── SLASH COMMAND DEFINITIONS ─────────────────────────────────────
 const commands = [
   new SlashCommandBuilder().setName('help').setDescription('Show all bot commands'),
@@ -116,9 +161,23 @@ const commands = [
   new SlashCommandBuilder().setName('welcomechannel')
     .setDescription('Set custom welcome greeting channel (Admin only)')
     .addChannelOption(opt => opt.setName('channel').setDescription('Target channel').setRequired(true)),
+  new SlashCommandBuilder().setName('greetmsg')
+    .setDescription('Set custom 5-second self-deleting greet message (Admin only)')
+    .addStringOption(opt => opt.setName('message').setDescription('Greeting template. Variables: {user}, {username}, {inviter}, {invites}').setRequired(true)),
+  new SlashCommandBuilder().setName('greetchannels')
+    .setDescription('Manage channels for 5-second self-deleting greets (Admin only)')
+    .addStringOption(opt => opt.setName('action').setDescription('Add, remove, or view channels').setRequired(true)
+      .addChoices(
+        { name: '➕ Add Channel', value: 'add' },
+        { name: '➖ Remove Channel', value: 'remove' },
+        { name: '📋 View Channels', value: 'view' }
+      ))
+    .addChannelOption(opt => opt.setName('channel').setDescription('Channel to add or remove').setRequired(false)),
   new SlashCommandBuilder().setName('event1invite')
     .setDescription('Toggle 1-invite event (Admin only)')
     .addBooleanOption(opt => opt.setName('enabled').setDescription('Enable or disable 1-invite event').setRequired(true)),
+  new SlashCommandBuilder().setName('testwelcome')
+    .setDescription('Simulate a join event to test welcome and greet messages (Admin only)'),
 ].map(cmd => cmd.toJSON());
 
 // ─── BOT CLIENT ────────────────────────────────────────────────────
@@ -205,23 +264,8 @@ client.on('guildMemberAdd', async (member) => {
 
     guildInvites.set(member.guild.id, new Map(current.map(inv => [inv.code, inv.uses])));
 
-    // Greet / Welcome Broadcast
-    const welcomeChannelId = db.getSetting('welcomeChannel');
-    if (welcomeChannelId) {
-      const welcomeChannel = member.guild.channels.cache.get(welcomeChannelId);
-      if (welcomeChannel) {
-        let rawMsg = db.getSetting('welcomeMessage', 'Welcome {user} to RIWAAYAT! You were invited by {inviter} (who now has {invites} invites).');
-        const inviterText = inviterUser ? `${inviterUser}` : 'Direct Join';
-
-        const formatted = rawMsg
-          .replace(/{user}/g, `${member}`)
-          .replace(/{username}/g, member.user.username)
-          .replace(/{inviter}/g, inviterText)
-          .replace(/{invites}/g, inviterInvites.toString());
-
-        await welcomeChannel.send({ content: formatted }).catch(err => console.error('[WELCOME_SEND_ERROR]', err.message));
-      }
-    }
+    // Trigger Welcome And Greet dispatches
+    await triggerWelcomeAndGreets(member, inviterUser, inviterInvites);
   } catch (err) {
     console.error('[INVITE_ERROR]', err.message);
   }
@@ -266,10 +310,26 @@ client.on('interactionCreate', async (interaction) => {
           { name: '➕ `/addinvites`', value: 'Give invites to a user (Admin)' },
           { name: '💬 `/welcomemsg`', value: 'Set custom greeting message (Admin)' },
           { name: '📺 `/welcomechannel`', value: 'Set custom greeting channel (Admin)' },
-          { name: '⚡ `/event1invite`', value: 'Toggle 1-invite events mode (Admin)' }
+          { name: '💬 `/greetmsg`', value: 'Set custom 5s greet message (Admin)' },
+          { name: '📺 `/greetchannels`', value: 'Add/Remove/View multiple 5s greet channels (Admin)' },
+          { name: '⚡ `/event1invite`', value: 'Toggle 1-invite events mode (Admin)' },
+          { name: '🧪 `/testwelcome`', value: 'Simulate join to test Welcome & Greets (Admin)' }
         )
         .setFooter({ text: 'RIWAAYAT • Invite to Earn Platform' });
       return interaction.reply({ embeds: [embed] });
+    }
+
+    // /testwelcome
+    if (commandName === 'testwelcome') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', ephemeral: true });
+      }
+      
+      const mockInvites = db.getInviteCount(interaction.user.id);
+      await interaction.reply({ content: '🧪 **Simulating join event...** Dispatches firing now!', ephemeral: true });
+      
+      await triggerWelcomeAndGreets(interaction.member, client.user, mockInvites);
+      return;
     }
 
     // /welcomemsg
@@ -279,7 +339,7 @@ client.on('interactionCreate', async (interaction) => {
       }
       const msg = interaction.options.getString('message');
       db.setSetting('welcomeMessage', msg);
-      return interaction.reply({ content: `✅ Custom greeting message saved successfully:\n\`\`\`\n${msg}\n\`\`\``, ephemeral: true });
+      return interaction.reply({ content: `✅ Custom welcome message saved successfully:\n\`\`\`\n${msg}\n\`\`\``, ephemeral: true });
     }
 
     // /welcomechannel
@@ -290,6 +350,65 @@ client.on('interactionCreate', async (interaction) => {
       const channel = interaction.options.getChannel('channel');
       db.setSetting('welcomeChannel', channel.id);
       return interaction.reply({ content: `✅ Welcome message target channel updated to: ${channel}!`, ephemeral: true });
+    }
+
+    // /greetmsg
+    if (commandName === 'greetmsg') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', ephemeral: true });
+      }
+      const msg = interaction.options.getString('message');
+      db.setSetting('greetMessage', msg);
+      return interaction.reply({ content: `✅ Custom 5-second greet message saved successfully:\n\`\`\`\n${msg}\n\`\`\``, ephemeral: true });
+    }
+
+    // /greetchannels
+    if (commandName === 'greetchannels') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', ephemeral: true });
+      }
+      
+      const action = interaction.options.getString('action');
+      const channel = interaction.options.getChannel('channel');
+      
+      let list = db.getSetting('greetChannels', []);
+      if (!Array.isArray(list)) list = [];
+      
+      if (action === 'add') {
+        if (!channel) {
+          return interaction.reply({ content: '❌ Please specify a channel to add.', ephemeral: true });
+        }
+        if (list.includes(channel.id)) {
+          return interaction.reply({ content: `❌ ${channel} is already in the greet channels list.`, ephemeral: true });
+        }
+        list.push(channel.id);
+        db.setSetting('greetChannels', list);
+        return interaction.reply({ content: `✅ Added ${channel} to greet channels list! Total channels: **${list.length}**`, ephemeral: true });
+      }
+      
+      if (action === 'remove') {
+        if (!channel) {
+          return interaction.reply({ content: '❌ Please specify a channel to remove.', ephemeral: true });
+        }
+        if (!list.includes(channel.id)) {
+          return interaction.reply({ content: `❌ ${channel} is not in the greet channels list.`, ephemeral: true });
+        }
+        list = list.filter(id => id !== channel.id);
+        db.setSetting('greetChannels', list);
+        return interaction.reply({ content: `✅ Removed ${channel} from greet channels list! Remaining: **${list.length}**`, ephemeral: true });
+      }
+      
+      if (action === 'view') {
+        if (list.length === 0) {
+          return interaction.reply({ content: '📋 There are no channels configured for greet messages yet.', ephemeral: true });
+        }
+        const formattedList = list.map((id, index) => `${index + 1}. <#${id}>`).join('\n');
+        const embed = new EmbedBuilder()
+          .setColor('#2b2d31')
+          .setTitle('📋 Configured Greet Channels')
+          .setDescription(`These channels will receive a 5-second self-deleting greet message when a member joins:\n\n${formattedList}`);
+        return interaction.reply({ embeds: [embed], ephemeral: true });
+      }
     }
 
     // /event1invite
@@ -612,7 +731,6 @@ client.on('interactionCreate', async (interaction) => {
       const is1Inv = db.getSetting('event1invite', false);
       const minRequired = is1Inv ? 1 : 2;
 
-      // Send dispatching invite check embed
       const checkingEmbed = new EmbedBuilder()
         .setColor('#2b2d31')
         .setTitle('<:member:1505974580626591976> Dispatching Invite Telemetry...')
@@ -632,7 +750,6 @@ client.on('interactionCreate', async (interaction) => {
       await new Promise(r => setTimeout(r, 1000));
 
       if (stats.valid < minRequired) {
-        // Not enough invites
         const notEnoughEmbed = new EmbedBuilder()
           .setColor('#ef4444')
           .setTitle('❌ Invite Threshold Not Met')
@@ -645,12 +762,10 @@ client.on('interactionCreate', async (interaction) => {
         );
         await interaction.channel.send({ components: [closeRow] });
 
-        // Auto close timer in 30 seconds
         setTimeout(() => {
           interaction.channel.delete().catch(() => {});
         }, 30000);
       } else {
-        // Enough invites! Show eligible rewards
         const eligible = REWARDS.filter(r => {
           const cost = is1Inv ? 1 : r.invites;
           return stats.valid >= cost;
