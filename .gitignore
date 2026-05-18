@@ -30,3 +30,6 @@ npm-debug.log*
 # Build artifacts
 dist/
 build/
+.env
+.env.local
+.env.*.local
