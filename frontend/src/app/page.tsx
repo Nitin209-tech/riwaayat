@@ -461,35 +461,35 @@ export default function Home() {
       {/* DYNAMIC POPUP MODAL (GET EMAIL & USERNAME FIRST) */}
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="w-full max-w-sm bg-[#0f0f13] border border-white/10 rounded-3xl p-7 space-y-6 text-left relative shadow-[0_30px_90px_rgba(0,0,0,0.8)]"
+              className="w-full max-w-lg bg-[#0f0f13] border border-white/10 rounded-[32px] p-10 space-y-8 text-left relative shadow-[0_30px_90px_rgba(0,0,0,0.85)]"
             >
               <button
                 onClick={() => setShowModal(false)}
-                className="absolute top-5 right-5 text-zinc-400 hover:text-white transition"
+                className="absolute top-6 right-6 text-zinc-400 hover:text-white transition"
               >
-                <X size={18} />
+                <X size={20} />
               </button>
 
-              <div className="space-y-1">
-                <h3 className="text-xl font-black text-white uppercase tracking-tight">
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-white uppercase tracking-tight">
                   Session Credentials
                 </h3>
-                <p className="text-xs text-zinc-400 leading-relaxed">
+                <p className="text-sm text-zinc-400 leading-relaxed">
                   Authenticate your gaming details before applying the 25-character activation code.
                 </p>
               </div>
 
-              <form onSubmit={handleProceed} className="space-y-5">
+              <form onSubmit={handleProceed} className="space-y-6">
                 
                 {/* Email Field */}
-                <div className="space-y-2">
-                  <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest block font-mono">
+                <div className="space-y-2.5">
+                  <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest block font-mono">
                     Microsoft Outlook / Email ID
                   </label>
                   <div className="relative">
@@ -498,16 +498,16 @@ export default function Home() {
                       placeholder="steve@outlook.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-white/[0.02] border border-white/10 rounded-xl p-3.5 pl-11 text-xs text-white focus:outline-none focus:border-indigo-500/80 transition"
+                      className="w-full bg-white/[0.02] border border-white/10 rounded-2xl p-4.5 pl-13 text-sm text-white focus:outline-none focus:border-indigo-500/80 transition"
                       required
                     />
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4" />
+                    <Mail className="absolute left-4.5 top-1/2 -translate-y-1/2 text-zinc-400 w-5 h-5" />
                   </div>
                 </div>
 
                 {/* Username Field */}
-                <div className="space-y-2">
-                  <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest block font-mono">
+                <div className="space-y-2.5">
+                  <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest block font-mono">
                     Gamer Username
                   </label>
                   <div className="relative">
@@ -516,24 +516,24 @@ export default function Home() {
                       placeholder="e.g. SteveTheGamer"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="w-full bg-white/[0.02] border border-white/10 rounded-xl p-3.5 pl-11 text-xs text-white focus:outline-none focus:border-indigo-500/80 transition"
+                      className="w-full bg-white/[0.02] border border-white/10 rounded-2xl p-4.5 pl-13 text-sm text-white focus:outline-none focus:border-indigo-500/80 transition"
                       required
                     />
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4" />
+                    <User className="absolute left-4.5 top-1/2 -translate-y-1/2 text-zinc-400 w-5 h-5" />
                   </div>
                 </div>
 
                 {/* Selective Plan Tier based on activeCategory */}
                 {activeCategory === 'nitro' && (
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest block font-mono">
+                  <div className="space-y-3">
+                    <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest block font-mono">
                       Select Nitro Plan Tier
                     </label>
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-2 gap-3.5">
                       <button
                         type="button"
                         onClick={() => setSelectedPlan('Nitro Basic')}
-                        className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition duration-200 ${
+                        className={`py-3.5 px-4 rounded-2xl border text-xs font-bold transition duration-200 ${
                           selectedPlan === 'Nitro Basic' 
                             ? 'bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white border-transparent shadow-[0_4px_12px_rgba(99,102,241,0.25)]' 
                             : 'bg-white/[0.02] border-white/10 text-zinc-300 hover:bg-white/10'
@@ -544,7 +544,7 @@ export default function Home() {
                       <button
                         type="button"
                         onClick={() => setSelectedPlan('Nitro Boost')}
-                        className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition duration-200 ${
+                        className={`py-3.5 px-4 rounded-2xl border text-xs font-bold transition duration-200 ${
                           selectedPlan === 'Nitro Boost' 
                             ? 'bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white border-transparent shadow-[0_4px_12px_rgba(99,102,241,0.25)]' 
                             : 'bg-white/[0.02] border-white/10 text-zinc-300 hover:bg-white/10'
@@ -557,15 +557,15 @@ export default function Home() {
                 )}
 
                 {activeCategory === 'youtube' && (
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest block font-mono">
+                  <div className="space-y-3">
+                    <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest block font-mono">
                       Select Subscribers Plan
                     </label>
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-2 gap-3.5">
                       <button
                         type="button"
                         onClick={() => setSelectedPlan('10K Subscribers')}
-                        className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition duration-200 ${
+                        className={`py-3.5 px-4 rounded-2xl border text-xs font-bold transition duration-200 ${
                           selectedPlan === '10K Subscribers' 
                             ? 'bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white border-transparent shadow-[0_4px_12px_rgba(99,102,241,0.25)]' 
                             : 'bg-white/[0.02] border-white/10 text-zinc-300 hover:bg-white/10'
@@ -576,7 +576,7 @@ export default function Home() {
                       <button
                         type="button"
                         onClick={() => setSelectedPlan('30K Subscribers')}
-                        className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition duration-200 ${
+                        className={`py-3.5 px-4 rounded-2xl border text-xs font-bold transition duration-200 ${
                           selectedPlan === '30K Subscribers' 
                             ? 'bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white border-transparent shadow-[0_4px_12px_rgba(99,102,241,0.25)]' 
                             : 'bg-white/[0.02] border-white/10 text-zinc-300 hover:bg-white/10'
@@ -589,15 +589,15 @@ export default function Home() {
                 )}
 
                 {activeCategory === 'roblox' && (
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest block font-mono">
+                  <div className="space-y-3">
+                    <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest block font-mono">
                       Select Robux Card Tier
                     </label>
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-2 gap-3.5">
                       <button
                         type="button"
                         onClick={() => setSelectedPlan('$50 Giftcard')}
-                        className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition duration-200 ${
+                        className={`py-3.5 px-4 rounded-2xl border text-xs font-bold transition duration-200 ${
                           selectedPlan === '$50 Giftcard' 
                             ? 'bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white border-transparent shadow-[0_4px_12px_rgba(99,102,241,0.25)]' 
                             : 'bg-white/[0.02] border-white/10 text-zinc-300 hover:bg-white/10'
@@ -608,7 +608,7 @@ export default function Home() {
                       <button
                         type="button"
                         onClick={() => setSelectedPlan('$100 Giftcard')}
-                        className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition duration-200 ${
+                        className={`py-3.5 px-4 rounded-2xl border text-xs font-bold transition duration-200 ${
                           selectedPlan === '$100 Giftcard' 
                             ? 'bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white border-transparent shadow-[0_4px_12px_rgba(99,102,241,0.25)]' 
                             : 'bg-white/[0.02] border-white/10 text-zinc-300 hover:bg-white/10'
@@ -622,9 +622,9 @@ export default function Home() {
 
                 <button
                   type="submit"
-                  className="w-full py-4 bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white hover:brightness-110 rounded-xl text-xs font-black tracking-widest uppercase transition duration-300 flex items-center justify-center gap-1.5 shadow-[0_4px_15px_rgba(99,102,241,0.3)] font-sans"
+                  className="w-full py-4.5 bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white hover:brightness-110 rounded-2xl text-sm font-black tracking-widest uppercase transition duration-300 flex items-center justify-center gap-2 shadow-[0_4px_15px_rgba(99,102,241,0.3)] font-sans"
                 >
-                  Proceed to Secure Line <ArrowRight size={14} />
+                  Proceed to Secure Line <ArrowRight size={16} />
                 </button>
 
               </form>
