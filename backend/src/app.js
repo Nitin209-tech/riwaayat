@@ -1,3 +1,8 @@
+const dns = require('dns');
+if (typeof dns.setDefaultResultOrder === 'function') {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
 // Force Railway Database Connection Deploy Trigger
 const express = require('express');
 const cors = require('cors');
