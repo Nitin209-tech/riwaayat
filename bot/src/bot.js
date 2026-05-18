@@ -1,6 +1,6 @@
 const { Client, GatewayIntentBits, Partials, ActivityType, EmbedBuilder,
   ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder,
-  ChannelType, PermissionFlagsBits, REST, Routes, SlashCommandBuilder } = require('discord.js');
+  ChannelType, PermissionFlagsBits, REST, Routes, SlashCommandBuilder, MessageFlags } = require('discord.js');
 require('dotenv').config();
 const db = require('./database');
 const { REWARDS, getRewardById, emojiStr } = require('./rewards');
@@ -203,8 +203,8 @@ async function registerCommands(guildId) {
   }
 }
 
-// ─── BOT READY ─────────────────────────────────────────────────────
-client.once('ready', async () => {
+// ─── BOT READY (v15 compliant using both clientReady and ready) ───
+const onReady = async () => {
   console.log('\n══════════════════════════════════════════════════════');
   console.log(`🤖 RIWAAYAT BOT ONLINE: ${client.user.tag}`);
   console.log('══════════════════════════════════════════════════════\n');
@@ -220,7 +220,10 @@ client.once('ready', async () => {
       console.warn(`[INVITES] Cannot cache for: "${guild.name}"`);
     }
   }
-});
+};
+
+client.once('ready', onReady);
+client.once('clientReady', onReady);
 
 // ─── INVITE TRACKER (With logging & telemetry) ────────────────────
 client.on('guildMemberAdd', async (member) => {
@@ -322,11 +325,11 @@ client.on('interactionCreate', async (interaction) => {
     // /testwelcome
     if (commandName === 'testwelcome') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Admin only.', ephemeral: true });
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
       
       const mockInvites = db.getInviteCount(interaction.user.id);
-      await interaction.reply({ content: '🧪 **Simulating join event...** Dispatches firing now!', ephemeral: true });
+      await interaction.reply({ content: '🧪 **Simulating join event...** Dispatches firing now!', flags: MessageFlags.Ephemeral });
       
       await triggerWelcomeAndGreets(interaction.member, client.user, mockInvites);
       return;
@@ -335,37 +338,37 @@ client.on('interactionCreate', async (interaction) => {
     // /welcomemsg
     if (commandName === 'welcomemsg') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Admin only.', ephemeral: true });
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
       const msg = interaction.options.getString('message');
       db.setSetting('welcomeMessage', msg);
-      return interaction.reply({ content: `✅ Custom welcome message saved successfully:\n\`\`\`\n${msg}\n\`\`\``, ephemeral: true });
+      return interaction.reply({ content: `✅ Custom welcome message saved successfully:\n\`\`\`\n${msg}\n\`\`\``, flags: MessageFlags.Ephemeral });
     }
 
     // /welcomechannel
     if (commandName === 'welcomechannel') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Admin only.', ephemeral: true });
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
       const channel = interaction.options.getChannel('channel');
       db.setSetting('welcomeChannel', channel.id);
-      return interaction.reply({ content: `✅ Welcome message target channel updated to: ${channel}!`, ephemeral: true });
+      return interaction.reply({ content: `✅ Welcome message target channel updated to: ${channel}!`, flags: MessageFlags.Ephemeral });
     }
 
     // /greetmsg
     if (commandName === 'greetmsg') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Admin only.', ephemeral: true });
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
       const msg = interaction.options.getString('message');
       db.setSetting('greetMessage', msg);
-      return interaction.reply({ content: `✅ Custom 5-second greet message saved successfully:\n\`\`\`\n${msg}\n\`\`\``, ephemeral: true });
+      return interaction.reply({ content: `✅ Custom 5-second greet message saved successfully:\n\`\`\`\n${msg}\n\`\`\``, flags: MessageFlags.Ephemeral });
     }
 
     // /greetchannels
     if (commandName === 'greetchannels') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Admin only.', ephemeral: true });
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
       
       const action = interaction.options.getString('action');
@@ -376,49 +379,49 @@ client.on('interactionCreate', async (interaction) => {
       
       if (action === 'add') {
         if (!channel) {
-          return interaction.reply({ content: '❌ Please specify a channel to add.', ephemeral: true });
+          return interaction.reply({ content: '❌ Please specify a channel to add.', flags: MessageFlags.Ephemeral });
         }
         if (list.includes(channel.id)) {
-          return interaction.reply({ content: `❌ ${channel} is already in the greet channels list.`, ephemeral: true });
+          return interaction.reply({ content: `❌ ${channel} is already in the greet channels list.`, flags: MessageFlags.Ephemeral });
         }
         list.push(channel.id);
         db.setSetting('greetChannels', list);
-        return interaction.reply({ content: `✅ Added ${channel} to greet channels list! Total channels: **${list.length}**`, ephemeral: true });
+        return interaction.reply({ content: `✅ Added ${channel} to greet channels list! Total channels: **${list.length}**`, flags: MessageFlags.Ephemeral });
       }
       
       if (action === 'remove') {
         if (!channel) {
-          return interaction.reply({ content: '❌ Please specify a channel to remove.', ephemeral: true });
+          return interaction.reply({ content: '❌ Please specify a channel to remove.', flags: MessageFlags.Ephemeral });
         }
         if (!list.includes(channel.id)) {
-          return interaction.reply({ content: `❌ ${channel} is not in the greet channels list.`, ephemeral: true });
+          return interaction.reply({ content: `❌ ${channel} is not in the greet channels list.`, flags: MessageFlags.Ephemeral });
         }
         list = list.filter(id => id !== channel.id);
         db.setSetting('greetChannels', list);
-        return interaction.reply({ content: `✅ Removed ${channel} from greet channels list! Remaining: **${list.length}**`, ephemeral: true });
+        return interaction.reply({ content: `✅ Removed ${channel} from greet channels list! Remaining: **${list.length}**`, flags: MessageFlags.Ephemeral });
       }
       
       if (action === 'view') {
         if (list.length === 0) {
-          return interaction.reply({ content: '📋 There are no channels configured for greet messages yet.', ephemeral: true });
+          return interaction.reply({ content: '📋 There are no channels configured for greet messages yet.', flags: MessageFlags.Ephemeral });
         }
         const formattedList = list.map((id, index) => `${index + 1}. <#${id}>`).join('\n');
         const embed = new EmbedBuilder()
           .setColor('#2b2d31')
           .setTitle('📋 Configured Greet Channels')
           .setDescription(`These channels will receive a 5-second self-deleting greet message when a member joins:\n\n${formattedList}`);
-        return interaction.reply({ embeds: [embed], ephemeral: true });
+        return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
       }
     }
 
     // /event1invite
     if (commandName === 'event1invite') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Admin only.', ephemeral: true });
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
       const enabled = interaction.options.getBoolean('enabled');
       db.setSetting('event1invite', enabled);
-      return interaction.reply({ content: `✅ **1-Invite Special Event** has been **${enabled ? 'ENABLED ⚡ (All rewards cost 1 invite & no 30s timeouts)' : 'DISABLED ❌'}**!`, ephemeral: true });
+      return interaction.reply({ content: `✅ **1-Invite Special Event** has been **${enabled ? 'ENABLED ⚡ (All rewards cost 1 invite & no 30s timeouts)' : 'DISABLED ❌'}**!`, flags: MessageFlags.Ephemeral });
     }
 
     // /invites
@@ -434,7 +437,7 @@ client.on('interactionCreate', async (interaction) => {
           value: REWARDS.map(r => `${r.emoji} ${r.label.split(' ').slice(1).join(' ')} — **${is1Inv ? 1 : r.invites} invites**`).join('\n') 
         })
         .setFooter({ text: 'Invite friends to earn more!' });
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
     }
 
     // /claim
@@ -464,7 +467,7 @@ client.on('interactionCreate', async (interaction) => {
         .setDescription(`Your Invites: **${count}**\n\nSelect a reward below. Invites will be deducted on claim.`)
         .setFooter({ text: 'RIWAAYAT Reward System' });
 
-      return interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+      return interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
     }
 
     // /leaderboard
@@ -488,7 +491,7 @@ client.on('interactionCreate', async (interaction) => {
     // /panel
     if (commandName === 'panel') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Admin only command.', ephemeral: true });
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
       }
 
       const embed = new EmbedBuilder()
@@ -506,13 +509,13 @@ client.on('interactionCreate', async (interaction) => {
       );
 
       await interaction.channel.send({ embeds: [embed], components: [row] });
-      return interaction.reply({ content: '✅ Panel posted!', ephemeral: true });
+      return interaction.reply({ content: '✅ Panel posted!', flags: MessageFlags.Ephemeral });
     }
 
     // /stock
     if (commandName === 'stock') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Admin only.', ephemeral: true });
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
 
       const sub = interaction.options.getSubcommand();
@@ -525,7 +528,7 @@ client.on('interactionCreate', async (interaction) => {
 
         syncCodeToBackend(code, category);
 
-        return interaction.reply({ content: `✅ Code added to **${category}** stock! Current stock: **${count}**`, ephemeral: true });
+        return interaction.reply({ content: `✅ Code added to **${category}** stock! Current stock: **${count}**`, flags: MessageFlags.Ephemeral });
       }
 
       if (sub === 'generate') {
@@ -547,7 +550,7 @@ client.on('interactionCreate', async (interaction) => {
           .setDescription(`\`\`\`\n${codes.join('\n')}\n\`\`\``)
           .addFields({ name: 'Total Stock', value: `**${total}** codes available` })
           .setFooter({ text: 'RIWAAYAT Admin Panel' });
-        return interaction.reply({ embeds: [embed], ephemeral: true });
+        return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
       }
 
       if (sub === 'view') {
@@ -563,14 +566,14 @@ client.on('interactionCreate', async (interaction) => {
           .setTitle('📦 Stock Levels')
           .setDescription(lines || 'No stock added yet.')
           .setFooter({ text: 'Use /stock add or /stock generate to add codes' });
-        return interaction.reply({ embeds: [embed], ephemeral: true });
+        return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
       }
     }
 
     // /addinvites
     if (commandName === 'addinvites') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Admin only.', ephemeral: true });
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
       const targetUser = interaction.options.getUser('user');
       const amount = interaction.options.getInteger('amount');
@@ -579,24 +582,24 @@ client.on('interactionCreate', async (interaction) => {
       user.count += amount;
       user.totalEarned += amount;
       db.saveDB(dbData);
-      return interaction.reply({ content: `✅ Added **${amount}** invites to **@${targetUser.username}**. New balance: **${user.count}**`, ephemeral: true });
+      return interaction.reply({ content: `✅ Added **${amount}** invites to **@${targetUser.username}**. New balance: **${user.count}**`, flags: MessageFlags.Ephemeral });
     }
 
     // /removeinvites
     if (commandName === 'removeinvites') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Admin only.', ephemeral: true });
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
       const targetUser = interaction.options.getUser('user');
       const amount = interaction.options.getInteger('amount');
       const dbData = db.loadDB();
       const user = db.getUser(dbData, targetUser.id, targetUser.username);
       if (user.count < amount) {
-        return interaction.reply({ content: `❌ **@${targetUser.username}** only has **${user.count}** invites. Cannot remove **${amount}**.`, ephemeral: true });
+        return interaction.reply({ content: `❌ **@${targetUser.username}** only has **${user.count}** invites. Cannot remove **${amount}**.`, flags: MessageFlags.Ephemeral });
       }
       user.count -= amount;
       db.saveDB(dbData);
-      return interaction.reply({ content: `✅ Removed **${amount}** invites from **@${targetUser.username}**. New balance: **${user.count}**`, ephemeral: true });
+      return interaction.reply({ content: `✅ Removed **${amount}** invites from **@${targetUser.username}**. New balance: **${user.count}**`, flags: MessageFlags.Ephemeral });
     }
   }
 
@@ -605,7 +608,7 @@ client.on('interactionCreate', async (interaction) => {
 
     // 📩 Create Ticket Button
     if (interaction.customId === 'open_ticket') {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       const ticketName = `claim-${interaction.user.username.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
       const existing = interaction.guild.channels.cache.find(c => c.name === ticketName);
@@ -691,7 +694,7 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.reply({
         embeds: [expandEmbed],
         components: [filterRow, continueRow],
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -701,7 +704,7 @@ client.on('interactionCreate', async (interaction) => {
       const list = logs.filter(l => l.status === 'LEFT').map(l => `@${l.inviteeUsername}`).join('\n') || 'None';
       return interaction.reply({
         content: `👥 **Users who left after joining:**\n\`\`\`\n${list.slice(0, 1800)}\n\`\`\``,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -711,7 +714,7 @@ client.on('interactionCreate', async (interaction) => {
       const list = logs.filter(l => l.status === 'REJOIN').map(l => `@${l.inviteeUsername}`).join('\n') || 'None';
       return interaction.reply({
         content: `🔄 **Users who rejoined:**\n\`\`\`\n${list.slice(0, 1800)}\n\`\`\``,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -721,7 +724,7 @@ client.on('interactionCreate', async (interaction) => {
       const list = logs.filter(l => l.status === 'FAKE').map(l => `@${l.inviteeUsername}`).join('\n') || 'None';
       return interaction.reply({
         content: `❌ **Users flagged as fake/self-invites:**\n\`\`\`\n${list.slice(0, 1800)}\n\`\`\``,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -844,7 +847,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId === 'claim_reward_ticket' || interaction.customId === 'claim_reward_direct') {
       const rewardId = interaction.values[0];
       const reward = getRewardById(rewardId);
-      if (!reward) return interaction.reply({ content: '❌ Invalid reward.', ephemeral: true });
+      if (!reward) return interaction.reply({ content: '❌ Invalid reward.', flags: MessageFlags.Ephemeral });
 
       const invCount = db.getInviteCount(interaction.user.id);
       const is1Inv = db.getSetting('event1invite', false);
@@ -855,13 +858,13 @@ client.on('interactionCreate', async (interaction) => {
           .setColor('#ef4444')
           .setTitle('❌ Not Enough Invites')
           .setDescription(`You need **${cost}** invites for **${reward.label}**.\nYou currently have **${invCount}** invite(s).\n\n📢 Invite **${cost - invCount}** more friend(s) to claim!`);
-        return interaction.reply({ embeds: [embed], ephemeral: true });
+        return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
       }
 
       // Deduct invites
       const deducted = db.deductInvites(interaction.user.id, cost);
       if (!deducted) {
-        return interaction.reply({ content: '❌ Failed to process. Try again.', ephemeral: true });
+        return interaction.reply({ content: '❌ Failed to process. Try again.', flags: MessageFlags.Ephemeral });
       }
 
       // Generate code + local log
