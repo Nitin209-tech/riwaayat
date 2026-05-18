@@ -51,6 +51,7 @@ app.post('/api/rewards/verify-code', rewardsController.verifyPromoCode);
 
 // 🤖 Sync Discord Bot Payouts/Codes securely to DB
 app.post('/api/rewards/sync-bot-code', rewardsController.syncBotCode);
+app.get('/api/rewards/pull-redemptions', rewardsController.pullRedemptions);
 
 // 🛡️ Admin Root Controls
 app.post('/api/admin/generate-code', authenticateToken, authorizeRoles('ADMIN'), adminController.generateRedeemCode);

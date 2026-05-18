@@ -63,6 +63,53 @@ function syncCodeToBackend(code, category) {
   req.end();
 }
 
+// ─── STABLE HTTPS/HTTP REDEMPTIONS PULLER ───────────────────────────
+function pullRedemptionsFromBackend() {
+  return new Promise((resolve, reject) => {
+    const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+    let url;
+    try {
+      url = new URL(`${BACKEND_URL}/api/rewards/pull-redemptions`);
+    } catch (e) {
+      return reject(new Error(`Invalid BACKEND_URL: ${BACKEND_URL}`));
+    }
+
+    const options = {
+      hostname: url.hostname,
+      port: url.port || (url.protocol === 'https:' ? 443 : 80),
+      path: url.pathname + url.search,
+      method: 'GET',
+      headers: {
+        'x-bot-token': BOT_TOKEN
+      }
+    };
+
+    const client = url.protocol === 'https:' ? https : http;
+    const req = client.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.success) {
+            resolve(parsed.redemptions || []);
+          } else {
+            reject(new Error(parsed.error || 'Server error pulling redemptions.'));
+          }
+        } catch (e) {
+          reject(new Error('Failed to parse redemptions payload.'));
+        }
+      });
+    });
+
+    req.on('error', (err) => {
+      reject(err);
+    });
+
+    req.end();
+  });
+}
+
 // ─── GREET & WELCOME TELEMETRY DISPATCHER ───────────────────────────
 async function triggerWelcomeAndGreets(member, inviterUser, inviterInvites) {
   // 1. Permanent Welcome Message
@@ -178,6 +225,8 @@ const commands = [
     .addBooleanOption(opt => opt.setName('enabled').setDescription('Enable or disable 1-invite event').setRequired(true)),
   new SlashCommandBuilder().setName('testwelcome')
     .setDescription('Simulate a join event to test welcome and greet messages (Admin only)'),
+  new SlashCommandBuilder().setName('serverpulling')
+    .setDescription('Pull the latest 10 prize redemptions claimed on the website (Admin only)'),
 ].map(cmd => cmd.toJSON());
 
 // ─── BOT CLIENT ────────────────────────────────────────────────────
@@ -328,11 +377,80 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
       
-      const mockInvites = db.getInviteCount(interaction.user.id);
-      await interaction.reply({ content: '🧪 **Simulating join event...** Dispatches firing now!', flags: MessageFlags.Ephemeral });
+      const welcomeChannelId = db.getSetting('welcomeChannel') || interaction.channel.id;
+      let greetChannels = db.getSetting('greetChannels', []);
+      if (!Array.isArray(greetChannels) || greetChannels.length === 0) {
+        greetChannels = [interaction.channel.id]; // fallback to current channel for testing
+      }
       
-      await triggerWelcomeAndGreets(interaction.member, client.user, mockInvites);
+      const mockInvites = db.getInviteCount(interaction.user.id);
+      await interaction.reply({ content: '🧪 **Simulating join event...** Dispatches firing now inside channels!', flags: MessageFlags.Ephemeral });
+      
+      // Temporary override for testing
+      const originalWelcomeId = db.getSetting('welcomeChannel');
+      const originalGreetChannels = db.getSetting('greetChannels');
+      
+      db.setSetting('welcomeChannel', welcomeChannelId);
+      db.setSetting('greetChannels', greetChannels);
+      
+      try {
+        await triggerWelcomeAndGreets(interaction.member, client.user, mockInvites);
+      } finally {
+        // Restore original configuration immediately
+        if (originalWelcomeId) db.setSetting('welcomeChannel', originalWelcomeId);
+        else {
+          const dbData = db.loadDB();
+          delete dbData.settings.welcomeChannel;
+          db.saveDB(dbData);
+        }
+        if (originalGreetChannels) db.setSetting('greetChannels', originalGreetChannels);
+        else {
+          const dbData = db.loadDB();
+          delete dbData.settings.greetChannels;
+          db.saveDB(dbData);
+        }
+      }
       return;
+    }
+
+    // /serverpulling
+    if (commandName === 'serverpulling') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      
+      try {
+        const redemptions = await pullRedemptionsFromBackend();
+        if (redemptions.length === 0) {
+          const embed = new EmbedBuilder()
+            .setColor('#3b82f6')
+            .setTitle('🌐 RIWAAYAT WEBSITE REDEMPTIONS')
+            .setDescription('❌ No redemptions found in the database yet. Get some users to claim rewards on the website!')
+            .setTimestamp();
+          return interaction.editReply({ embeds: [embed] });
+        }
+        
+        const embed = new EmbedBuilder()
+          .setColor('#3b82f6')
+          .setTitle('🌐 RIWAAYAT WEBSITE REDEMPTIONS')
+          .setDescription(`📋 Successfully pulled the last **${redemptions.length}** prize claims from the production database.`)
+          .setTimestamp();
+          
+        redemptions.forEach((r, idx) => {
+          const formattedDate = new Date(r.claimedAt).toLocaleString('en-US');
+          embed.addFields({
+            name: `🔹 Claim #${idx + 1} — ${r.category} (${r.status})`,
+            value: `👤 **Gamer**: @${r.extraField1}\n📧 **Email**: ${r.emailUsed}\n🔑 **Voucher Key**: \`${r.deliveredPayload}\`\n📍 **IP Address**: \`${r.ipAddress}\`\n📅 **Date**: ${formattedDate}`
+          });
+        });
+        
+        return interaction.editReply({ embeds: [embed] });
+      } catch (err) {
+        console.error('Failed to pull redemptions:', err);
+        return interaction.editReply({ content: `❌ **Failed to pull from database**: ${err.message}` });
+      }
     }
 
     // /welcomemsg

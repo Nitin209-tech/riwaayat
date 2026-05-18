@@ -81,8 +81,8 @@ model RedeemCode {
 // 📝 Historical Redemptions Log
 model RedeemHistory {
   id               String   @id @default(uuid())
-  userId           String
-  user             User     @relation(fields: [userId], references: [id])
+  userId           String?
+  user             User?    @relation(fields: [userId], references: [id])
   rewardId         String
   reward           Reward   @relation(fields: [rewardId], references: [id])
   category         Category

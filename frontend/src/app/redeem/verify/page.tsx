@@ -160,7 +160,12 @@ function VerifyRedeemContent() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ code: rawCode })
+        body: JSON.stringify({ 
+          code: rawCode,
+          email: email,
+          username: username,
+          category: category
+        })
       });
 
       const data = await res.json();

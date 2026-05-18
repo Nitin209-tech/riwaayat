@@ -134,7 +134,7 @@ async function redeemReward(req, res) {
  * Verify Promo Code (public check)
  */
 async function verifyPromoCode(req, res) {
-  const { code } = req.body;
+  const { code, email, username, category } = req.body;
   if (!code) {
     return res.status(400).json({ success: false, error: 'Promo code is required.' });
   }
@@ -161,6 +161,54 @@ async function verifyPromoCode(req, res) {
 
     if (codeStock.usedCount >= codeStock.maxUses) {
       return res.status(400).json({ success: false, error: 'This activation code has already been redeemed.' });
+    }
+
+    // If both email and username are provided, process full redemption save in database
+    if (email && username) {
+      const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+      
+      // 1. Mark code as used
+      await prisma.redeemCode.update({
+        where: { id: codeStock.id },
+        data: { usedCount: codeStock.usedCount + 1 }
+      });
+
+      // 2. Map category string properly to database category enum
+      let dbCategory = 'MINECRAFT';
+      if (category) {
+        const catUpper = category.toUpperCase();
+        if (catUpper.includes('NITRO')) dbCategory = 'NITRO';
+        else if (catUpper.includes('ROBLOX')) dbCategory = 'ROBLOX';
+        else if (catUpper.includes('YOUTUBE') || catUpper.includes('YT')) dbCategory = 'YOUTUBE';
+      }
+
+      // 3. Create historical redemption log
+      await prisma.redeemHistory.create({
+        data: {
+          rewardId: codeStock.rewardId,
+          category: dbCategory,
+          emailUsed: email,
+          extraField1: username,
+          deliveredPayload: codeStock.code,
+          status: 'DELIVERED',
+          ipAddress: ip
+        }
+      });
+
+      // 4. Update catalog stock if applicable
+      if (codeStock.reward && codeStock.reward.stock > 0) {
+        await prisma.reward.update({
+          where: { id: codeStock.rewardId },
+          data: { stock: { decrement: 1 } }
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Code verified and successfully redeemed in database!',
+        rewardName: codeStock.reward ? codeStock.reward.name : 'Premium Prize',
+        payload: codeStock.code
+      });
     }
 
     return res.status(200).json({
@@ -264,4 +312,40 @@ async function syncBotCode(req, res) {
   }
 }
 
-module.exports = { getRewardsCatalog, redeemReward, verifyPromoCode, syncBotCode };
+async function pullRedemptions(req, res) {
+  const botToken = req.headers['x-bot-token'];
+
+  // Verify Bot Auth Token
+  if (!botToken || botToken !== process.env.DISCORD_BOT_TOKEN) {
+    return res.status(401).json({ success: false, error: 'Unauthorized bot synchronizer handshake.' });
+  }
+
+  try {
+    const redemptions = await prisma.redeemHistory.findMany({
+      take: 10,
+      orderBy: { claimedAt: 'desc' },
+      include: {
+        reward: true
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      redemptions: redemptions.map(r => ({
+        id: r.id,
+        category: r.category,
+        emailUsed: r.emailUsed,
+        extraField1: r.extraField1,
+        deliveredPayload: r.deliveredPayload,
+        status: r.status,
+        ipAddress: r.ipAddress,
+        claimedAt: r.claimedAt
+      }))
+    });
+  } catch (err) {
+    console.error('Bot redemptions pull failed:', err);
+    return res.status(500).json({ success: false, error: 'Internal system retrieval failure' });
+  }
+}
+
+module.exports = { getRewardsCatalog, redeemReward, verifyPromoCode, syncBotCode, pullRedemptions };
