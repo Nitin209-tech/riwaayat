@@ -1,0 +1,112 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 🌐 Visitor Analytics Table
+model Visitor {
+  id         String   @id @default(uuid())
+  ipAddress  String
+  userAgent  String
+  country    String   @default("Unknown")
+  deviceFp   String?
+  createdAt  DateTime @default(now())
+}
+
+// 👤 Discord Authorized Users
+model User {
+  id           String         @id @default(uuid())
+  discordId    String         @unique
+  username     String
+  globalName   String?
+  avatar       String?
+  email        String?
+  accessToken  String
+  refreshToken String?
+  joinedServer Boolean        @default(false)
+  role         Role           @default(USER)
+  coins        Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  redeems      RedeemHistory[]
+  auditLogs    AuditLog[]
+}
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+// 🎁 Reward Stock Catalog
+model Reward {
+  id          String         @id @default(uuid())
+  category    Category
+  name        String
+  description String
+  inrPrice    String
+  coinsCost   Int
+  stock       Int            @default(0)
+  maxStock    Int            @default(100)
+  imageUrl    String
+  isActive    Boolean        @default(true)
+  redeemCodes RedeemCode[]
+  redeems     RedeemHistory[]
+}
+
+enum Category {
+  MINECRAFT
+  ROBLOX
+  YOUTUBE
+  NITRO
+}
+
+// 🔑 Encrypted Redeem Codes Stock
+model RedeemCode {
+  id               String   @id @default(uuid())
+  rewardId         String
+  reward           Reward   @relation(fields: [rewardId], references: [id])
+  code             String   @unique
+  encryptedPayload String
+  maxUses          Int      @default(1)
+  usedCount        Int      @default(0)
+  expiresAt        DateTime?
+  createdAt        DateTime @default(now())
+}
+
+// 📝 Historical Redemptions Log
+model RedeemHistory {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  rewardId         String
+  reward           Reward   @relation(fields: [rewardId], references: [id])
+  category         Category
+  emailUsed        String
+  extraField1      String
+  deliveredPayload String
+  status           Status   @default(PROCESSING)
+  ipAddress        String
+  claimedAt        DateTime @default(now())
+}
+
+enum Status {
+  PROCESSING
+  DELIVERED
+  FAILED
+}
+
+// 🛡️ Security Audit Logs
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  ipAddress  String
+  details    String
+  createdAt  DateTime @default(now())
+}

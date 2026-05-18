@@ -1,0 +1,15 @@
+{
+  "name": "riwaayat-monorepo",
+  "version": "1.0.0",
+  "description": "State-of-the-art cyberpunk rewards portal monorepo configuration.",
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:bot": "cd bot && npm run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:bot\"",
+    "install:all": "concurrently \"cd backend && npm install\" \"cd frontend && npm install\" \"cd bot && npm install\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -1,0 +1,181 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,400&display=swap');
+
+:root {
+  --bg: #ffffff;
+  --bg2: #fafafa;
+  --bg3: #f3f4f6;
+  --surface: #ffffff;
+  --glass: rgba(255, 255, 255, 0.85);
+  --border: rgba(0, 0, 0, 0.08);
+  --border2: rgba(0, 0, 0, 0.15);
+  --border3: rgba(0, 0, 0, 0.35);
+  --t: #000000;
+  --t2: rgba(0, 0, 0, 0.65);
+  --t3: rgba(0, 0, 0, 0.45);
+  --t4: rgba(0, 0, 0, 0.2);
+  --p: #1d4ed8;
+  --p2: #2563eb;
+  --p3: #1e40af;
+  --p4: rgba(29, 78, 216, 0.05);
+  --pd: rgba(29, 78, 216, 0.03);
+  
+  --r: 6px;
+  --r2: 10px;
+  --r3: 14px;
+  --nh: 72px;
+  
+  --s1: 0 4px 30px rgba(0, 0, 0, 0.04);
+  --s2: 0 8px 40px rgba(0, 0, 0, 0.06);
+  --s3: 0 16px 80px rgba(0, 0, 0, 0.08);
+  
+  --nav-bg: rgba(255, 255, 255, 0.85);
+  --mob-bg: rgba(255, 255, 255, 0.98);
+  --card-bg: #ffffff;
+  --input-bg: #fafafa;
+}
+
+[data-theme="dark"] {
+  --bg: #ffffff;
+  --bg2: #fafafa;
+  --bg3: #f3f4f6;
+  --surface: #ffffff;
+  --glass: rgba(255, 255, 255, 0.85);
+  --border: rgba(0, 0, 0, 0.08);
+  --border2: rgba(0, 0, 0, 0.15);
+  --border3: rgba(0, 0, 0, 0.35);
+  --t: #000000;
+  --t2: rgba(0, 0, 0, 0.65);
+  --t3: rgba(0, 0, 0, 0.45);
+  --t4: rgba(0, 0, 0, 0.2);
+  --p: #1d4ed8;
+  --p2: #2563eb;
+  --p3: #1e40af;
+  --p4: rgba(29, 78, 216, 0.05);
+  --pd: rgba(29, 78, 216, 0.03);
+  
+  --s1: 0 4px 30px rgba(0, 0, 0, 0.04);
+  --s2: 0 8px 40px rgba(0, 0, 0, 0.06);
+  --s3: 0 16px 80px rgba(0, 0, 0, 0.08);
+  
+  --nav-bg: rgba(255, 255, 255, 0.85);
+  --mob-bg: rgba(255, 255, 255, 0.98);
+  --card-bg: #ffffff;
+  --input-bg: #fafafa;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background-color: var(--bg);
+  color: var(--t);
+  overflow-x: hidden;
+  line-height: 1.6;
+  transition: background 0.3s, color 0.3s;
+}
+
+/* BG MESH */
+.bg-mesh {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+  overflow: hidden;
+  background: radial-gradient(ellipse 80% 60% at 10% 5%,rgba(29, 78, 216, 0.07) 0%,transparent 60%),
+             radial-gradient(ellipse 60% 50% at 90% 90%,rgba(37, 99, 235, 0.05) 0%,transparent 60%),
+             var(--bg);
+  transition: background 0.3s;
+}
+
+[data-theme="dark"] .bg-mesh {
+  background: radial-gradient(ellipse 80% 60% at 10% 5%,rgba(29, 78, 216, 0.07) 0%,transparent 60%),
+             radial-gradient(ellipse 60% 50% at 90% 90%,rgba(37, 99, 235, 0.05) 0%,transparent 60%),
+             var(--bg);
+}
+
+.bg-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  animation: orbDrift 24s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.bg-orb.o1 {
+  width: 600px;
+  height: 600px;
+  top: -120px;
+  left: -160px;
+  background: radial-gradient(circle,rgba(29, 78, 216, 0.05),transparent 70%);
+}
+
+.bg-orb.o2 {
+  width: 480px;
+  height: 480px;
+  bottom: -100px;
+  right: -100px;
+  background: radial-gradient(circle,rgba(30, 64, 175, 0.04),transparent 70%);
+  animation-delay: -9s;
+  animation-duration: 22s;
+}
+
+.bg-orb.o3 {
+  width: 300px;
+  height: 300px;
+  top: 45%;
+  left: 48%;
+  background: radial-gradient(circle,rgba(0, 0, 0, 0.01),transparent 70%);
+  animation-delay: -5s;
+  animation-duration: 15s;
+}
+
+.bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(0, 0, 0, 0.08) 1.5px,transparent 1.5px);
+  background-size: 36px 36px;
+}
+
+@keyframes orbDrift {
+  0% { transform: translate(0,0); }
+  33% { transform: translate(28px,-18px); }
+  66% { transform: translate(-18px,14px); }
+  100% { transform: translate(0,0); }
+}
+
+/* Custom Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #ffffff;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #000000;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #1d4ed8;
+}
+
+/* Glassmorphism utility overlay */
+.glassmorphism {
+  background: var(--glass);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid var(--border);
+  box-shadow: var(--s1);
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.glassmorphism:hover {
+  border-color: var(--border2);
+  transform: translateY(-3px);
+  box-shadow: var(--s3);
+}

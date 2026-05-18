@@ -1,0 +1,40 @@
+{
+  "invites": {
+    "1291447772058353684": {
+      "username": "nitin_209",
+      "count": 36,
+      "totalEarned": 42,
+      "fake": 0,
+      "rejoin": 0
+    }
+  },
+  "stock": {},
+  "tickets": [],
+  "redemptions": [
+    {
+      "discordId": "1291447772058353684",
+      "username": "nitin_209",
+      "category": "NITRO_BASIC",
+      "reward": "Nitro Basic Link",
+      "code": "U82XW-EPKST-MDLTY-EU3UC-W8MUY",
+      "date": "2026-05-18T17:19:17.794Z"
+    },
+    {
+      "discordId": "1291447772058353684",
+      "username": "nitin_209",
+      "category": "MINECRAFT_ACC",
+      "reward": "Minecraft Account",
+      "code": "GEAGD-3FZLL-VKHS6-KVDBB-RTG8Z",
+      "date": "2026-05-18T17:21:57.539Z"
+    },
+    {
+      "discordId": "1291447772058353684",
+      "username": "nitin_209",
+      "category": "MINECRAFT_ACC",
+      "reward": "Minecraft Account",
+      "code": "9KN5W-9HKRV-R48VQ-GGSME-9CU9Z",
+      "date": "2026-05-18T17:21:57.560Z"
+    }
+  ],
+  "settings": {}
+}
