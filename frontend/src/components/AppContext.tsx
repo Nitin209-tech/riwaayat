@@ -2,7 +2,11 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+let API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+if (API_BASE && !API_BASE.startsWith('http://') && !API_BASE.startsWith('https://')) {
+  API_BASE = `https://${API_BASE}`;
+}
+API_BASE = API_BASE.replace(/\/$/, "");
 
 interface User {
   id: string;

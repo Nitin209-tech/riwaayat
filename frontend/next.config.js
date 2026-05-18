@@ -58,11 +58,18 @@ const nextConfig = {
 
   // Rewrites for API proxy
   async rewrites() {
+    let backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+    if (backendUrl && !backendUrl.startsWith('http://') && !backendUrl.startsWith('https://')) {
+      backendUrl = `https://${backendUrl}`;
+    }
+    // Remove trailing slash if present
+    backendUrl = backendUrl.replace(/\/$/, "");
+
     return {
       beforeFiles: [
         {
           source: '/api/:path*',
-          destination: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/:path*`,
+          destination: `${backendUrl}/api/:path*`,
         },
       ],
     };
