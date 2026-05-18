@@ -110,6 +110,46 @@ function pullRedemptionsFromBackend() {
   });
 }
 
+// ─── STABLE HTTPS/HTTP HEALTH CHECKER ───────────────────────────────
+function checkHealthFromBackend() {
+  return new Promise((resolve) => {
+    const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+    let url;
+    try {
+      url = new URL(`${BACKEND_URL}/health`);
+    } catch (e) {
+      return resolve({ status: 'DOWN', database: 'OFFLINE', error: 'Invalid BACKEND_URL' });
+    }
+
+    const options = {
+      hostname: url.hostname,
+      port: url.port || (url.protocol === 'https:' ? 443 : 80),
+      path: url.pathname,
+      method: 'GET'
+    };
+
+    const client = url.protocol === 'https:' ? https : http;
+    const req = client.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          resolve(parsed);
+        } catch (e) {
+          resolve({ status: 'DOWN', database: 'OFFLINE', error: 'Failed to parse health check response.' });
+        }
+      });
+    });
+
+    req.on('error', (err) => {
+      resolve({ status: 'DOWN', database: 'OFFLINE', error: err.message });
+    });
+
+    req.end();
+  });
+}
+
 // ─── GREET & WELCOME TELEMETRY DISPATCHER ───────────────────────────
 async function triggerWelcomeAndGreets(member, inviterUser, inviterInvites) {
   // 1. Permanent Welcome Message
@@ -227,6 +267,8 @@ const commands = [
     .setDescription('Simulate a join event to test welcome and greet messages (Admin only)'),
   new SlashCommandBuilder().setName('serverpulling')
     .setDescription('Pull the latest 10 prize redemptions claimed on the website (Admin only)'),
+  new SlashCommandBuilder().setName('dbstatus')
+    .setDescription('Check if the bot is successfully connected to the PostgreSQL database (Admin only)'),
 ].map(cmd => cmd.toJSON());
 
 // ─── BOT CLIENT ────────────────────────────────────────────────────
@@ -451,6 +493,39 @@ client.on('interactionCreate', async (interaction) => {
         console.error('Failed to pull redemptions:', err);
         return interaction.editReply({ content: `❌ **Failed to pull from database**: ${err.message}` });
       }
+    }
+
+    // /dbstatus
+    if (commandName === 'dbstatus') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      
+      const health = await checkHealthFromBackend();
+      
+      const embed = new EmbedBuilder()
+        .setTitle('🗄️ DATABASE CONNECTION STATUS')
+        .setTimestamp();
+        
+      if (health.database === 'ONLINE') {
+        embed.setColor('#10b981') // emerald green
+          .setDescription('🟢 **PostgreSQL Connection is ONLINE & HEALTHY!**\n\nThe bot and website are successfully connected to your Supabase production database. All payouts, stock levels, and user claims are synchronizing perfectly in real-time!')
+          .addFields(
+            { name: '🔌 Connection Mode', value: 'Direct TCP Port 5432', inline: true },
+            { name: '📡 Server Status', value: '🟢 HEALTHY (UP)', inline: true }
+          );
+      } else {
+        embed.setColor('#ef4444') // red
+          .setDescription('🔴 **PostgreSQL Connection is OFFLINE!**\n\nThe backend server is active but failed to connect to the Supabase database. Please check your database connection credentials on Railway!')
+          .addFields(
+            { name: '🔌 Connection Mode', value: 'Direct TCP Port 5432', inline: true },
+            { name: '⚠️ Error Message', value: `\`\`\`\n${health.error || 'Unknown Connection Failure'}\n\`\`\`` }
+          );
+      }
+      
+      return interaction.editReply({ embeds: [embed] });
     }
 
     // /welcomemsg

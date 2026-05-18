@@ -59,8 +59,24 @@ app.get('/api/admin/visitor-logs', authenticateToken, authorizeRoles('ADMIN', 'M
 app.get('/api/admin/audit-logs', authenticateToken, authorizeRoles('ADMIN'), adminController.getAuditLogs);
 
 // System Status Check
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'UP', timestamp: new Date() });
+app.get('/health', async (req, res) => {
+  try {
+    const prisma = require('./config/db');
+    // Run a fast verification query
+    await prisma.$queryRaw`SELECT 1`;
+    return res.status(200).json({ 
+      status: 'UP', 
+      database: 'ONLINE', 
+      timestamp: new Date() 
+    });
+  } catch (err) {
+    return res.status(500).json({ 
+      status: 'DOWN', 
+      database: 'OFFLINE', 
+      error: err.message, 
+      timestamp: new Date() 
+    });
+  }
 });
 
 // Boot listening server
