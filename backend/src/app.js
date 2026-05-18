@@ -45,6 +45,9 @@ app.get('/api/rewards/catalog', rewardsController.getRewardsCatalog);
 // 🎟️ Redeem Reward form submittals (3 claims/min limit)
 app.post('/api/rewards/redeem', authenticateToken, redeemLimit, rewardsController.redeemReward);
 
+// 🎟️ Verify Promo Code (public check)
+app.post('/api/rewards/verify-code', rewardsController.verifyPromoCode);
+
 // 🛡️ Admin Root Controls
 app.post('/api/admin/generate-code', authenticateToken, authorizeRoles('ADMIN'), adminController.generateRedeemCode);
 app.get('/api/admin/visitor-logs', authenticateToken, authorizeRoles('ADMIN', 'MODERATOR'), adminController.getVisitorLogs);

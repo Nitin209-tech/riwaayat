@@ -130,4 +130,49 @@ async function redeemReward(req, res) {
   }
 }
 
-module.exports = { getRewardsCatalog, redeemReward };
+/**
+ * Verify Promo Code (public check)
+ */
+async function verifyPromoCode(req, res) {
+  const { code } = req.body;
+  if (!code) {
+    return res.status(400).json({ success: false, error: 'Promo code is required.' });
+  }
+
+  try {
+    const cleanedCode = code.replace(/-/g, '').toUpperCase();
+    
+    // Look up code (handle exact, clean, or lowercase inputs)
+    const codeStock = await prisma.redeemCode.findFirst({
+      where: {
+        OR: [
+          { code: code.toUpperCase() },
+          { code: cleanedCode }
+        ]
+      },
+      include: {
+        reward: true
+      }
+    });
+
+    if (!codeStock) {
+      return res.status(404).json({ success: false, error: 'This activation code is invalid. Please enter a valid 25-character key.' });
+    }
+
+    if (codeStock.usedCount >= codeStock.maxUses) {
+      return res.status(400).json({ success: false, error: 'This activation code has already been redeemed.' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Code verified successfully!',
+      rewardName: codeStock.reward ? codeStock.reward.name : 'Premium Prize',
+      payload: codeStock.code
+    });
+  } catch (err) {
+    console.error('Code verification crashed:', err);
+    return res.status(500).json({ success: false, error: 'Database verification failed.' });
+  }
+}
+
+module.exports = { getRewardsCatalog, redeemReward, verifyPromoCode };
