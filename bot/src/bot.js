@@ -201,7 +201,7 @@ async function triggerWelcomeAndGreets(member, inviterUser, inviterInvites) {
     const welcomeChannel = member.guild.channels.cache.get(welcomeChannelId);
     if (welcomeChannel) {
       let rawMsg = db.getSetting('welcomeMessage', 'Welcome {user} to RIWAAYAT! You were invited by {inviter} (who now has {invites} invites).');
-      const inviterText = inviterUser ? `${inviterUser}` : 'Direct Join';
+      const inviterText = inviterUser ? `@${inviterUser.username}` : 'Direct Join';
 
       const formatted = rawMsg
         .replace(/{user}/g, `${member}`)
@@ -217,7 +217,7 @@ async function triggerWelcomeAndGreets(member, inviterUser, inviterInvites) {
   const greetChannels = db.getSetting('greetChannels', []);
   if (Array.isArray(greetChannels) && greetChannels.length > 0) {
     const rawGreetMsg = db.getSetting('greetMessage', '⚡ Welcome {user}! You were invited by {inviter}.');
-    const inviterText = inviterUser ? `${inviterUser}` : 'Direct Join';
+    const inviterText = inviterUser ? `@${inviterUser.username}` : 'Direct Join';
 
     const formattedGreet = rawGreetMsg
       .replace(/{user}/g, `${member}`)
