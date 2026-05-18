@@ -80,6 +80,36 @@ function createMockPrisma() {
     },
     redeemCode: {
       findUnique: async ({ where }) => store.redeemCodes.find(c => c.code === where.code),
+      findFirst: async ({ where, include }) => {
+        let codeStock;
+        if (where.OR) {
+          codeStock = store.redeemCodes.find(c => 
+            where.OR.some(cond => {
+              if (cond.code) {
+                return c.code.toUpperCase() === cond.code.toUpperCase();
+              }
+              return false;
+            })
+          );
+        } else if (where.code) {
+          codeStock = store.redeemCodes.find(c => c.code === where.code);
+        } else {
+          codeStock = store.redeemCodes.find(c => {
+            let matches = true;
+            if (where.rewardId) matches = matches && (c.rewardId === where.rewardId);
+            if (where.usedCount && where.usedCount.lt !== undefined) {
+              matches = matches && (c.usedCount < where.usedCount.lt);
+            }
+            return matches;
+          });
+        }
+        
+        if (codeStock && include && include.reward) {
+          const reward = store.rewards.find(r => r.id === codeStock.rewardId);
+          return { ...codeStock, reward };
+        }
+        return codeStock;
+      },
       update: async ({ where, data }) => {
         const c = store.redeemCodes.find(x => x.id === where.id);
         if (c) Object.assign(c, data);
