@@ -4,27 +4,38 @@ let activeClient;
 
 const hasValidDB = !!process.env.DATABASE_URL;
 
+let dbError = null;
+
 if (hasValidDB) {
   try {
     activeClient = new PrismaClient();
     activeClient.$connect()
-      .then(() => console.log('📡 Database connection established successfully.'))
+      .then(() => {
+        console.log('📡 Database connection established successfully.');
+        dbError = null;
+      })
       .catch((err) => {
         console.warn('⚠️ PostgreSQL database is offline. Sandbox mock client active.');
+        dbError = err.message || err.toString();
         activeClient = createMockPrisma();
       });
   } catch (e) {
     console.warn('⚠️ Prisma engine error. Falling back to sandbox mock.');
+    dbError = e.message || e.toString();
     activeClient = createMockPrisma();
   }
 } else {
   console.log('⚠️ No production DATABASE_URL provided. Sandbox mock client mode active.');
+  dbError = 'No DATABASE_URL environment variable found.';
   activeClient = createMockPrisma();
 }
 
 // Dynamic Proxy to route queries to active client seamlessly
 const prismaProxy = new Proxy({}, {
   get(target, prop) {
+    if (prop === 'getConnectionError') {
+      return () => dbError;
+    }
     return activeClient[prop];
   }
 });

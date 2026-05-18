@@ -65,9 +65,11 @@ app.get('/health', async (req, res) => {
     
     // Check if using sandbox mock client
     if (typeof prisma.$queryRaw !== 'function') {
+      const errorMsg = typeof prisma.getConnectionError === 'function' ? prisma.getConnectionError() : 'Mock client active';
       return res.status(200).json({ 
         status: 'UP', 
         database: 'OFFLINE (Sandbox Mock Client Active)', 
+        error: errorMsg,
         timestamp: new Date() 
       });
     }
