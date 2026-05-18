@@ -58,7 +58,7 @@ const nextConfig = {
 
   // Rewrites for API proxy
   async rewrites() {
-    let backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+    let backendUrl = process.env.BACKEND_URL || 'https://riwaayat-production.up.railway.app';
     if (backendUrl && !backendUrl.startsWith('http://') && !backendUrl.startsWith('https://')) {
       backendUrl = `https://${backendUrl}`;
     }
