@@ -268,6 +268,27 @@ client.on('interactionCreate', async (interaction) => {
         const code = interaction.options.getString('code');
         db.addStock(category, code);
         const count = db.getStockCount(category);
+
+        // --- SYNC WITH BACKEND DATABASE ---
+        const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+        fetch(`${BACKEND_URL}/api/rewards/sync-bot-code`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-bot-token': BOT_TOKEN
+          },
+          body: JSON.stringify({
+            code: code,
+            category: category
+          })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) console.log(`[SYNC] Admin added code ${code} synced successfully.`);
+          else console.error(`[SYNC_ERROR] Admin sync failed: ${data.error}`);
+        })
+        .catch(err => console.error(`[SYNC_CRASH] Admin sync connection failed:`, err.message));
+
         return interaction.reply({ content: `✅ Code added to **${category}** stock! Current stock: **${count}**`, ephemeral: true });
       }
 
@@ -275,10 +296,30 @@ client.on('interactionCreate', async (interaction) => {
         const category = interaction.options.getString('category');
         const count = Math.min(50, Math.max(1, interaction.options.getInteger('count')));
         const codes = [];
+        const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+
         for (let i = 0; i < count; i++) {
           const code = db.generateCode();
           db.addStock(category, code);
           codes.push(code);
+
+          // --- SYNC GENERATED CODE TO BACKEND ---
+          fetch(`${BACKEND_URL}/api/rewards/sync-bot-code`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-bot-token': BOT_TOKEN
+            },
+            body: JSON.stringify({
+              code: code,
+              category: category
+            })
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (!data.success) console.error(`[SYNC_ERROR] Admin gen sync failed: ${data.error}`);
+          })
+          .catch(err => console.error(`[SYNC_CRASH] Admin gen sync connection failed:`, err.message));
         }
         const total = db.getStockCount(category);
         const embed = new EmbedBuilder()
@@ -531,6 +572,31 @@ client.on('interactionCreate', async (interaction) => {
         date: new Date().toISOString()
       });
       db.saveDB(dbData);
+
+      // --- SYNC WITH BACKEND DATABASE ---
+      const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+      fetch(`${BACKEND_URL}/api/rewards/sync-bot-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-bot-token': BOT_TOKEN
+        },
+        body: JSON.stringify({
+          code: code,
+          category: reward.category
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          console.log(`[SYNC] Code ${code} synced successfully to website database.`);
+        } else {
+          console.error(`[SYNC_ERROR] Failed to sync: ${data.error}`);
+        }
+      })
+      .catch(err => {
+        console.error(`[SYNC_CRASH] Error connecting to backend for sync:`, err.message);
+      });
 
       // ── PAYOUT in spoiler format ──
       await interaction.reply({

@@ -1,5 +1,5 @@
 const prisma = require('../config/db');
-const { decrypt } = require('../utils/encryption');
+const { decrypt, encrypt } = require('../utils/encryption');
 const { Resend } = require('resend');
 
 // Initialize Resend Client
@@ -175,4 +175,93 @@ async function verifyPromoCode(req, res) {
   }
 }
 
-module.exports = { getRewardsCatalog, redeemReward, verifyPromoCode };
+/**
+ * Synchronize a bot payout or generated promo code with website database
+ */
+async function syncBotCode(req, res) {
+  const { code, category } = req.body;
+  const botToken = req.headers['x-bot-token'];
+
+  // 1. Verify Bot Auth Token
+  if (!botToken || botToken !== process.env.DISCORD_BOT_TOKEN) {
+    return res.status(401).json({ success: false, error: 'Unauthorized bot synchronizer handshake.' });
+  }
+
+  if (!code || !category) {
+    return res.status(400).json({ success: false, error: 'Code value and category are required.' });
+  }
+
+  try {
+    // 2. Map bot category to database Category enum
+    let dbCategory = 'NITRO'; // default fallback
+    const botCatUpper = category.toUpperCase();
+    if (botCatUpper.includes('MINECRAFT')) {
+      dbCategory = 'MINECRAFT';
+    } else if (botCatUpper.includes('ROBUX') || botCatUpper.includes('ROBLOX')) {
+      dbCategory = 'ROBLOX';
+    } else if (botCatUpper.includes('YT') || botCatUpper.includes('YOUTUBE')) {
+      dbCategory = 'YOUTUBE';
+    } else if (botCatUpper.includes('NITRO')) {
+      dbCategory = 'NITRO';
+    }
+
+    // 3. Find or create a matching Reward record in DB
+    let reward = await prisma.reward.findFirst({ where: { category: dbCategory } });
+    if (!reward) {
+      reward = await prisma.reward.create({
+        data: {
+          category: dbCategory,
+          name: `${dbCategory.charAt(0) + dbCategory.slice(1).toLowerCase()} Premium Package`,
+          description: `Automatically created reward catalog package for ${dbCategory}`,
+          inrPrice: 'Rs.999',
+          coinsCost: 1000,
+          stock: 100,
+          maxStock: 500,
+          imageUrl: 'https://images.unsplash.com/photo-1614680376593-902f74fa0d41?q=80&w=300',
+          isActive: true
+        }
+      });
+    }
+
+    // 4. Encrypt the cleartext code payload
+    const encryptedPayload = encrypt(code);
+
+    // 5. Create or update RedeemCode in database
+    let existingCode = await prisma.redeemCode.findUnique({
+      where: { code: code.toUpperCase().trim() }
+    });
+
+    let syncedCode;
+    if (existingCode) {
+      syncedCode = await prisma.redeemCode.update({
+        where: { id: existingCode.id },
+        data: {
+          rewardId: reward.id,
+          encryptedPayload: encryptedPayload,
+          usedCount: 0
+        }
+      });
+    } else {
+      syncedCode = await prisma.redeemCode.create({
+        data: {
+          rewardId: reward.id,
+          code: code.toUpperCase().trim(),
+          encryptedPayload: encryptedPayload,
+          maxUses: 1,
+          usedCount: 0
+        }
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Bot generated code successfully synchronized with DB.',
+      code: syncedCode.code
+    });
+  } catch (err) {
+    console.error('Bot code synchronization failed:', err);
+    return res.status(500).json({ success: false, error: 'Internal system synchronization failure' });
+  }
+}
+
+module.exports = { getRewardsCatalog, redeemReward, verifyPromoCode, syncBotCode };
