@@ -62,6 +62,16 @@ app.get('/api/admin/audit-logs', authenticateToken, authorizeRoles('ADMIN'), adm
 app.get('/health', async (req, res) => {
   try {
     const prisma = require('./config/db');
+    
+    // Check if using sandbox mock client
+    if (typeof prisma.$queryRaw !== 'function') {
+      return res.status(200).json({ 
+        status: 'UP', 
+        database: 'OFFLINE (Sandbox Mock Client Active)', 
+        timestamp: new Date() 
+      });
+    }
+
     // Run a fast verification query
     await prisma.$queryRaw`SELECT 1`;
     return res.status(200).json({ 
