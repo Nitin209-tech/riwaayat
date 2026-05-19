@@ -5,7 +5,8 @@ if (typeof dns.setDefaultResultOrder === 'function') {
 
 const { Client, GatewayIntentBits, Partials, ActivityType, EmbedBuilder,
   ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder,
-  ChannelType, PermissionFlagsBits, REST, Routes, SlashCommandBuilder, MessageFlags } = require('discord.js');
+  ChannelType, PermissionFlagsBits, REST, Routes, SlashCommandBuilder, MessageFlags,
+  ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 require('dotenv').config();
 const db = require('./database');
 const { decrypt } = require('./utils/encryption');
@@ -424,6 +425,8 @@ const commands = [
     .addAttachmentOption(opt => opt.setName('file').setDescription('New avatar image file').setRequired(false)),
   new SlashCommandBuilder().setName('botmanager')
     .setDescription('Multi-Agent Bot Token & Dispatch Manager (Admin only)')
+    .addSubcommand(sub => sub.setName('panel')
+      .setDescription('Spawn the interactive Multi-Agent dashboard control panel'))
     .addSubcommand(sub => sub.setName('add')
       .setDescription('Register a new bot token')
       .addStringOption(opt => opt.setName('token').setDescription('The Discord bot token').setRequired(true)))
@@ -462,6 +465,122 @@ const client = new Client({
 });
 
 const guildInvites = new Map();
+
+// Helper: Build the interactive bot manager panel
+async function buildBotManagerPanel(selectedClientId = null) {
+  let tokens = db.getSetting('botTokens', []);
+  if (!Array.isArray(tokens)) tokens = [];
+
+  const embed = new EmbedBuilder()
+    .setColor('#5865F2')
+    .setTitle('🤖 MULTI-AGENT CONTROL CENTER')
+    .setDescription('Configure, update, or broadcast custom payloads using any of your registered bot agents.')
+    .setTimestamp();
+
+  let activeBot = null;
+  let options = [];
+
+  for (const token of tokens) {
+    try {
+      const base64Part = token.split('.')[0];
+      const clientId = Buffer.from(base64Part, 'base64').toString('utf-8');
+      
+      let username = 'Unknown Bot';
+      try {
+        const response = await fetch('https://discord.com/api/v10/users/@me', {
+          headers: { Authorization: `Bot ${token}` }
+        });
+        if (response.ok) {
+          const botData = await response.json();
+          username = botData.username;
+        }
+      } catch {}
+
+      const isSelected = clientId === selectedClientId;
+      if (isSelected) {
+        activeBot = { clientId, username, token };
+      }
+
+      options.push({
+        label: `@${username}`,
+        description: `Client ID: ${clientId}`,
+        value: clientId,
+        emoji: '🤖',
+        default: isSelected
+      });
+    } catch {}
+  }
+
+  if (activeBot) {
+    const inviteLink = `https://discord.com/oauth2/authorize?client_id=${activeBot.clientId}&permissions=8&scope=bot%20applications.commands`;
+    embed.addFields(
+      { name: '🟢 Active Selected Agent', value: `**Tag**: \`@${activeBot.username}\`\n**Client ID**: \`${activeBot.clientId}\`\n🔗 **Invite Link**: [Authorize Bot](${inviteLink})`, inline: false },
+      { name: '🔌 Masked Token', value: `\`${activeBot.token.slice(0, 20)}...\``, inline: true },
+      { name: '📊 Total Registered', value: `\`${tokens.length}\` bot agents`, inline: true }
+    );
+  } else {
+    embed.addFields(
+      { name: '⚪ Active Selected Agent', value: '*None (Please select an agent from the dropdown below)*', inline: false },
+      { name: '📊 Total Registered', value: `\`${tokens.length}\` bot agents`, inline: true }
+    );
+  }
+
+  const components = [];
+
+  // Row 1: Dropdown Select Menu
+  const selectMenu = new StringSelectMenuBuilder()
+    .setCustomId('bm_active_bot_select')
+    .setPlaceholder(options.length > 0 ? '🎯 Select an active bot agent...' : '🔌 No bot agents registered');
+
+  if (options.length > 0) {
+    selectMenu.addOptions(options.slice(0, 25)); // Discord select menu cap is 25 options
+  } else {
+    selectMenu.addOptions({
+      label: 'No Bot Agents Registered',
+      value: 'none',
+      description: 'Click "Register Bot Tokens" below to add one',
+      disabled: true
+    });
+  }
+  components.push(new ActionRowBuilder().addComponents(selectMenu));
+
+  // Row 2: Action Buttons
+  const rowButtons = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('bm_btn_add_tokens_modal')
+      .setLabel('🔌 Register Bot Tokens')
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId('bm_btn_update_bot_modal')
+      .setLabel('✏️ Edit Identity')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(!activeBot),
+    new ButtonBuilder()
+      .setCustomId('bm_btn_get_invite')
+      .setLabel('🔗 Invite Link')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(!activeBot),
+    new ButtonBuilder()
+      .setCustomId('bm_btn_send_msg_modal')
+      .setLabel('📤 Send Message')
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled(!activeBot)
+  );
+  components.push(rowButtons);
+
+  // Row 3: Delete Action Button (if active bot selected)
+  if (activeBot) {
+    const rowDelete = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`bm_btn_delete_${activeBot.clientId}`)
+        .setLabel('✕ Delete Agent from Store')
+        .setStyle(ButtonStyle.Danger)
+    );
+    components.push(rowDelete);
+  }
+
+  return { embeds: [embed], components };
+}
 
 // ─── REGISTER SLASH COMMANDS ───────────────────────────────────────
 async function registerCommands(guildId) {
@@ -1267,6 +1386,14 @@ client.on('interactionCreate', async (interaction) => {
 
       const sub = interaction.options.getSubcommand();
 
+      // Subcommand: panel
+      if (sub === 'panel') {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        const lastSelected = db.getSetting('lastSelectedBot', null);
+        const panel = await buildBotManagerPanel(lastSelected);
+        return interaction.editReply({ embeds: panel.embeds, components: panel.components });
+      }
+
       // Subcommand: add
       if (sub === 'add') {
         const token = interaction.options.getString('token').trim();
@@ -1490,6 +1617,141 @@ client.on('interactionCreate', async (interaction) => {
 
   // ── BUTTON INTERACTIONS ──
   if (interaction.isButton()) {
+    // Bot Manager: Register Bot Tokens Modal
+    if (interaction.customId === 'bm_btn_add_tokens_modal') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      const modal = new ModalBuilder()
+        .setCustomId('bm_modal_add_tokens')
+        .setTitle('Bulk Register Bot Agents');
+      const tokensInput = new TextInputBuilder()
+        .setCustomId('tokens_input')
+        .setLabel('Paste Bot Tokens (one per line)')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('Paste your bot tokens here...\nEach token on its own line.')
+        .setRequired(true);
+      modal.addComponents(new ActionRowBuilder().addComponents(tokensInput));
+      return interaction.showModal(modal);
+    }
+
+    // Bot Manager: Edit Bot Profile Modal
+    if (interaction.customId === 'bm_btn_update_bot_modal') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      const modal = new ModalBuilder()
+        .setCustomId('bm_modal_update_bot')
+        .setTitle('Update Bot Profile');
+      const nameInput = new TextInputBuilder()
+        .setCustomId('bot_name')
+        .setLabel('New Username')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Enter new username (optional)')
+        .setRequired(false);
+      const avatarInput = new TextInputBuilder()
+        .setCustomId('bot_avatar')
+        .setLabel('New Avatar URL')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('https://example.com/avatar.png (optional)')
+        .setRequired(false);
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(nameInput),
+        new ActionRowBuilder().addComponents(avatarInput)
+      );
+      return interaction.showModal(modal);
+    }
+
+    // Bot Manager: Get Invite Link
+    if (interaction.customId === 'bm_btn_get_invite') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      const selectedId = db.getSetting('lastSelectedBot', null);
+      if (!selectedId) return interaction.reply({ content: '❌ No active selected bot agent.', flags: MessageFlags.Ephemeral });
+      const inviteLink = `https://discord.com/oauth2/authorize?client_id=${selectedId}&permissions=8&scope=bot%20applications.commands`;
+      return interaction.reply({ content: `🔗 **Bot Invite Link**: ${inviteLink}`, flags: MessageFlags.Ephemeral });
+    }
+
+    // Bot Manager: Broadcast Message Modal
+    if (interaction.customId === 'bm_btn_send_msg_modal') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      const modal = new ModalBuilder()
+        .setCustomId('bm_modal_send_msg')
+        .setTitle('Broadcast Message Payload');
+      const channelInput = new TextInputBuilder()
+        .setCustomId('channel_id')
+        .setLabel('Target Channel ID')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Enter Discord channel ID')
+        .setRequired(true);
+      const textInput = new TextInputBuilder()
+        .setCustomId('message_text')
+        .setLabel('Plain Text Message Content (optional)')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('Type text content...')
+        .setRequired(false);
+      const embedTitleInput = new TextInputBuilder()
+        .setCustomId('embed_title')
+        .setLabel('Embed Title (optional)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Enter embed title...')
+        .setRequired(false);
+      const embedDescInput = new TextInputBuilder()
+        .setCustomId('embed_desc')
+        .setLabel('Embed Description (optional)')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('Enter embed description...')
+        .setRequired(false);
+      const jsonInput = new TextInputBuilder()
+        .setCustomId('raw_json')
+        .setLabel('Raw JSON Payload (overrides above fields)')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('{"content":"Hello","embeds":[{"title":"Custom Title"}]}')
+        .setRequired(false);
+
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(channelInput),
+        new ActionRowBuilder().addComponents(textInput),
+        new ActionRowBuilder().addComponents(embedTitleInput),
+        new ActionRowBuilder().addComponents(embedDescInput),
+        new ActionRowBuilder().addComponents(jsonInput)
+      );
+      return interaction.showModal(modal);
+    }
+
+    // Bot Manager: Delete Agent
+    if (interaction.customId.startsWith('bm_btn_delete_')) {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      const clientIdToRemove = interaction.customId.replace('bm_btn_delete_', '');
+      let tokens = db.getSetting('botTokens', []);
+      if (!Array.isArray(tokens)) tokens = [];
+      
+      let index = -1;
+      for (let i = 0; i < tokens.length; i++) {
+        try {
+          const base64Part = tokens[i].split('.')[0];
+          const cid = Buffer.from(base64Part, 'base64').toString('utf-8');
+          if (cid === clientIdToRemove) {
+            index = i;
+            break;
+          }
+        } catch {}
+      }
+      
+      if (index !== -1) {
+        tokens.splice(index, 1);
+        db.setSetting('botTokens', tokens);
+      }
+      
+      db.setSetting('lastSelectedBot', null);
+      const panel = await buildBotManagerPanel(null);
+      return interaction.update({ embeds: panel.embeds, components: panel.components });
+    }
 
     // 🔍 Check Invites Button from Event Panel
     if (interaction.customId === 'p_303796426524069889') {
@@ -1953,6 +2215,16 @@ client.on('interactionCreate', async (interaction) => {
 
   // ── SELECT MENU (REWARD CLAIM) ──
   if (interaction.isStringSelectMenu()) {
+    if (interaction.customId === 'bm_active_bot_select') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      const selectedId = interaction.values[0];
+      db.setSetting('lastSelectedBot', selectedId === 'none' ? null : selectedId);
+      const panel = await buildBotManagerPanel(selectedId === 'none' ? null : selectedId);
+      return interaction.update({ embeds: panel.embeds, components: panel.components });
+    }
+
     if (interaction.customId === 'claim_reward_ticket' || interaction.customId === 'claim_reward_direct') {
       const rewardId = interaction.values[0];
       const reward = getRewardById(rewardId);
@@ -2003,6 +2275,232 @@ client.on('interactionCreate', async (interaction) => {
         embeds: [confirmEmbed],
         components: [row]
       });
+    }
+  }
+
+  // ── MODAL SUBMISSIONS ──
+  if (interaction.isModalSubmit()) {
+    // Modal: Bulk Register Tokens
+    if (interaction.customId === 'bm_modal_add_tokens') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      const rawInput = interaction.fields.getTextInputValue('tokens_input') || '';
+      
+      const lines = rawInput.split(/[\n, ]+/).map(l => l.trim()).filter(l => l.length > 20);
+      
+      let tokens = db.getSetting('botTokens', []);
+      if (!Array.isArray(tokens)) tokens = [];
+      
+      let successCount = 0;
+      let alreadyRegistered = 0;
+      let failedCount = 0;
+      const logs = [];
+
+      for (const t of lines) {
+        if (tokens.includes(t)) {
+          alreadyRegistered++;
+          continue;
+        }
+        try {
+          const response = await fetch('https://discord.com/api/v10/users/@me', {
+            headers: { Authorization: `Bot ${t}` }
+          });
+          if (response.ok) {
+            const botData = await response.json();
+            tokens.push(t);
+            successCount++;
+            logs.push(`✅ **@${botData.username}** successfully registered!`);
+          } else {
+            failedCount++;
+            logs.push(`❌ Invalid Token (\`${t.slice(0, 15)}...\`)`);
+          }
+        } catch (err) {
+          failedCount++;
+          logs.push(`⚠️ Network Error validating (\`${t.slice(0, 15)}...\`)`);
+        }
+      }
+
+      db.setSetting('botTokens', tokens);
+
+      const logEmbed = new EmbedBuilder()
+        .setColor('#10b981')
+        .setTitle('🔌 BULK TOKEN REGISTER STATUS')
+        .setDescription(`Processed **${lines.length}** token strings.`)
+        .addFields(
+          { name: '✅ Successfully Added', value: `\`${successCount}\` bot(s)`, inline: true },
+          { name: '⚠️ Already Registered', value: `\`${alreadyRegistered}\` bot(s)`, inline: true },
+          { name: '❌ Failed / Invalid', value: `\`${failedCount}\` token(s)`, inline: true }
+        );
+
+      if (logs.length > 0) {
+        logEmbed.addFields({ name: '📝 Verification Details', value: logs.slice(0, 10).join('\n') });
+      }
+
+      await interaction.editReply({ embeds: [logEmbed] });
+      
+      // Update original dashboard message panel
+      try {
+        const lastSelected = db.getSetting('lastSelectedBot', null);
+        const panel = await buildBotManagerPanel(lastSelected);
+        await interaction.message.edit({ embeds: panel.embeds, components: panel.components });
+      } catch {}
+      return;
+    }
+
+    // Modal: Update Bot Profile Identity
+    if (interaction.customId === 'bm_modal_update_bot') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      const newName = interaction.fields.getTextInputValue('bot_name');
+      const avatarUrl = interaction.fields.getTextInputValue('bot_avatar');
+      
+      const selectedId = db.getSetting('lastSelectedBot', null);
+      if (!selectedId) {
+        return interaction.editReply({ content: '❌ No bot selected active.' });
+      }
+      
+      let tokens = db.getSetting('botTokens', []);
+      if (!Array.isArray(tokens)) tokens = [];
+      
+      let botToken = null;
+      for (const t of tokens) {
+        try {
+          const base64Part = t.split('.')[0];
+          const cid = Buffer.from(base64Part, 'base64').toString('utf-8');
+          if (cid === selectedId) {
+            botToken = t;
+            break;
+          }
+        } catch {}
+      }
+      
+      if (!botToken) {
+        return interaction.editReply({ content: '❌ Selected bot token not found in database.' });
+      }
+      
+      try {
+        const payload = {};
+        if (newName) payload.username = newName;
+        
+        if (avatarUrl) {
+          const imgRes = await fetch(avatarUrl);
+          const buffer = await imgRes.arrayBuffer();
+          const base64 = Buffer.from(buffer).toString('base64');
+          const mime = imgRes.headers.get('content-type') || 'image/png';
+          payload.avatar = `data:${mime};base64,${base64}`;
+        }
+        
+        const response = await fetch('https://discord.com/api/v10/users/@me', {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bot ${botToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) {
+          const errText = await response.text();
+          return interaction.editReply({ content: `❌ **Failed to update bot**: ${errText}` });
+        }
+        
+        const botData = await response.json();
+        await interaction.editReply({ content: `✅ Successfully updated bot profile username to **@${botData.username}**!` });
+
+        // Update dashboard
+        try {
+          const panel = await buildBotManagerPanel(selectedId);
+          await interaction.message.edit({ embeds: panel.embeds, components: panel.components });
+        } catch {}
+      } catch (err) {
+        return interaction.editReply({ content: `❌ **Failed to update profile**: ${err.message}` });
+      }
+      return;
+    }
+
+    // Modal: Broadcast Message Payload
+    if (interaction.customId === 'bm_modal_send_msg') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      const channelId = interaction.fields.getTextInputValue('channel_id').trim();
+      const messageText = interaction.fields.getTextInputValue('message_text');
+      const embedTitle = interaction.fields.getTextInputValue('embed_title');
+      const embedDesc = interaction.fields.getTextInputValue('embed_desc');
+      const rawJson = interaction.fields.getTextInputValue('raw_json').trim();
+      
+      const selectedId = db.getSetting('lastSelectedBot', null);
+      if (!selectedId) {
+        return interaction.editReply({ content: '❌ No active selected bot.' });
+      }
+      
+      let tokens = db.getSetting('botTokens', []);
+      if (!Array.isArray(tokens)) tokens = [];
+      
+      let botToken = null;
+      for (const t of tokens) {
+        try {
+          const base64Part = t.split('.')[0];
+          const cid = Buffer.from(base64Part, 'base64').toString('utf-8');
+          if (cid === selectedId) {
+            botToken = t;
+            break;
+          }
+        } catch {}
+      }
+      
+      if (!botToken) {
+        return interaction.editReply({ content: '❌ Stored token not found.' });
+      }
+      
+      let payload = {};
+      if (rawJson) {
+        try {
+          payload = JSON.parse(rawJson);
+        } catch (err) {
+          return interaction.editReply({ content: `❌ **Invalid JSON syntax**: ${err.message}` });
+        }
+      } else {
+        if (messageText) payload.content = messageText;
+        if (embedTitle || embedDesc) {
+          const emb = {
+            title: embedTitle || undefined,
+            description: embedDesc || undefined,
+            color: 5814783 // Discord Blurple
+          };
+          payload.embeds = [emb];
+        }
+      }
+      
+      if (!payload.content && !payload.embeds && !payload.components) {
+        return interaction.editReply({ content: '❌ Please provide at least text message content, embed descriptions, or custom JSON!' });
+      }
+      
+      try {
+        const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bot ${botToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) {
+          const errText = await response.text();
+          return interaction.editReply({ content: `❌ **Broadcast failed**: ${errText}` });
+        }
+        
+        return interaction.editReply({ content: `🚀 **Success!** Message payload successfully broadcasted to channel <#${channelId}>!` });
+      } catch (err) {
+        return interaction.editReply({ content: `❌ **Broadcast failed**: ${err.message}` });
+      }
+      return;
     }
   }
 });
