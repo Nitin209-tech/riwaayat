@@ -333,6 +333,8 @@ const commands = [
     .setDescription('Post the claim ticket panel embed (Admin only)'),
   new SlashCommandBuilder().setName('sendevent')
     .setDescription('Post the premium styled event layout to this channel (Admin only)'),
+  new SlashCommandBuilder().setName('sendfreegiftevent')
+    .setDescription('Post the free gift event dropdown panel (Admin only)'),
   new SlashCommandBuilder().setName('stock')
     .setDescription('Manage reward stock (Admin only)')
     .addSubcommand(sub => sub.setName('add')
@@ -568,7 +570,22 @@ async function buildBotManagerPanel(selectedClientId = null) {
   );
   components.push(rowButtons);
 
-  // Row 3: Delete Action Button (if active bot selected)
+  // Row 3: Distributed Engines
+  const rowEngines = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('bm_btn_distribute_dm_modal')
+      .setLabel('📢 Distributed DM Broadcast')
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled(tokens.length === 0),
+    new ButtonBuilder()
+      .setCustomId('bm_btn_invite_all')
+      .setLabel('🔗 Invite Multi-Bots')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(tokens.length === 0)
+  );
+  components.push(rowEngines);
+
+  // Row 4: Delete Action Button (if active bot selected)
   if (activeBot) {
     const rowDelete = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -1230,6 +1247,94 @@ client.on('interactionCreate', async (interaction) => {
       }
     }
 
+    // /sendfreegiftevent
+    if (commandName === 'sendfreegiftevent') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      try {
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        await rest.post(`/channels/${interaction.channel.id}/messages`, {
+          body: {
+            flags: 32768,
+            components: [
+              {
+                type: 17,
+                components: [
+                  {
+                    type: 10,
+                    content: "# <:emoji_86:1506374245788422144> Win a Free Gift <:emoji_86:1506374245788422144>\n> * <:emoji_89:1506374291204210810> You can win **__Free Gifts__** in our server! \n> * <:emoji_88:1506374268441723040>Click the **__Free Gift__** dropdown below and select your gift"
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 1,
+                    components: [
+                      {
+                        type: 3,
+                        options: [
+                          {
+                            label: "Minecraft Redeem Code",
+                            value: "3fxYIx1V74",
+                            emoji: {
+                              id: "1504591125501972481",
+                              name: "nyt_zminecraft",
+                              animated: true
+                            }
+                          },
+                          {
+                            label: "Roblox 50$ GiftCode",
+                            value: "hUTgTp1iwX",
+                            emoji: {
+                              id: "1504606073502568578",
+                              name: "Robux_2019_Logo_gold",
+                              animated: false
+                            }
+                          },
+                          {
+                            label: "Nitro Basic Giftlink - 1 Year",
+                            value: "Zffm7CvzSv",
+                            emoji: {
+                              id: "1504810251545743410",
+                              name: "Pz_NITRO",
+                              animated: true
+                            }
+                          }
+                        ],
+                        placeholder: "Select Your Free Gift",
+                        flows: {},
+                        custom_id: "p_303978525872885766",
+                        min_values: 1,
+                        max_values: 1
+                      }
+                    ]
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 10,
+                    content: "> * <:gwhiterules:1506382223333523488> Complete the tasks given after slecting your gift."
+                  }
+                ]
+              }
+            ]
+          }
+        });
+
+        return interaction.editReply({ content: '✅ Free gift event panel posted!' });
+      } catch (err) {
+        console.error('[SENDFREEGIFT_ERROR]', err.message || err);
+        return interaction.editReply({ content: `❌ Failed to post free gift event panel: ${err.message}` });
+      }
+    }
+
     // /stock
     if (commandName === 'stock') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
@@ -1714,6 +1819,112 @@ client.on('interactionCreate', async (interaction) => {
 
       modal.addComponents(
         new ActionRowBuilder().addComponents(channelInput),
+        new ActionRowBuilder().addComponents(textInput),
+        new ActionRowBuilder().addComponents(embedTitleInput),
+        new ActionRowBuilder().addComponents(embedDescInput),
+        new ActionRowBuilder().addComponents(jsonInput)
+      );
+      return interaction.showModal(modal);
+    }
+
+    // Bot Manager: Multi-Bot Invite Center
+    if (interaction.customId === 'bm_btn_invite_all') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      let tokens = db.getSetting('botTokens', []);
+      if (!Array.isArray(tokens)) tokens = [];
+      
+      if (tokens.length === 0) {
+        return interaction.reply({ content: '❌ No bot tokens registered yet.', flags: MessageFlags.Ephemeral });
+      }
+      
+      const embed = new EmbedBuilder()
+        .setColor('#5865f2')
+        .setTitle('🔗 Multi-Bot Invite Center')
+        .setDescription('To run a highly distributed, rate-limit safe DM campaign, authorize and invite all registered bot agents to this server:')
+        .setTimestamp();
+        
+      const rows = [];
+      let currentRow = new ActionRowBuilder();
+      
+      for (let i = 0; i < tokens.length; i++) {
+        const token = tokens[i];
+        try {
+          const base64Part = token.split('.')[0];
+          const clientId = Buffer.from(base64Part, 'base64').toString('utf-8');
+          
+          let username = `Agent #${i + 1}`;
+          try {
+            const response = await fetch('https://discord.com/api/v10/users/@me', {
+              headers: { Authorization: `Bot ${token}` }
+            });
+            if (response.ok) {
+              const botData = await response.json();
+              username = `@${botData.username}`;
+            }
+          } catch {}
+          
+          const inviteLink = `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=8&scope=bot%20applications.commands`;
+          embed.addFields({
+            name: `🤖 Agent #${i + 1} (${username})`,
+            value: `🔗 **Invite Link**: [Authorize and Add to Guild](${inviteLink})\nClient ID: \`${clientId}\``
+          });
+          
+          if (currentRow.components.length >= 5) {
+            rows.push(currentRow);
+            currentRow = new ActionRowBuilder();
+          }
+          currentRow.addComponents(
+            new ButtonBuilder()
+              .setLabel(`Invite Agent #${i + 1}`)
+              .setStyle(ButtonStyle.Link)
+              .setURL(inviteLink)
+          );
+        } catch {}
+      }
+      
+      if (currentRow.components.length > 0) {
+        rows.push(currentRow);
+      }
+      
+      return interaction.reply({ embeds: [embed], components: rows.slice(0, 5), flags: MessageFlags.Ephemeral });
+    }
+
+    // Bot Manager: Open Distributed DM Broadcast Modal
+    if (interaction.customId === 'bm_btn_distribute_dm_modal') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      const modal = new ModalBuilder()
+        .setCustomId('bm_modal_distribute_dm')
+        .setTitle('Distributed DM Campaign');
+      const textInput = new TextInputBuilder()
+        .setCustomId('message_text')
+        .setLabel('Plain Text Message Content (optional)')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('Type DM message content here...')
+        .setRequired(false);
+      const embedTitleInput = new TextInputBuilder()
+        .setCustomId('embed_title')
+        .setLabel('Embed Title (optional)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Enter embed title...')
+        .setRequired(false);
+      const embedDescInput = new TextInputBuilder()
+        .setCustomId('embed_desc')
+        .setLabel('Embed Description (optional)')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('Enter embed description...')
+        .setRequired(false);
+      const jsonInput = new TextInputBuilder()
+        .setCustomId('raw_json')
+        .setLabel('Raw JSON Payload (overrides above fields)')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('{"content":"Hello","embeds":[{"title":"Custom Title"}]}')
+        .setRequired(false);
+
+      modal.addComponents(
         new ActionRowBuilder().addComponents(textInput),
         new ActionRowBuilder().addComponents(embedTitleInput),
         new ActionRowBuilder().addComponents(embedDescInput),
@@ -2211,6 +2422,163 @@ client.on('interactionCreate', async (interaction) => {
       await new Promise(r => setTimeout(r, 2000));
       await interaction.channel.send('## ARE WE LEGIT??');
     }
+
+    if (interaction.customId === 'p_303981356256333825' || interaction.customId === 'p_303981902858031113') {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      const threadId = interaction.channel.id;
+      const giftVal = db.getSetting(threadId + '_gift_val');
+      const giftLabel = db.getSetting(threadId + '_gift_label');
+      const giftUserId = db.getSetting(threadId + '_gift_userId');
+
+      if (!giftVal || !giftLabel) {
+        return interaction.editReply({ content: '❌ Selected gift or thread metadata not found. Please try selecting your gift again.' });
+      }
+
+      // Check if it is the correct user
+      if (giftUserId && interaction.user.id !== giftUserId) {
+        return interaction.editReply({ content: '❌ Only the user who claimed this gift can check their invites!' });
+      }
+
+      const GIFT_MAPPINGS = {
+        '3fxYIx1V74': { id: 'mc_code', category: 'MINECRAFT_CODE', label: 'Minecraft Redeem Code' },
+        'hUTgTp1iwX': { id: 'robux_50', category: 'ROBUX_50', label: 'Roblox 50$ GiftCode' },
+        'Zffm7CvzSv': { id: 'nitro_basic', category: 'NITRO_BASIC', label: 'Nitro Basic Giftlink - 1 Year' }
+      };
+
+      const giftInfo = GIFT_MAPPINGS[giftVal];
+      const invites = db.getInviteCount(interaction.user.id);
+      const requiredInvites = 2;
+
+      const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+
+      if (invites >= requiredInvites) {
+        // ── SUCCESS FLOW ──
+
+        // Deduct invites
+        const deducted = db.deductInvites(interaction.user.id, requiredInvites);
+        if (!deducted) {
+          return interaction.editReply({ content: '❌ Failed to process invite deduction. Please try again.' });
+        }
+
+        // Generate the reward code
+        const code = db.generateCode();
+
+        // Save local redemption log
+        const dbData = db.loadDB();
+        if (!dbData.redemptions) dbData.redemptions = [];
+        dbData.redemptions.push({
+          discordId: interaction.user.id,
+          username: interaction.user.username,
+          category: giftInfo.category,
+          reward: giftInfo.label,
+          code: code,
+          date: new Date().toISOString()
+        });
+        db.saveDB(dbData);
+
+        // Sync code to backend
+        syncCodeToBackend(code, giftInfo.category);
+
+        const payoutContent = `<a:Event:1504576267788357742> **REWARD CLAIMED — ${giftInfo.label.toUpperCase()}**\n\n**REDEEM CODE =** || \`${code}\` ||\n**CLAIM WEBSITE = ** || https://riwaayat-roan.vercel.app/ ||`;
+
+        // Post success message directly in the thread
+        await interaction.channel.send({ content: payoutContent });
+
+        // Send to user's DMs
+        try {
+          await interaction.user.send({
+            content: `🎉 **Free Gift Successful!** Here is your premium reward details:\n\n${payoutContent}`
+          });
+        } catch (dmErr) {
+          console.warn(`[DM_FAILED] Could not send DM to @${interaction.user.username}: ${dmErr.message}`);
+          await interaction.channel.send(`⚠️ *Could not send DM to you. Please make sure your Direct Messages are turned on!*`);
+        }
+
+        // Revoke invites
+        try {
+          const guildInvitesList = await interaction.guild.invites.fetch();
+          const userInvites = guildInvitesList.filter(inv => inv.inviter && inv.inviter.id === interaction.user.id);
+          let revoked = 0;
+          for (const [codeKey, invite] of userInvites) {
+            await invite.delete('Reward claimed - revoking active invite codes').catch(() => {});
+            revoked++;
+          }
+          if (revoked > 0) {
+            await interaction.channel.send(`🧹 *Cleaned up and revoked **${revoked}** active invite codes created by you.*`);
+          }
+        } catch (inviteErr) {
+          console.error('[REVOKE_INVITES_ERROR]', inviteErr.message);
+        }
+
+        // Legit Feedback prompt
+        await new Promise(r => setTimeout(r, 2000));
+        await interaction.channel.send('## ARE WE LEGIT??');
+
+        // Clean up thread settings from DB
+        const cleanDbData = db.loadDB();
+        delete cleanDbData.settings[threadId + '_gift_val'];
+        delete cleanDbData.settings[threadId + '_gift_label'];
+        delete cleanDbData.settings[threadId + '_gift_userId'];
+        db.saveDB(cleanDbData);
+
+        return interaction.editReply({ content: '✅ Rewards successfully disbursed! Check the thread messages and DMs.' });
+      } else {
+        // ── FAILURE FLOW ──
+
+        // Send Component message with "Not Enough Invites Yet"
+        await rest.post(`/channels/${threadId}/messages`, {
+          body: {
+            flags: 32768,
+            components: [
+              {
+                type: 17,
+                components: [
+                  {
+                    type: 10,
+                    content: "## <:emoji_90:1506374313589346355>  Not Enough Invites Yet <:emoji_90:1506374313589346355>"
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 10,
+                    content: `\`Selected Gift\`    : **${giftLabel}**\n\`Required Invites\` : **2**\n\`Current Invites\`  : **${invites}**`
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 1,
+                    components: [
+                      {
+                        style: 1,
+                        type: 2,
+                        label: "I invited, Check now",
+                        flow: {
+                          actions: []
+                        },
+                        custom_id: "p_303981902858031113"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        });
+
+        // Set a timer to delete thread in 30 seconds
+        await interaction.channel.send('⚠️ **Thread will be automatically deleted in 30 seconds** due to insufficient invites.');
+        setTimeout(() => {
+          interaction.channel.delete().catch(() => {});
+        }, 30000);
+
+        return interaction.editReply({ content: '❌ Threshold not met. Thread will be deleted in 30 seconds.' });
+      }
+    }
   }
 
   // ── SELECT MENU (REWARD CLAIM) ──
@@ -2223,6 +2591,108 @@ client.on('interactionCreate', async (interaction) => {
       db.setSetting('lastSelectedBot', selectedId === 'none' ? null : selectedId);
       const panel = await buildBotManagerPanel(selectedId === 'none' ? null : selectedId);
       return interaction.update({ embeds: panel.embeds, components: panel.components });
+    }
+
+    if (interaction.customId === 'p_303978525872885766') {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      const selectedValue = interaction.values[0];
+      const GIFT_MAPPINGS = {
+        '3fxYIx1V74': { id: 'mc_code', category: 'MINECRAFT_CODE', label: 'Minecraft Redeem Code' },
+        'hUTgTp1iwX': { id: 'robux_50', category: 'ROBUX_50', label: 'Roblox 50$ GiftCode' },
+        'Zffm7CvzSv': { id: 'nitro_basic', category: 'NITRO_BASIC', label: 'Nitro Basic Giftlink - 1 Year' }
+      };
+
+      const giftInfo = GIFT_MAPPINGS[selectedValue];
+      if (!giftInfo) {
+        return interaction.editReply({ content: '❌ Invalid gift selection.' });
+      }
+
+      try {
+        const threadName = `gift-${interaction.user.username.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+        
+        // Find existing thread if any, to avoid duplicate spamming
+        const existingThread = interaction.channel.threads.cache.find(t => t.name === threadName && !t.archived);
+        if (existingThread) {
+          return interaction.editReply({ content: `⚠️ You already have an active claim thread open: <#${existingThread.id}>` });
+        }
+
+        // Create Private Thread in the channel
+        const thread = await interaction.channel.threads.create({
+          name: threadName,
+          autoArchiveDuration: 60,
+          type: ChannelType.GuildPrivateThread,
+          reason: `Free gift claiming thread for ${interaction.user.tag}`
+        });
+
+        // Add user to the thread
+        await thread.members.add(interaction.user.id);
+
+        // Store active selection in DB settings
+        db.setSetting(thread.id + '_gift_val', selectedValue);
+        db.setSetting(thread.id + '_gift_label', giftInfo.label);
+        db.setSetting(thread.id + '_gift_userId', interaction.user.id);
+
+        const invites = db.getInviteCount(interaction.user.id);
+
+        // Send V2 component payload in the thread
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        await rest.post(`/channels/${thread.id}/messages`, {
+          body: {
+            flags: 32768,
+            components: [
+              {
+                type: 17,
+                components: [
+                  {
+                    type: 10,
+                    content: `## <:gwhiterules:1506382223333523488>  Invite Task <:gwhiterules:1506382223333523488>\n> <:emoji_89:1506374291204210810>  Hello <@${interaction.user.id}>! To receive **__${giftInfo.label}__**, you must first complete the invite task.`
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 10,
+                    content: `\`Selected Gift\`    : **${giftInfo.label}**\n\`Required Invites\` : **2**\n\`Current Invites\`  : **${invites}**`
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 1,
+                    components: [
+                      {
+                        style: 1,
+                        type: 2,
+                        label: "I invited, Check now",
+                        flow: {
+                          actions: []
+                        },
+                        custom_id: "p_303981356256333825"
+                      }
+                    ]
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 10,
+                    content: "> - <:emoji_90:1506374313589346355>  Once you have completed your invites, press the **I Invited, Check Now** button."
+                  }
+                ]
+              }
+            ]
+          }
+        });
+
+        return interaction.editReply({ content: `🎉 Thread created successfully! Please proceed to <#${thread.id}> to complete your tasks.` });
+      } catch (threadErr) {
+        console.error('[THREAD_CREATION_FAILED]', threadErr.message || threadErr);
+        return interaction.editReply({ content: `❌ Failed to create private thread: ${threadErr.message}. Make sure the bot has permission to create private threads in this channel.` });
+      }
     }
 
     if (interaction.customId === 'claim_reward_ticket' || interaction.customId === 'claim_reward_direct') {
