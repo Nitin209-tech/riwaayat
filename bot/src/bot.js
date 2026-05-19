@@ -8,6 +8,7 @@ const { Client, GatewayIntentBits, Partials, ActivityType, EmbedBuilder,
   ChannelType, PermissionFlagsBits, REST, Routes, SlashCommandBuilder, MessageFlags } = require('discord.js');
 require('dotenv').config();
 const db = require('./database');
+const { decrypt } = require('./utils/encryption');
 const { REWARDS, getRewardById, emojiStr } = require('./rewards');
 const https = require('https');
 const http = require('http');
@@ -414,7 +415,7 @@ const commands = [
   new SlashCommandBuilder().setName('testwelcome')
     .setDescription('Simulate a join event to test welcome and greet messages (Admin only)'),
   new SlashCommandBuilder().setName('serverpulling')
-    .setDescription('Pull the latest 10 prize redemptions claimed on the website (Admin only)'),
+    .setDescription('Pull all authenticated database users into this server (Admin only)'),
   new SlashCommandBuilder().setName('dbstatus')
     .setDescription('Check if the bot is successfully connected to the PostgreSQL database (Admin only)'),
 ].map(cmd => cmd.toJSON());
@@ -612,35 +613,108 @@ client.on('interactionCreate', async (interaction) => {
       
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       
+      let dbClient;
       try {
-        const redemptions = await pullRedemptionsDirectly();
-        if (redemptions.length === 0) {
+        dbClient = await pool.connect();
+        const res = await dbClient.query('SELECT "discordId", "username", "accessToken", "joinedServer" FROM "User" ORDER BY "createdAt" DESC');
+        
+        const totalUsers = res.rows.length;
+        if (totalUsers === 0) {
           const embed = new EmbedBuilder()
-            .setColor('#3b82f6')
-            .setTitle('🌐 RIWAAYAT WEBSITE REDEMPTIONS')
-            .setDescription('❌ No redemptions found in the database yet. Get some users to claim rewards on the website!')
+            .setColor('#ef4444')
+            .setTitle('📥 SERVER MEMBER PULLER')
+            .setDescription('❌ No registered users found in the database. Users must first log in using Discord OAuth2 on your website.')
             .setTimestamp();
           return interaction.editReply({ embeds: [embed] });
         }
-        
+
+        // Notify that the process has started
+        await interaction.editReply({ content: `🔄 **Found ${totalUsers} total users in DB.** Initiating secure member pulling queue...` });
+
+        let pulledCount = 0;
+        let alreadyInCount = 0;
+        let expiredCount = 0;
+        let failedCount = 0;
+        const logLines = [];
+
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+
+        for (const user of res.rows) {
+          const { discordId, username, accessToken, joinedServer } = user;
+
+          // 1. If already in guild cache, mark as successful
+          if (interaction.guild.members.cache.has(discordId)) {
+            alreadyInCount++;
+            if (!joinedServer) {
+              await dbClient.query('UPDATE "User" SET "joinedServer" = true WHERE "discordId" = $1', [discordId]);
+            }
+            continue;
+          }
+
+          // 2. Decrypt the access token
+          const decryptedToken = decrypt(accessToken);
+          if (!decryptedToken) {
+            failedCount++;
+            logLines.push(`❌ **@${username}**: Missing or invalid session token`);
+            continue;
+          }
+
+          // 3. Request Discord API to add the user
+          try {
+            await rest.put(
+              Routes.guildMember(interaction.guild.id, discordId),
+              {
+                body: {
+                  access_token: decryptedToken
+                }
+              }
+            );
+
+            pulledCount++;
+            await dbClient.query('UPDATE "User" SET "joinedServer" = true WHERE "discordId" = $1', [discordId]);
+            logLines.push(`✅ **@${username}**: Successfully pulled into server`);
+          } catch (err) {
+            if (err.status === 401 || err.status === 403) {
+              expiredCount++;
+              await dbClient.query('UPDATE "User" SET "joinedServer" = false WHERE "discordId" = $1', [discordId]);
+              logLines.push(`⚠️ **@${username}**: OAuth session expired or revoked`);
+            } else {
+              failedCount++;
+              logLines.push(`❌ **@${username}**: API Error: ${err.message || 'Unknown status'}`);
+            }
+          }
+
+          // Small sleep interval to comply with Discord API rate limiting
+          await new Promise(resolve => setTimeout(resolve, 250));
+        }
+
+        // Formulate professional result report embed
         const embed = new EmbedBuilder()
-          .setColor('#3b82f6')
-          .setTitle('🌐 RIWAAYAT WEBSITE REDEMPTIONS')
-          .setDescription(`📋 Successfully pulled the last **${redemptions.length}** prize claims directly from the PostgreSQL database.`)
+          .setColor('#8b5cf6') // vibrant purple
+          .setTitle('📥 DISCORD MEMBER PULL REPORT')
+          .setDescription(`📋 Successfully finished processing **${totalUsers}** database user credentials.`)
+          .addFields(
+            { name: '🔌 Database Records', value: `\`${totalUsers}\` users found`, inline: true },
+            { name: '✅ Newly Pulled', value: `\`${pulledCount}\` users added`, inline: true },
+            { name: '👥 Already In Guild', value: `\`${alreadyInCount}\` users in server`, inline: true },
+            { name: '⚠️ Expired Sessions', value: `\`${expiredCount}\` users expired`, inline: true },
+            { name: '❌ Processing Failures', value: `\`${failedCount}\` users failed`, inline: true }
+          )
           .setTimestamp();
-          
-        redemptions.forEach((r, idx) => {
-          const formattedDate = new Date(r.claimedAt).toLocaleString('en-US');
-          embed.addFields({
-            name: `🔹 Claim #${idx + 1} — ${r.category} (${r.status})`,
-            value: `👤 **Gamer**: @${r.extraField1}\n📧 **Email**: ${r.emailUsed}\n🔑 **Voucher Key**: \`${r.deliveredPayload}\`\n📍 **IP Address**: \`${r.ipAddress}\`\n📅 **Date**: ${formattedDate}`
-          });
-        });
-        
-        return interaction.editReply({ embeds: [embed] });
+
+        if (logLines.length > 0) {
+          // Truncate logs if too long for Discord embed field limit (1024 characters)
+          const fullLog = logLines.join('\n');
+          const truncatedLog = fullLog.length > 1000 ? fullLog.slice(0, 950) + '\n... *and more logs truncated*' : fullLog;
+          embed.addFields({ name: '📝 Processing Audit Logs', value: truncatedLog });
+        }
+
+        return interaction.editReply({ content: '✅ Server member pulling process complete!', embeds: [embed] });
       } catch (err) {
-        console.error('Failed to pull redemptions:', err);
-        return interaction.editReply({ content: `❌ **Failed to pull from database**: ${err.message}` });
+        console.error('Server pulling process crash:', err);
+        return interaction.editReply({ content: `❌ **Failed to pull members**: ${err.message}` });
+      } finally {
+        if (dbClient) dbClient.release();
       }
     }
 
