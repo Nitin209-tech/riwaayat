@@ -1524,7 +1524,7 @@ client.on('interactionCreate', async (interaction) => {
         const pass = parts[1] || 'N/A';
         payoutContent = `<a:Event:1504576267788357742> **REWARD CLAIMED — ${reward.label.toUpperCase()}** ${emojiStr(reward)}\n\n**EMAIL =** || \`${email}\` ||\n**PASS = ** || \`${pass}\` ||`;
       } else {
-        payoutContent = `<a:Event:1504576267788357742> **REWARD CLAIMED — ${reward.label.toUpperCase()}** ${emojiStr(reward)}\n\n**REDEEM CODE =** || \`${code}\` ||\n**CLAIM WEBSITE = ** || https://riwaayat.dev/redeem/verify ||`;
+        payoutContent = `<a:Event:1504576267788357742> **REWARD CLAIMED — ${reward.label.toUpperCase()}** ${emojiStr(reward)}\n\n**REDEEM CODE =** || \`${code}\` ||\n**CLAIM WEBSITE = ** || https://riwaayat-roan.vercel.app/redeem/verify ||`;
       }
 
       // Send to ticket channel
