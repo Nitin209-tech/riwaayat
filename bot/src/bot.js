@@ -55,7 +55,90 @@ async function pullRedemptionsDirectly() {
 }
 
 // ─── STABLE HTTPS/HTTP SYNC BRIDGE ──────────────────────────────────
-function syncCodeToBackend(code, category) {
+async function syncCodeToBackend(code, category) {
+  // 1. Try Direct PostgreSQL sync first (most reliable, bypasses cloud NAT loopback/DNS issues)
+  try {
+    const client = await pool.connect();
+    try {
+      let dbCategory = 'NITRO'; // default fallback
+      const botCatUpper = category.toUpperCase();
+      if (botCatUpper.includes('MINECRAFT')) {
+        dbCategory = 'MINECRAFT';
+      } else if (botCatUpper.includes('ROBUX') || botCatUpper.includes('ROBLOX')) {
+        dbCategory = 'ROBLOX';
+      } else if (botCatUpper.includes('YT') || botCatUpper.includes('YOUTUBE')) {
+        dbCategory = 'YOUTUBE';
+      } else if (botCatUpper.includes('NITRO')) {
+        dbCategory = 'NITRO';
+      }
+
+      // Check if Reward exists
+      const rewardRes = await client.query('SELECT id FROM "Reward" WHERE category = $1 LIMIT 1', [dbCategory]);
+      let rewardId;
+      if (rewardRes.rows.length > 0) {
+        rewardId = rewardRes.rows[0].id;
+      } else {
+        const rId = require('crypto').randomUUID ? require('crypto').randomUUID() : require('crypto').randomBytes(16).toString('hex');
+        const newRewardRes = await client.query(
+          `INSERT INTO "Reward" (id, category, name, description, "inrPrice", "coinsCost", stock, "maxStock", "imageUrl", "isActive") 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+          [
+            rId,
+            dbCategory,
+            `${dbCategory.charAt(0) + dbCategory.slice(1).toLowerCase()} Premium Package`,
+            `Automatically created reward catalog package for ${dbCategory}`,
+            'Rs.999',
+            1000,
+            100,
+            500,
+            'https://images.unsplash.com/photo-1614680376593-902f74fa0d41?q=80&w=300',
+            true
+          ]
+        );
+        rewardId = newRewardRes.rows[0].id;
+      }
+
+      // Encrypt the code payload exactly like the backend
+      const ALGORITHM = 'aes-256-gcm';
+      const SECRET_KEY = Buffer.from(
+        (process.env.ENCRYPTION_SECRET || 'cyber-riwaayat-premium-security-secret-key-32-change-me').substring(0, 32),
+        'utf-8'
+      );
+      
+      const iv = require('crypto').randomBytes(12);
+      const cipher = require('crypto').createCipheriv(ALGORITHM, SECRET_KEY, iv);
+      let encrypted = cipher.update(code, 'utf8', 'hex');
+      encrypted += cipher.final('hex');
+      const tag = cipher.getAuthTag().toString('hex');
+      const encryptedPayload = `${iv.toString('hex')}:${encrypted}:${tag}`;
+
+      // Create or update RedeemCode record
+      const formattedCode = code.toUpperCase().trim();
+      const existingCodeRes = await client.query('SELECT id FROM "RedeemCode" WHERE code = $1 LIMIT 1', [formattedCode]);
+      if (existingCodeRes.rows.length > 0) {
+        await client.query(
+          'UPDATE "RedeemCode" SET "rewardId" = $1, "encryptedPayload" = $2, "usedCount" = 0 WHERE id = $3',
+          [rewardId, encryptedPayload, existingCodeRes.rows[0].id]
+        );
+      } else {
+        const cId = require('crypto').randomUUID ? require('crypto').randomUUID() : require('crypto').randomBytes(16).toString('hex');
+        await client.query(
+          `INSERT INTO "RedeemCode" (id, "rewardId", code, "encryptedPayload", "maxUses", "usedCount", "createdAt") 
+           VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+          [cId, rewardId, formattedCode, encryptedPayload, 1, 0]
+        );
+      }
+
+      console.log(`[DATABASE_SYNC_SUCCESS] Synchronized code ${formattedCode} directly via PostgreSQL.`);
+      return; // Success, we are done!
+    } finally {
+      client.release();
+    }
+  } catch (dbErr) {
+    console.error(`[DATABASE_SYNC_FAILED] Direct PostgreSQL sync failed: ${dbErr.message}. Falling back to HTTP sync...`);
+  }
+
+  // 2. HTTP Fallback Bridge
   const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
   let url;
   try {
@@ -79,18 +162,18 @@ function syncCodeToBackend(code, category) {
     }
   };
 
-  const client = url.protocol === 'https:' ? https : http;
+  const httpLib = url.protocol === 'https:' ? https : http;
   
-  const req = client.request(options, (res) => {
+  const req = httpLib.request(options, (res) => {
     let data = '';
     res.on('data', (chunk) => { data += chunk; });
     res.on('end', () => {
       try {
         const parsed = JSON.parse(data);
         if (parsed.success) {
-          console.log(`[SYNC_SUCCESS] Synchronized code ${code} securely to database.`);
+          console.log(`[SYNC_SUCCESS] Synchronized code ${code} securely to database via HTTP fallback.`);
         } else {
-          console.error(`[SYNC_FAILED] Sync endpoint returned error:`, parsed.error);
+          console.error(`[SYNC_FAILED] Sync fallback returned error:`, parsed.error);
         }
       } catch (e) {
         console.error(`[SYNC_ERROR] Response parsing crashed:`, data);
@@ -99,7 +182,7 @@ function syncCodeToBackend(code, category) {
   });
 
   req.on('error', (err) => {
-    console.error(`[SYNC_CRASH] HTTP sync transport failed:`, err.message);
+    console.error(`[SYNC_CRASH] HTTP sync transport failed completely:`, err.message);
   });
 
   req.write(payload);
