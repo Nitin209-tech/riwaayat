@@ -338,7 +338,8 @@ const commands = [
       .addStringOption(opt => opt.setName('category').setDescription('Reward category')
         .setRequired(true)
         .addChoices(
-          { name: '⛏ Minecraft', value: 'MINECRAFT' },
+          { name: '⛏ Minecraft Account (Credentials)', value: 'MINECRAFT_ACC' },
+          { name: '⛏ MC Redeem Code', value: 'MINECRAFT_CODE' },
           { name: '💎 Nitro Basic', value: 'NITRO_BASIC' },
           { name: '🚀 Nitro Boost', value: 'NITRO_BOOST' },
           { name: '📺 YT 10K Subs', value: 'YT_10K' },
@@ -352,7 +353,8 @@ const commands = [
       .addStringOption(opt => opt.setName('category').setDescription('Reward category')
         .setRequired(true)
         .addChoices(
-          { name: '⛏ Minecraft', value: 'MINECRAFT' },
+          { name: '⛏ Minecraft Account (Credentials)', value: 'MINECRAFT_ACC' },
+          { name: '⛏ MC Redeem Code', value: 'MINECRAFT_CODE' },
           { name: '💎 Nitro Basic', value: 'NITRO_BASIC' },
           { name: '🚀 Nitro Boost', value: 'NITRO_BOOST' },
           { name: '📺 YT 10K Subs', value: 'YT_10K' },
@@ -367,7 +369,8 @@ const commands = [
     .addStringOption(opt => opt.setName('category').setDescription('Reward category')
       .setRequired(true)
       .addChoices(
-        { name: '⛏ Minecraft', value: 'MINECRAFT' },
+        { name: '⛏ Minecraft Account (Credentials)', value: 'MINECRAFT_ACC' },
+        { name: '⛏ MC Redeem Code', value: 'MINECRAFT_CODE' },
         { name: '💎 Nitro Basic', value: 'NITRO_BASIC' },
         { name: '🚀 Nitro Boost', value: 'NITRO_BOOST' },
         { name: '📺 YT 10K Subs', value: 'YT_10K' },
@@ -376,6 +379,9 @@ const commands = [
         { name: '🎮 Roblox $100', value: 'ROBUX_100' }
       ))
     .addIntegerOption(opt => opt.setName('count').setDescription('How many codes to generate (1-50)').setRequired(false)),
+  new SlashCommandBuilder().setName('addmc')
+    .setDescription('Add unlimited Minecraft accounts (Format: email:pass one per line) (Admin only)')
+    .addStringOption(opt => opt.setName('accounts').setDescription('Accounts list (email:pass, one per line)').setRequired(true)),
   new SlashCommandBuilder().setName('addinvites')
     .setDescription('Manually add invites to a user (Admin only)')
     .addUserOption(opt => opt.setName('user').setDescription('Target user').setRequired(true))
@@ -991,7 +997,7 @@ client.on('interactionCreate', async (interaction) => {
         const lines = REWARDS.map(r => {
           const s = stockCounts[r.category] || 0;
           const bar = '█'.repeat(Math.min(10, s)) + '░'.repeat(Math.max(0, 10 - Math.min(10, s)));
-          return `${r.emoji} **${r.category}**: ${bar} **${s}** codes`;
+          return `${emojiStr(r)} **${r.category}**: ${bar} **${s}** available`;
         }).join('\n');
 
         const embed = new EmbedBuilder()
@@ -1001,6 +1007,35 @@ client.on('interactionCreate', async (interaction) => {
           .setFooter({ text: 'Use /stock add or /stock generate to add codes' });
         return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
       }
+    }
+
+    // /addmc
+    if (commandName === 'addmc') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
+      }
+
+      const input = interaction.options.getString('accounts');
+      const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      let added = 0;
+      let invalid = 0;
+
+      for (const line of lines) {
+        if (line.includes(':')) {
+          db.addStock('MINECRAFT_ACC', line);
+          added++;
+        } else {
+          invalid++;
+        }
+      }
+
+      const total = db.getStockCount('MINECRAFT_ACC');
+      return interaction.reply({
+        content: `✅ Successfully added **${added}** Minecraft accounts to stock!` + 
+                 (invalid > 0 ? `\n⚠️ Ignored **${invalid}** lines (missing \`:\` separator).` : '') +
+                 `\n📦 Total Minecraft Accounts stock: **${total}**`,
+        flags: MessageFlags.Ephemeral
+      });
     }
 
     // /generatecode
@@ -1409,6 +1444,128 @@ client.on('interactionCreate', async (interaction) => {
       await interaction.reply('🔒 Closing this ticket in 5 seconds...');
       setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
     }
+
+    // ❌ Cancel Claim / Change Selection Button
+    if (interaction.customId === 'cancel_claim') {
+      await interaction.deferUpdate().catch(() => {});
+      try {
+        await interaction.message.delete();
+      } catch {}
+      return interaction.channel.send('❌ **Claim Cancelled.** You can select a different reward from the dropdown menu above!');
+    }
+
+    // 🎉 Confirm Claim Button
+    if (interaction.customId.startsWith('confirm_claim_')) {
+      const rewardId = interaction.customId.replace('confirm_claim_', '');
+      const reward = getRewardById(rewardId);
+      if (!reward) return interaction.reply({ content: '❌ Invalid reward selection.', flags: MessageFlags.Ephemeral });
+
+      const invCount = db.getInviteCount(interaction.user.id);
+      const is1Inv = db.getSetting('event1invite', false);
+      const cost = is1Inv ? 1 : reward.invites;
+
+      if (invCount < cost) {
+        return interaction.reply({
+          content: `❌ You do not have enough invites. You need **${cost}** but only have **${invCount}**.`,
+          flags: MessageFlags.Ephemeral
+        });
+      }
+
+      // Check stock availability
+      const stockCount = db.getStockCount(reward.category);
+      if (stockCount <= 0) {
+        return interaction.reply({
+          content: `❌ **Out of Stock!** The reward **${reward.label}** is currently out of stock. Please ask an admin to restock.`,
+          flags: MessageFlags.Ephemeral
+        });
+      }
+
+      // Deduct invites
+      const deducted = db.deductInvites(interaction.user.id, cost);
+      if (!deducted) {
+        return interaction.reply({ content: '❌ Failed to process invite deduction. Try again.', flags: MessageFlags.Ephemeral });
+      }
+
+      // Claim code/account from stock
+      const code = db.claimFromStock(reward.category, interaction.user.id);
+      if (!code) {
+        // Refund invites if stock claim somehow failed last second
+        const dbData = db.loadDB();
+        const user = db.getUser(dbData, interaction.user.id);
+        user.count += cost;
+        db.saveDB(dbData);
+        return interaction.reply({
+          content: `❌ **Out of Stock!** Failed to retrieve item from stock. Your invites have been refunded.`,
+          flags: MessageFlags.Ephemeral
+        });
+      }
+
+      // Save local redemption log
+      const dbData = db.loadDB();
+      if (!dbData.redemptions) dbData.redemptions = [];
+      dbData.redemptions.push({
+        discordId: interaction.user.id,
+        username: interaction.user.username,
+        category: reward.category,
+        reward: reward.label,
+        code: code,
+        date: new Date().toISOString()
+      });
+      db.saveDB(dbData);
+
+      // Delete the confirmation message
+      try {
+        await interaction.message.delete();
+      } catch {}
+
+      // Sync code to backend
+      syncCodeToBackend(code, reward.category);
+
+      // Payout content building based on reward type
+      const isMinecraft = reward.category === 'MINECRAFT_ACC';
+      let payoutContent;
+      if (isMinecraft) {
+        const parts = code.split(':');
+        const email = parts[0] || 'N/A';
+        const pass = parts[1] || 'N/A';
+        payoutContent = `<a:Event:1504576267788357742> **REWARD CLAIMED — ${reward.label.toUpperCase()}** ${emojiStr(reward)}\n\n**EMAIL =** || \`${email}\` ||\n**PASS = ** || \`${pass}\` ||`;
+      } else {
+        payoutContent = `<a:Event:1504576267788357742> **REWARD CLAIMED — ${reward.label.toUpperCase()}** ${emojiStr(reward)}\n\n**REDEEM CODE =** || \`${code}\` ||\n**CLAIM WEBSITE = ** || https://riwaayat.dev/redeem/verify ||`;
+      }
+
+      // Send to ticket channel
+      await interaction.reply({ content: payoutContent });
+
+      // Send to user's DMs
+      try {
+        await interaction.user.send({
+          content: `🎉 **Claim Successful!** Here is your premium reward details:\n\n${payoutContent}`
+        });
+      } catch (dmErr) {
+        console.warn(`[DM_FAILED] Could not send DM to @${interaction.user.username}: ${dmErr.message}`);
+        await interaction.channel.send(`⚠️ *Could not send DM to you. Please make sure your Direct Messages are turned on!*`);
+      }
+
+      // Revoke all invite codes created by this user
+      try {
+        const invites = await interaction.guild.invites.fetch();
+        const userInvites = invites.filter(inv => inv.inviter && inv.inviter.id === interaction.user.id);
+        let revoked = 0;
+        for (const [codeKey, invite] of userInvites) {
+          await invite.delete('Reward claimed - revoking active invite codes').catch(() => {});
+          revoked++;
+        }
+        if (revoked > 0) {
+          await interaction.channel.send(`🧹 *Cleaned up and revoked **${revoked}** active invite codes created by you.*`);
+        }
+      } catch (inviteErr) {
+        console.error('[REVOKE_INVITES_ERROR]', inviteErr.message);
+      }
+
+      // Legit Feedback prompt
+      await new Promise(r => setTimeout(r, 2000));
+      await interaction.channel.send('## ARE WE LEGIT??');
+    }
   }
 
   // ── SELECT MENU (REWARD CLAIM) ──
@@ -1430,51 +1587,66 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
       }
 
-      // Deduct invites
-      const deducted = db.deductInvites(interaction.user.id, cost);
-      if (!deducted) {
-        return interaction.reply({ content: '❌ Failed to process. Try again.', flags: MessageFlags.Ephemeral });
+      // Check stock availability
+      const stockCount = db.getStockCount(reward.category);
+      if (stockCount <= 0) {
+        return interaction.reply({
+          content: `❌ **Out of Stock!** The reward **${reward.label}** is currently out of stock. Please ask an admin to restock.`,
+          flags: MessageFlags.Ephemeral
+        });
       }
 
-      // Generate code + local log
-      const code = db.generateCode();
-      const dbData = db.loadDB();
-      if (!dbData.redemptions) dbData.redemptions = [];
-      dbData.redemptions.push({
-        discordId: interaction.user.id,
-        username: interaction.user.username,
-        category: reward.category,
-        reward: reward.label,
-        code: code,
-        date: new Date().toISOString()
+      // Send confirmation screen
+      const confirmEmbed = new EmbedBuilder()
+        .setColor('#eab308')
+        .setTitle('⚠️ Claim Confirmation')
+        .setDescription(`You are about to claim:\n\n🎉 **Reward:** **${reward.label}** ${emojiStr(reward)}\n📉 **Cost:** **${cost}** invites\n👥 **Current Balance:** **${invCount}** invites\n\n*Click **Confirm Claim** below to deduct invites and receive your prize. Or click **Change Selection** if you made a mistake!*`);
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`confirm_claim_${reward.id}`)
+          .setLabel('Confirm Claim')
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId(`cancel_claim`)
+          .setLabel('❌ Change Selection / Cancel')
+          .setStyle(ButtonStyle.Secondary)
+      );
+
+      return interaction.reply({
+        embeds: [confirmEmbed],
+        components: [row]
       });
-      db.saveDB(dbData);
-
-      // --- SYNC WITH BACKEND DATABASE ---
-      syncCodeToBackend(code, reward.category);
-
-      // ── PAYOUT in spoiler format ──
-      await interaction.reply({
-        content: `<a:Event:1504576267788357742> **REWARD CLAIMED — ${reward.label.toUpperCase()}**\n\n||redeem code - ${code}||\n\nclaim site ||https://riwaayat.dev/redeem/verify||`
-      });
-
-      // ── ARE WE LEGIT?? ──
-      await new Promise(r => setTimeout(r, 2000));
-      await interaction.channel.send('## ARE WE LEGIT??');
     }
   }
 });
 
-// ─── LEGIT LISTENER (30min timer + auto-close) ────────────────────
-client.on('messageCreate', (message) => {
+// ─── LEGIT & SUPPORT ESCALATION LISTENER ──────────────────────────
+client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
-  if (!message.channel.name?.startsWith('claim-')) return;
+  if (!message.channel.name?.startsWith('claim-') && !message.channel.name?.startsWith('escalated-')) return;
 
-  if (message.content.toLowerCase().includes('legit')) {
-    message.reply(`✅ Thanks for confirming! This ticket will auto-close in **30 minutes**. ⏳`);
+  const content = message.content.toLowerCase();
+
+  // Positive feedback
+  if (content.includes('legit') || content.includes('working') || content.includes('work kar raha') || content.includes('work kr rha')) {
+    await message.reply(`✅ **Thank you for confirming!** We are thrilled that everything is working perfectly for you.\n\nThis ticket channel will **automatically close in 30 minutes** to keep our ticket queue clean. ⏳`);
     setTimeout(() => {
       message.channel.delete().catch(() => {});
     }, 30 * 60 * 1000);
+    return;
+  }
+
+  // Negative feedback / support needed
+  if (content.includes('not working') || content.includes('work nhi kar rhaa') || content.includes('work nhi kr rha') || content.includes('scam') || content.includes('fake')) {
+    await message.reply(`⚠️ **We are sorry to hear that you are facing issues!**\n\nYour concern has been **escalated directly to our Support Admins** (<@&1506193757681487943> / <@&1506193607802093598>). A staff member will join this ticket shortly to help you resolve this issue manually!`);
+    
+    // Rename ticket to signal immediate staff attention
+    if (message.channel.name.startsWith('claim-')) {
+      const newName = `escalated-${message.channel.name.slice(6)}`;
+      await message.channel.setName(newName).catch(err => console.error('[RENAME_FAILED]', err.message));
+    }
+    return;
   }
 });
 
