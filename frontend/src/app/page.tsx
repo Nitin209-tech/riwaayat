@@ -498,10 +498,10 @@ export default function Home() {
                       placeholder="steve@outlook.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-[#030014]/65 border border-purple-500/20 rounded-2xl p-4.5 pl-13 text-sm text-white focus:outline-none focus:border-cyan-400/80 transition"
+                      className="w-full bg-[#030014]/65 border border-purple-500/20 rounded-2xl py-3.5 px-4 pl-12 text-sm text-white focus:outline-none focus:border-cyan-400/80 transition"
                       required
                     />
-                    <Mail className="absolute left-4.5 top-1/2 -translate-y-1/2 text-purple-400 w-5 h-5" />
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-400 w-5 h-5" />
                   </div>
                 </div>
 
@@ -516,10 +516,10 @@ export default function Home() {
                       placeholder="e.g. SteveTheGamer"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="w-full bg-[#030014]/65 border border-purple-500/20 rounded-2xl p-4.5 pl-13 text-sm text-white focus:outline-none focus:border-cyan-400/80 transition"
+                      className="w-full bg-[#030014]/65 border border-purple-500/20 rounded-2xl py-3.5 px-4 pl-12 text-sm text-white focus:outline-none focus:border-cyan-400/80 transition"
                       required
                     />
-                    <User className="absolute left-4.5 top-1/2 -translate-y-1/2 text-purple-400 w-5 h-5" />
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-400 w-5 h-5" />
                   </div>
                 </div>
 
