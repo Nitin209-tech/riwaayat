@@ -1079,7 +1079,7 @@ client.on('interactionCreate', async (interaction) => {
             body: {
               type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
               data: {
-                flags: 32768, // Ephemeral
+                flags: 32832, // Ephemeral + V2 Components (32768 | 64)
                 components: [
                   {
                     type: 17,
