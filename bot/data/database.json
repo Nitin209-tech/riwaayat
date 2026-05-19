@@ -2,7 +2,7 @@
   "invites": {
     "1291447772058353684": {
       "username": "nitin_209",
-      "count": 36,
+      "count": 33,
       "totalEarned": 42,
       "fake": 0,
       "rejoin": 0
@@ -34,7 +34,29 @@
       "reward": "Minecraft Account",
       "code": "9KN5W-9HKRV-R48VQ-GGSME-9CU9Z",
       "date": "2026-05-18T17:21:57.560Z"
+    },
+    {
+      "discordId": "1291447772058353684",
+      "username": "nitin_209",
+      "category": "MINECRAFT_ACC",
+      "reward": "Minecraft Account",
+      "code": "KAWCQ-A8A53-9W4SV-4A8Y7-U2JFV",
+      "date": "2026-05-18T21:47:50.343Z"
+    },
+    {
+      "discordId": "1291447772058353684",
+      "username": "nitin_209",
+      "category": "YT_30K",
+      "reward": "YT 30k Subs",
+      "code": "XLMBL-PPYUT-VMAH5-7HVBX-BX8B2",
+      "date": "2026-05-18T21:52:57.655Z"
     }
   ],
-  "settings": {}
+  "settings": {
+    "welcomeChannel": "1506004593841274920",
+    "greetChannels": [
+      "1506004593841274920"
+    ],
+    "event1invite": false
+  }
 }

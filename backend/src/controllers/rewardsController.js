@@ -141,13 +141,15 @@ async function verifyPromoCode(req, res) {
 
   try {
     const cleanedCode = code.replace(/-/g, '').toUpperCase();
+    const formattedWithHyphens = cleanedCode.match(/.{1,5}/g)?.join('-') || cleanedCode;
     
     // Look up code (handle exact, clean, or lowercase inputs)
     const codeStock = await prisma.redeemCode.findFirst({
       where: {
         OR: [
           { code: code.toUpperCase() },
-          { code: cleanedCode }
+          { code: cleanedCode },
+          { code: formattedWithHyphens }
         ]
       },
       include: {
