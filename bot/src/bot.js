@@ -1296,63 +1296,51 @@ client.on('interactionCreate', async (interaction) => {
       const is1Inv = db.getSetting('event1invite', false);
       const minRequired = is1Inv ? 1 : 2;
 
-      const checkingEmbed = new EmbedBuilder()
-        .setColor('#2b2d31')
-        .setTitle('<:member:1505974580626591976> Dispatching Invite Telemetry...')
-        .setDescription(`Please wait while we cross-reference invite logs inside cores...`);
-
-      const checkingMsg = await interaction.channel.send({ embeds: [checkingEmbed] });
-
-      await new Promise(r => setTimeout(r, 1500));
-
+      // 1. Post the custom V2 invite count component directly in the channel
       const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
-      await rest.patch(`/channels/${interaction.channel.id}/messages/${checkingMsg.id}`, {
-        body: {
-          embeds: [],
-          components: [
-            {
-              type: 17,
-              components: [
-                {
-                  type: 10,
-                  content: "# <:verification:1506199270188122242> CHECK INVITES <:verification:1506199270188122242>"
-                },
-                {
-                  type: 14,
-                  spacing: 2
-                },
-                {
-                  type: 9,
-                  components: [
-                    {
-                      type: 10,
-                      content: `<a:nt_cyandot:1506201246225268828> \`INVITES COUNT :\` **${stats.valid}**  `
+      try {
+        await rest.post(`/channels/${interaction.channel.id}/messages`, {
+          body: {
+            flags: 32768, // IS_COMPONENTS_V2
+            components: [
+              {
+                type: 17,
+                components: [
+                  {
+                    type: 10,
+                    content: "# <:verification:1506199270188122242> CHECK INVITES <:verification:1506199270188122242>"
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 9,
+                    components: [
+                      {
+                        type: 10,
+                        content: `<a:nt_cyandot:1506201246225268828> \`INVITES COUNT :\` **${stats.valid}**  `
+                      }
+                    ],
+                    accessory: {
+                      type: 11,
+                      media: {
+                        url: "https://cdn.discordapp.com/attachments/1343602374991806476/1506201739630481498/file_0000000032e47208b64a8a8e8825a619.png?ex=6a0d672e&is=6a0c15ae&hm=4ae404a77e3532c51935664ee482b5813e4cb8ce6b2b927095899e5724b6beea"
+                      }
                     }
-                  ],
-                  accessory: {
-                    type: 11,
-                    media: {
-                      url: "https://cdn.discordapp.com/attachments/1343602374991806476/1506201739630481498/file_0000000032e47208b64a8a8e8825a619.png?ex=6a0d672e&is=6a0c15ae&hm=4ae404a77e3532c51935664ee482b5813e4cb8ce6b2b927095899e5724b6beea"
-                    }
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
                   }
-                },
-                {
-                  type: 14,
-                  spacing: 2
-                }
-              ]
-            }
-          ]
-        }
-      }).catch(err => {
-        console.error('[TICKET_TELEMETRY_RESULTS_PATCH_FAILED]', err.message);
-        // Fallback to updating with standard embeds in case REST patch fails
-        const inviteEmbed = new EmbedBuilder()
-          .setColor('#2b2d31')
-          .setTitle('<:member:1505974580626591976> Invite Telemetry Results')
-          .setDescription(`<a:emoji_25:1504806993280503810> **Valid Referrals** — __**\`${stats.valid}\`**__\n\n> **Total Joins  = ** ${stats.total}\n> **Left Server = ** ${stats.left}\n> **Fake Joins   = ** ${stats.fake}\n> **Rejoined     = ** ${stats.rejoin}`);
-        checkingMsg.edit({ embeds: [inviteEmbed] }).catch(() => {});
-      });
+                ]
+              }
+            ]
+          }
+        });
+      } catch (err) {
+        console.error('[TICKET_TELEMETRY_SEND_FAILED]', err.message);
+      }
 
       await new Promise(r => setTimeout(r, 1000));
 
@@ -1391,7 +1379,6 @@ client.on('interactionCreate', async (interaction) => {
           rewardLines += lines + '\n\n';
         }
 
-        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
         await rest.post(`/channels/${interaction.channel.id}/messages`, {
           body: {
             flags: 32768,
@@ -1471,13 +1458,16 @@ client.on('interactionCreate', async (interaction) => {
         });
       }
 
-      // Check stock availability
-      const stockCount = db.getStockCount(reward.category);
-      if (stockCount <= 0) {
-        return interaction.reply({
-          content: `❌ **Out of Stock!** The reward **${reward.label}** is currently out of stock. Please ask an admin to restock.`,
-          flags: MessageFlags.Ephemeral
-        });
+      // Check stock availability (ONLY for Minecraft Account)
+      const isMinecraft = reward.category === 'MINECRAFT_ACC';
+      if (isMinecraft) {
+        const stockCount = db.getStockCount(reward.category);
+        if (stockCount <= 0) {
+          return interaction.reply({
+            content: `❌ **Out of Stock!** The reward **${reward.label}** is currently out of stock. Please ask an admin to restock.`,
+            flags: MessageFlags.Ephemeral
+          });
+        }
       }
 
       // Deduct invites
@@ -1486,18 +1476,23 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.reply({ content: '❌ Failed to process invite deduction. Try again.', flags: MessageFlags.Ephemeral });
       }
 
-      // Claim code/account from stock
-      const code = db.claimFromStock(reward.category, interaction.user.id);
-      if (!code) {
-        // Refund invites if stock claim somehow failed last second
-        const dbData = db.loadDB();
-        const user = db.getUser(dbData, interaction.user.id);
-        user.count += cost;
-        db.saveDB(dbData);
-        return interaction.reply({
-          content: `❌ **Out of Stock!** Failed to retrieve item from stock. Your invites have been refunded.`,
-          flags: MessageFlags.Ephemeral
-        });
+      // Claim code/account from stock OR dynamically generate
+      let code;
+      if (isMinecraft) {
+        code = db.claimFromStock(reward.category, interaction.user.id);
+        if (!code) {
+          // Refund invites if stock claim somehow failed last second
+          const dbData = db.loadDB();
+          const user = db.getUser(dbData, interaction.user.id);
+          user.count += cost;
+          db.saveDB(dbData);
+          return interaction.reply({
+            content: `❌ **Out of Stock!** Failed to retrieve item from stock. Your invites have been refunded.`,
+            flags: MessageFlags.Ephemeral
+          });
+        }
+      } else {
+        code = db.generateCode();
       }
 
       // Save local redemption log
@@ -1522,7 +1517,6 @@ client.on('interactionCreate', async (interaction) => {
       syncCodeToBackend(code, reward.category);
 
       // Payout content building based on reward type
-      const isMinecraft = reward.category === 'MINECRAFT_ACC';
       let payoutContent;
       if (isMinecraft) {
         const parts = code.split(':');
@@ -1587,13 +1581,15 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
       }
 
-      // Check stock availability
-      const stockCount = db.getStockCount(reward.category);
-      if (stockCount <= 0) {
-        return interaction.reply({
-          content: `❌ **Out of Stock!** The reward **${reward.label}** is currently out of stock. Please ask an admin to restock.`,
-          flags: MessageFlags.Ephemeral
-        });
+      // Check stock availability (ONLY for Minecraft Account)
+      if (reward.category === 'MINECRAFT_ACC') {
+        const stockCount = db.getStockCount(reward.category);
+        if (stockCount <= 0) {
+          return interaction.reply({
+            content: `❌ **Out of Stock!** The reward **${reward.label}** is currently out of stock. Please ask an admin to restock.`,
+            flags: MessageFlags.Ephemeral
+          });
+        }
       }
 
       // Send confirmation screen
