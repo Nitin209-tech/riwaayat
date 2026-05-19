@@ -6,6 +6,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'cyber-riwaayat-premium-jwt-super-s
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '1485034551108702268';
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || 'mock_secret';
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || 'mock_bot_token';
+const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID || '';
 
 /**
  * Capture Visitor IP, User Agent, and Country details
@@ -52,7 +53,7 @@ async function handleDiscordCallback(req, res) {
         grant_type: 'authorization_code',
         code: code,
         redirect_uri: redirect_uri,
-        scope: 'identify'
+        scope: 'identify email guilds.join'
       }),
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     });
@@ -74,8 +75,36 @@ async function handleDiscordCallback(req, res) {
       return res.status(400).json({ success: false, error: 'Failed to retrieve Discord profile' });
     }
 
-    // User has successfully authenticated
-    const joinedServer = true;
+    // User has successfully authenticated, attempt to add user to the Discord server
+    let joinedServer = false;
+    if (DISCORD_BOT_TOKEN && DISCORD_GUILD_ID && userData.id) {
+      try {
+        const joinResponse = await fetch(`https://discord.com/api/guilds/${DISCORD_GUILD_ID}/members/${userData.id}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            access_token: access_token
+          })
+        });
+
+        if (joinResponse.status === 201 || joinResponse.status === 204) {
+          joinedServer = true;
+          console.log(`[DISCORD_AUTO_JOIN_SUCCESS] Successfully added user ${userData.username} to guild ${DISCORD_GUILD_ID}. Status: ${joinResponse.status}`);
+        } else {
+          const joinDetails = await joinResponse.json().catch(() => ({}));
+          console.warn(`[DISCORD_AUTO_JOIN_FAILED] Discord API responded with status ${joinResponse.status}:`, joinDetails);
+          // If the status is 204, the user was already a member of the guild
+          if (joinResponse.status === 204) {
+            joinedServer = true;
+          }
+        }
+      } catch (joinErr) {
+        console.error('[DISCORD_AUTO_JOIN_CRASH] Failed to auto-join guild:', joinErr);
+      }
+    }
 
     // Save/Upsert Discord user data securely
     const user = await prisma.user.upsert({

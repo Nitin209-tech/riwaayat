@@ -85,8 +85,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
     if (code && !user) {
-      handleOAuthCallback(code);
-      // Clean URL
+      // Use sessionStorage lock to absolutely prevent double-fetching the same code
+      const locked = sessionStorage.getItem(`oauth_lock_${code}`);
+      if (!locked) {
+        sessionStorage.setItem(`oauth_lock_${code}`, 'true');
+        handleOAuthCallback(code);
+      }
+      // Clean URL immediately
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -113,7 +118,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const loginWithDiscord = () => {
     const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || '1505965176413880371';
     const redirectUri = encodeURIComponent(window.location.origin + '/');
-    const scope = encodeURIComponent('identify');
+    const scope = encodeURIComponent('identify email guilds.join');
     const discordUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
     window.location.href = discordUrl;
   };

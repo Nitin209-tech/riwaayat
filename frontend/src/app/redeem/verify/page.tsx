@@ -41,13 +41,13 @@ function VerifyRedeemContent() {
   const getCategoryIcon = () => {
     switch (category) {
       case 'youtube':
-        return <Tv className="w-6 h-6 text-zinc-400" />;
+        return <Tv className="w-6 h-6 text-red-500" />;
       case 'roblox':
-        return <Sparkles className="w-6 h-6 text-zinc-400" />;
+        return <Sparkles className="w-6 h-6 text-amber-400" />;
       case 'nitro':
-        return <Award className="w-6 h-6 text-zinc-400" />;
+        return <Award className="w-6 h-6 text-fuchsia-400" />;
       default:
-        return <Gamepad2 className="w-6 h-6 text-zinc-400" />;
+        return <Gamepad2 className="w-6 h-6 text-cyan-400" />;
     }
   };
 
@@ -187,25 +187,25 @@ function VerifyRedeemContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#030303] text-white selection:bg-zinc-700 selection:text-white font-sans relative flex flex-col justify-between overflow-hidden">
+    <div className="min-h-screen bg-[#030014] text-white selection:bg-purple-500/30 selection:text-white font-sans relative flex flex-col justify-between overflow-hidden">
       
       {/* Background patterns */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.03),transparent_70%)] blur-[120px]" />
-        <div className="absolute top-[40%] right-[-10%] w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.01),transparent_70%)] blur-[150px]" />
-        <div className="absolute inset-0 bg-grid opacity-5" />
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,rgba(168,85,247,0.15),transparent_70%)] blur-[120px]" />
+        <div className="absolute top-[40%] right-[-10%] w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle,rgba(6,182,212,0.12),transparent_70%)] blur-[150px]" />
+        <div className="absolute inset-0 bg-grid opacity-15" />
       </div>
 
       {/* Simple Header */}
-      <nav className="border-b border-white/5 bg-[#09090b]/75 backdrop-blur-2xl py-4 px-8 relative z-10">
+      <nav className="border-b border-white/5 bg-[#030014]/85 backdrop-blur-2xl py-4 px-8 relative z-10 shadow-[0_4px_30px_rgba(168,85,247,0.08)]">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 no-underline">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-r from-zinc-700 to-zinc-500 text-white flex items-center justify-center font-bold text-xs shadow-md">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 via-fuchsia-500 to-cyan-400 text-white flex items-center justify-center font-bold text-xs shadow-[0_0_15px_rgba(168,85,247,0.4)]">
               R
             </div>
-            <span className="font-extrabold text-sm tracking-wider text-white">RIWAAYAT</span>
+            <span className="font-extrabold text-sm tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-fuchsia-400 to-cyan-400">RIWAAYAT</span>
           </Link>
-          <Link href="/" className="text-xs font-bold text-zinc-400 hover:text-white transition duration-200 no-underline">
+          <Link href="/" className="text-xs font-bold text-purple-300 hover:text-white transition duration-200 no-underline">
             ← Back to Home
           </Link>
         </div>
@@ -215,33 +215,33 @@ function VerifyRedeemContent() {
         
         {/* Terminal Header */}
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-white/[0.02] border border-white/10 flex items-center justify-center mx-auto">
+          <div className="w-12 h-12 rounded-2xl bg-[#0c082c]/65 border border-purple-500/20 flex items-center justify-center mx-auto shadow-[0_0_15px_rgba(168,85,247,0.15)]">
             {getCategoryIcon()}
           </div>
           <h1 className="text-2xl font-black tracking-tight text-white uppercase">
             {getCategoryLabel()} VERIFICATION
           </h1>
-          <p className="text-xs text-zinc-400 max-w-xs mx-auto leading-relaxed">
+          <p className="text-xs text-zinc-300 max-w-xs mx-auto leading-relaxed">
             Apply your 25-character voucher coupon below to process the activation queue.
           </p>
         </div>
 
         {/* Credentials Summary Card */}
-        <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 space-y-4 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]">
-          <span className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest block border-b border-white/5 pb-2 font-mono">
+        <div className="bg-[#0c082c]/40 border border-purple-500/10 rounded-3xl p-6 space-y-4 shadow-[0_8px_32px_0_rgba(168,85,247,0.05)]">
+          <span className="text-[9px] font-extrabold text-purple-300 uppercase tracking-widest block border-b border-white/5 pb-2 font-mono">
             Verified Session Credentials
           </span>
           <div className="grid grid-cols-2 gap-4 text-xs">
             <div>
               <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block font-mono">Gamer Handle</span>
               <span className="font-bold text-white flex items-center gap-1.5 mt-0.5">
-                <User size={13} className="text-zinc-400" /> {username}
+                <User size={13} className="text-purple-400" /> {username}
               </span>
             </div>
             <div>
               <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block font-mono">Outlook/Email</span>
               <span className="font-bold text-white flex items-center gap-1.5 mt-0.5 truncate">
-                <Mail size={13} className="text-zinc-400" /> {email}
+                <Mail size={13} className="text-cyan-400" /> {email}
               </span>
             </div>
             <div className="col-span-2 border-t border-white/5 pt-3.5">
@@ -254,7 +254,7 @@ function VerifyRedeemContent() {
         </div>
 
         {/* Action Form card */}
-        <div className="bg-[#0f0f13] border border-white/10 rounded-3xl p-8 shadow-[0_30px_90px_rgba(0,0,0,0.8)] space-y-6">
+        <div className="bg-[#0c082c]/40 border border-purple-500/10 rounded-3xl p-8 shadow-[0_30px_90px_rgba(168,85,247,0.06)] space-y-6">
           <h2 className="text-xs font-black tracking-widest text-zinc-400 uppercase text-center border-b border-white/5 pb-3">
             ENTER PROMO REDEEM CODE
           </h2>
@@ -263,7 +263,7 @@ function VerifyRedeemContent() {
             
             {/* Promo Code input */}
             <div className="space-y-2">
-              <label htmlFor="code" className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block font-mono">
+              <label htmlFor="code" className="text-[10px] font-bold text-purple-300 uppercase tracking-widest block font-mono">
                 25-Character Key
               </label>
               <div className="relative">
@@ -273,10 +273,10 @@ function VerifyRedeemContent() {
                   placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
                   value={code}
                   onChange={(e) => handleCodeChange(e.target.value)}
-                  className="w-full bg-white/[0.02] border border-white/10 rounded-xl p-3.5 pl-11 text-xs font-mono text-white focus:outline-none focus:border-zinc-500 transition tracking-widest"
+                  className="w-full bg-[#030014]/65 border border-purple-500/20 rounded-xl p-3.5 pl-11 text-xs font-mono text-white focus:outline-none focus:border-cyan-400/80 transition tracking-widest"
                   required
                 />
-                <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4" />
+                <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 text-purple-400 w-4 h-4" />
               </div>
             </div>
 
@@ -290,7 +290,7 @@ function VerifyRedeemContent() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 bg-gradient-to-r from-zinc-700 to-zinc-500 text-white hover:brightness-110 rounded-xl text-xs font-black tracking-widest uppercase transition duration-300 flex items-center justify-center gap-2 shadow-[0_4px_15px_rgba(255,255,255,0.05)]"
+              className="w-full py-4 btn-neon-purple text-white rounded-xl text-xs font-black tracking-widest uppercase transition duration-300 flex items-center justify-center gap-2"
             >
               <span>{loading ? 'COMPILING TELEMETRY...' : 'EXECUTE CLAIM'}</span>
             </button>
@@ -301,14 +301,14 @@ function VerifyRedeemContent() {
       </main>
 
       {/* Simple Footer */}
-      <footer className="border-t border-white/5 py-6 text-center text-xs text-zinc-600 relative z-10">
+      <footer className="border-t border-white/5 py-6 text-center text-xs text-zinc-500 relative z-10">
         © 2026 Riwaayat • Premium Rewards Platform
       </footer>
 
       {/* POPUP MODAL: LARGE SUCCESS INVOICE RECEIPT */}
       {success && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md overflow-y-auto">
-          <div className="w-full max-w-lg bg-[#0f0f13] border border-white/10 rounded-3xl p-8 space-y-6 text-center relative shadow-[0_30px_90px_rgba(0,0,0,0.8)] my-8">
+          <div className="w-full max-w-lg bg-[#0c082c]/95 border border-purple-500/30 rounded-3xl p-8 space-y-6 text-center relative shadow-[0_30px_95px_rgba(168,85,247,0.15)] my-8 backdrop-blur-3xl">
             
             <button
               onClick={() => setSuccess(false)}
@@ -326,18 +326,18 @@ function VerifyRedeemContent() {
               <h3 className="text-xl font-black text-white uppercase tracking-tight">
                 Voucher Claim Verified!
               </h3>
-              <p className="text-xs text-zinc-400">
+              <p className="text-xs text-zinc-300">
                 Your luxury prize has been successfully registered and queued for dispatch.
               </p>
             </div>
 
             {/* HIGH-END MINIMAL VERCEL INVOICE BOX */}
-            <div className="border border-white/5 rounded-2xl overflow-hidden text-left text-xs bg-white/[0.01] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]">
+            <div className="border border-purple-500/10 rounded-2xl overflow-hidden text-left text-xs bg-[#030014]/65 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]">
               
               {/* Invoice Top header */}
-              <div className="bg-white/[0.02] border-b border-white/5 p-4 flex items-center justify-between">
+              <div className="bg-[#0c082c]/85 border-b border-purple-500/10 p-4 flex items-center justify-between">
                 <div>
-                  <span className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest block font-mono">VOUCHER INVOICE</span>
+                  <span className="text-[9px] font-extrabold text-purple-300 uppercase tracking-widest block font-mono">VOUCHER INVOICE</span>
                   <span className="font-mono font-bold text-xs text-white">{invoiceNumber}</span>
                 </div>
                 <span className="bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider">
@@ -349,7 +349,7 @@ function VerifyRedeemContent() {
               <div className="p-5 space-y-4">
                 
                 {/* Meta details */}
-                <div className="grid grid-cols-2 gap-4 border-b border-white/5 pb-3.5">
+                <div className="grid grid-cols-2 gap-4 border-b border-purple-500/10 pb-3.5">
                   <div>
                     <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block font-mono">Date Issued</span>
                     <span className="font-semibold text-white mt-0.5 block">May 18, 2026, 09:12 PM</span>
@@ -361,7 +361,7 @@ function VerifyRedeemContent() {
                 </div>
 
                 {/* Account Details */}
-                <div className="grid grid-cols-2 gap-4 border-b border-white/5 pb-3.5">
+                <div className="grid grid-cols-2 gap-4 border-b border-purple-500/10 pb-3.5">
                   <div>
                     <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block font-mono">Bill To Gamer</span>
                     <span className="font-bold text-white mt-0.5 block">@{username}</span>
@@ -373,12 +373,12 @@ function VerifyRedeemContent() {
                 </div>
 
                 {/* Enrolled voucher line items */}
-                <div className="border-b border-white/5 pb-3.5">
+                <div className="border-b border-purple-500/10 pb-3.5">
                   <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block mb-2 font-mono">Item Statement</span>
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="font-bold text-white block">{getCategoryLabel()} Bundle</span>
-                      <span className="text-[10px] text-zinc-400">{plan} Activation</span>
+                      <span className="text-[10px] text-zinc-300">{plan} Activation</span>
                     </div>
                     <span className="font-mono font-bold text-white">$0.00</span>
                   </div>
@@ -387,7 +387,7 @@ function VerifyRedeemContent() {
                 {/* Secure Code Key Delivery */}
                 <div className="bg-[#10b981]/5 border border-[#10b981]/15 rounded-xl p-4 text-center space-y-2">
                   <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest block font-mono">🔑 SECURE ACTIVATION KEY</span>
-                  <div className="font-mono font-bold text-base text-white select-all bg-[#09090b] border border-white/5 py-2.5 rounded-lg tracking-wider">
+                  <div className="font-mono font-bold text-base text-white select-all bg-[#030014] border border-cyan-500/20 py-2.5 rounded-lg tracking-wider shadow-[0_0_15px_rgba(6,182,212,0.1)]">
                     {verifiedCode}
                   </div>
                   <span className="text-[8.5px] text-zinc-400 block">Copy this activation code and use it on the provider's platform to claim your reward.</span>
@@ -401,7 +401,7 @@ function VerifyRedeemContent() {
 
                 {/* Delivery message */}
                 <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 text-[10px] text-zinc-400 leading-relaxed">
-                  📢 **Delivery Status Notification**: Activation voucher codes and Microsoft login validation certificates will be delivered directly to <span className="font-bold text-white">{email}</span> within <span className="font-bold text-zinc-400">72 Hours</span>.
+                  📢 **Delivery Status Notification**: Activation voucher codes and Microsoft login validation certificates will be delivered directly to <span className="font-bold text-white">{email}</span> within <span className="font-bold text-zinc-300">72 Hours</span>.
                 </div>
 
               </div>
@@ -412,7 +412,7 @@ function VerifyRedeemContent() {
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <button
                 onClick={handleDownloadPDF}
-                className="flex-1 py-3 border border-white/10 rounded-xl text-xs font-bold hover:bg-white/5 text-white flex items-center justify-center gap-2 transition"
+                className="flex-1 py-3 border border-white/10 rounded-xl text-xs font-bold hover:bg-purple-500/10 hover:border-purple-500/40 hover:shadow-[0_0_15px_rgba(168,85,247,0.15)] text-white flex items-center justify-center gap-2 transition"
               >
                 <Download size={14} className="text-zinc-400" /> Download Invoice
               </button>
@@ -421,7 +421,7 @@ function VerifyRedeemContent() {
                   setSuccess(false);
                   window.location.href = '/';
                 }}
-                className="flex-1 py-3 bg-gradient-to-r from-zinc-700 to-zinc-500 text-white hover:brightness-110 rounded-xl text-xs font-black tracking-widest uppercase transition duration-200"
+                className="flex-1 py-3 btn-neon-purple text-white rounded-xl text-xs font-black tracking-widest uppercase transition duration-200"
               >
                 Done — Return Home
               </button>
@@ -438,7 +438,7 @@ function VerifyRedeemContent() {
 export default function VerifyRedeem() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-white text-black flex items-center justify-center font-sans text-xs">
+      <div className="min-h-screen bg-[#030014] text-white flex items-center justify-center font-sans text-xs selection:bg-purple-500/30">
         Loading verification terminal...
       </div>
     }>
