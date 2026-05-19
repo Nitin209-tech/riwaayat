@@ -277,6 +277,20 @@ const commands = [
         ))
       .addIntegerOption(opt => opt.setName('count').setDescription('How many codes to generate (1-50)').setRequired(true)))
     .addSubcommand(sub => sub.setName('view').setDescription('View current stock levels')),
+  new SlashCommandBuilder().setName('generatecode')
+    .setDescription('Auto-generate codes for stock (Admin only)')
+    .addStringOption(opt => opt.setName('category').setDescription('Reward category')
+      .setRequired(true)
+      .addChoices(
+        { name: '⛏ Minecraft', value: 'MINECRAFT' },
+        { name: '💎 Nitro Basic', value: 'NITRO_BASIC' },
+        { name: '🚀 Nitro Boost', value: 'NITRO_BOOST' },
+        { name: '📺 YT 10K Subs', value: 'YT_10K' },
+        { name: '📺 YT 30K Subs', value: 'YT_30K' },
+        { name: '🎮 Roblox $50', value: 'ROBUX_50' },
+        { name: '🎮 Roblox $100', value: 'ROBUX_100' }
+      ))
+    .addIntegerOption(opt => opt.setName('count').setDescription('How many codes to generate (1-50)').setRequired(false)),
   new SlashCommandBuilder().setName('addinvites')
     .setDescription('Manually add invites to a user (Admin only)')
     .addUserOption(opt => opt.setName('user').setDescription('Target user').setRequired(true))
@@ -444,6 +458,7 @@ client.on('interactionCreate', async (interaction) => {
           { name: '📦 `/stock add`', value: 'Add reward code to stock (Admin)' },
           { name: '🔧 `/stock generate`', value: 'Auto-generate codes (Admin)' },
           { name: '📋 `/stock view`', value: 'View stock levels (Admin)' },
+          { name: '🔧 `/generatecode`', value: 'Auto-generate codes for stock directly (Admin only)' },
           { name: '➕ `/addinvites`', value: 'Give invites to a user (Admin)' },
           { name: '💬 `/welcomemsg`', value: 'Set custom greeting message (Admin)' },
           { name: '📺 `/welcomechannel`', value: 'Set custom greeting channel (Admin)' },
@@ -804,6 +819,35 @@ client.on('interactionCreate', async (interaction) => {
           .setFooter({ text: 'Use /stock add or /stock generate to add codes' });
         return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
       }
+    }
+
+    // /generatecode
+    if (commandName === 'generatecode') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+
+      const category = interaction.options.getString('category');
+      const count = Math.min(50, Math.max(1, interaction.options.getInteger('count') || 1));
+      const codes = [];
+
+      for (let i = 0; i < count; i++) {
+        const code = db.generateCode();
+        db.addStock(category, code);
+        codes.push(code);
+
+        syncCodeToBackend(code, category);
+      }
+      
+      const total = db.getStockCount(category);
+      const embed = new EmbedBuilder()
+        .setColor('#10b981')
+        .setTitle(`✅ Generated ${count} codes for ${category}`)
+        .setDescription(`\`\`\`\n${codes.join('\n')}\n\`\`\``)
+        .addFields({ name: 'Total Stock', value: `**${total}** codes available` })
+        .setFooter({ text: 'RIWAAYAT Admin Panel' });
+        
+      return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
     }
 
     // /addinvites
