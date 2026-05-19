@@ -30,10 +30,12 @@ function getUser(db, discordId, username) {
 function getUserStats(discordId) {
   const db = loadDB();
   const u = db.invites[discordId] || { count: 0, totalEarned: 0, fake: 0, rejoin: 0 };
+  const logs = (db.joinLogs || []).filter(l => l.inviterId === discordId);
+  const leftCount = logs.filter(l => l.status === 'LEFT').length;
   return {
     valid: u.count,
     total: u.totalEarned,
-    left: u.count,
+    left: leftCount,
     fake: u.fake || 0,
     rejoin: u.rejoin || 0
   };

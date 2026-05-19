@@ -329,6 +329,8 @@ const commands = [
   new SlashCommandBuilder().setName('leaderboard').setDescription('View top inviters'),
   new SlashCommandBuilder().setName('panel')
     .setDescription('Post the claim ticket panel embed (Admin only)'),
+  new SlashCommandBuilder().setName('sendevent')
+    .setDescription('Post the premium styled event layout to this channel (Admin only)'),
   new SlashCommandBuilder().setName('stock')
     .setDescription('Manage reward stock (Admin only)')
     .addSubcommand(sub => sub.setName('add')
@@ -846,6 +848,104 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.reply({ content: '✅ Panel posted!', flags: MessageFlags.Ephemeral });
     }
 
+    // /sendevent
+    if (commandName === 'sendevent') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      try {
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        await rest.post(`/channels/${interaction.channel.id}/messages`, {
+          body: {
+            flags: 32768,
+            components: [
+              {
+                type: 17,
+                components: [
+                  {
+                    type: 12,
+                    items: [
+                      {
+                        media: {
+                          url: "https://cdn.discordapp.com/attachments/1343602374991806476/1506194924268425256/file_00000000f5a87207a97920ef212fa323.png?ex=6a0d60d5&is=6a0c0f55&hm=52ce26cf5212dc7c511446162d9218f7405d89b6771aae51b8bc9dbd29f598a8"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 10,
+                    content: "# INVITE EVENT 2026\n<:infoBlue:1506195998245130352> This is a **LIMITED-TIME** event until <t:1780222800:R>. "
+                  },
+                  {
+                    type: 14
+                  },
+                  {
+                    type: 10,
+                    content: "<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Roblox 50$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Roblox 100$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **MineCraft Account** <a:Minecraft:1504810470153126042>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = ***MC Redeem Code** <a:Minecraft:1504810470153126042>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Nitro Basic GiftCode** <a:AHNitroBoosts:1506197135157231738>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Nitro Boost GiftCode** <a:AHNitroBoosts:1506197135157231738>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **YT 10k Subs** <a:RG_yt:1504591010888683600>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **YT 30k Subs** <a:RG_yt:1504591010888683600>"
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 10,
+                    content: "# NOTICE \n<:Inviteh:1506198676375343105> **DONE INVITING?** Create <#1504803227990888598> to claim your reward!"
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 1,
+                    components: [
+                      {
+                        type: 2,
+                        style: 5,
+                        label: "Are We Legit? Check here",
+                        emoji: {
+                          id: "1506199235052175400",
+                          name: "gift",
+                          animated: false
+                        },
+                        url: "https://discord.com/channels/1485628774178623568/1485628774665158760",
+                        custom_id: "p_303796653519802370"
+                      },
+                      {
+                        style: 1,
+                        type: 2,
+                        label: "Check Invites",
+                        emoji: {
+                          id: "1506199270188122242",
+                          name: "verification",
+                          animated: false
+                        },
+                        flow: {
+                          actions: []
+                        },
+                        custom_id: "p_303796426524069889"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        });
+
+        return interaction.editReply({ content: '✅ Event panel posted!' });
+      } catch (err) {
+        console.error('[SENDEVENT_ERROR]', err.message || err);
+        return interaction.editReply({ content: `❌ Failed to post event panel: ${err.message}` });
+      }
+    }
+
     // /stock
     if (commandName === 'stock') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
@@ -968,6 +1068,70 @@ client.on('interactionCreate', async (interaction) => {
 
   // ── BUTTON INTERACTIONS ──
   if (interaction.isButton()) {
+
+    // 🔍 Check Invites Button from Event Panel
+    if (interaction.customId === 'p_303796426524069889') {
+      const count = db.getInviteCount(interaction.user.id);
+      try {
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        await rest.post(
+          Routes.interactionCallback(interaction.id, interaction.token),
+          {
+            body: {
+              type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+              data: {
+                flags: 32768, // Ephemeral
+                components: [
+                  {
+                    type: 17,
+                    components: [
+                      {
+                        type: 10,
+                        content: "# <:verification:1506199270188122242> CHECK INVITES <:verification:1506199270188122242>"
+                      },
+                      {
+                        type: 14,
+                        spacing: 2
+                      },
+                      {
+                        type: 9,
+                        components: [
+                          {
+                            type: 10,
+                            content: `<a:nt_cyandot:1506201246225268828> \`INVITES COUNT :\` **${count}**  `
+                          }
+                        ],
+                        accessory: {
+                          type: 11,
+                          media: {
+                            url: "https://cdn.discordapp.com/attachments/1343602374991806476/1506201739630481498/file_0000000032e47208b64a8a8e8825a619.png?ex=6a0d672e&is=6a0c15ae&hm=4ae404a77e3532c51935664ee482b5813e4cb8ce6b2b927095899e5724b6beea"
+                          }
+                        }
+                      },
+                      {
+                        type: 14,
+                        spacing: 2
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        );
+        return;
+      } catch (err) {
+        console.error('[CHECK_INVITES_BUTTON_ERROR]', err.message || err);
+        try {
+          return interaction.reply({
+            content: `📊 **Your Invite Count:** **${count}**`,
+            flags: MessageFlags.Ephemeral
+          });
+        } catch (innerErr) {
+          console.error('[CHECK_INVITES_FALLBACK_FAILED]', innerErr.message);
+        }
+      }
+    }
 
     // 📩 Create Ticket Button
     if (interaction.customId === 'open_ticket') {
@@ -1093,6 +1257,7 @@ client.on('interactionCreate', async (interaction) => {
 
     // ⚡ Continue Claim Button
     if (interaction.customId === 'continue_claim') {
+      await interaction.deferUpdate().catch(() => {});
       const stats = db.getUserStats(interaction.user.id);
       const is1Inv = db.getSetting('event1invite', false);
       const minRequired = is1Inv ? 1 : 2;
@@ -1106,12 +1271,54 @@ client.on('interactionCreate', async (interaction) => {
 
       await new Promise(r => setTimeout(r, 1500));
 
-      const inviteEmbed = new EmbedBuilder()
-        .setColor('#2b2d31')
-        .setTitle('<:member:1505974580626591976> Invite Telemetry Results')
-        .setDescription(`<a:emoji_25:1504806993280503810> **Valid Referrals** — __**\`${stats.valid}\`**__\n\n> **Total Joins  = ** ${stats.total}\n> **Left Server = ** ${stats.left}\n> **Fake Joins   = ** ${stats.fake}\n> **Rejoined     = ** ${stats.rejoin}`);
-
-      await checkingMsg.edit({ embeds: [inviteEmbed] });
+      const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+      await rest.patch(`/channels/${interaction.channel.id}/messages/${checkingMsg.id}`, {
+        body: {
+          embeds: [],
+          components: [
+            {
+              type: 17,
+              components: [
+                {
+                  type: 10,
+                  content: "# <:verification:1506199270188122242> CHECK INVITES <:verification:1506199270188122242>"
+                },
+                {
+                  type: 14,
+                  spacing: 2
+                },
+                {
+                  type: 9,
+                  components: [
+                    {
+                      type: 10,
+                      content: `<a:nt_cyandot:1506201246225268828> \`INVITES COUNT :\` **${stats.valid}**  `
+                    }
+                  ],
+                  accessory: {
+                    type: 11,
+                    media: {
+                      url: "https://cdn.discordapp.com/attachments/1343602374991806476/1506201739630481498/file_0000000032e47208b64a8a8e8825a619.png?ex=6a0d672e&is=6a0c15ae&hm=4ae404a77e3532c51935664ee482b5813e4cb8ce6b2b927095899e5724b6beea"
+                    }
+                  }
+                },
+                {
+                  type: 14,
+                  spacing: 2
+                }
+              ]
+            }
+          ]
+        }
+      }).catch(err => {
+        console.error('[TICKET_TELEMETRY_RESULTS_PATCH_FAILED]', err.message);
+        // Fallback to updating with standard embeds in case REST patch fails
+        const inviteEmbed = new EmbedBuilder()
+          .setColor('#2b2d31')
+          .setTitle('<:member:1505974580626591976> Invite Telemetry Results')
+          .setDescription(`<a:emoji_25:1504806993280503810> **Valid Referrals** — __**\`${stats.valid}\`**__\n\n> **Total Joins  = ** ${stats.total}\n> **Left Server = ** ${stats.left}\n> **Fake Joins   = ** ${stats.fake}\n> **Rejoined     = ** ${stats.rejoin}`);
+        checkingMsg.edit({ embeds: [inviteEmbed] }).catch(() => {});
+      });
 
       await new Promise(r => setTimeout(r, 1000));
 
