@@ -412,6 +412,16 @@ const commands = [
   new SlashCommandBuilder().setName('event1invite')
     .setDescription('Toggle 1-invite event (Admin only)')
     .addBooleanOption(opt => opt.setName('enabled').setDescription('Enable or disable 1-invite event').setRequired(true)),
+  new SlashCommandBuilder().setName('event2invite')
+    .setDescription('Toggle 2-invite event (Admin only)')
+    .addBooleanOption(opt => opt.setName('enabled').setDescription('Enable or disable 2-invite event').setRequired(true)),
+  new SlashCommandBuilder().setName('setbotname')
+    .setDescription('Change the bot\'s Discord username (Admin only)')
+    .addStringOption(opt => opt.setName('name').setDescription('New username for the bot').setRequired(true)),
+  new SlashCommandBuilder().setName('setbotavatar')
+    .setDescription('Change the bot\'s Discord profile picture/avatar (Admin only)')
+    .addStringOption(opt => opt.setName('url').setDescription('New avatar image URL').setRequired(false))
+    .addAttachmentOption(opt => opt.setName('file').setDescription('New avatar image file').setRequired(false)),
   new SlashCommandBuilder().setName('testwelcome')
     .setDescription('Simulate a join event to test welcome and greet messages (Admin only)'),
   new SlashCommandBuilder().setName('serverpulling')
@@ -837,20 +847,74 @@ client.on('interactionCreate', async (interaction) => {
       }
       const enabled = interaction.options.getBoolean('enabled');
       db.setSetting('event1invite', enabled);
+      if (enabled) db.setSetting('event2invite', false); // disable conflicting event
       return interaction.reply({ content: `✅ **1-Invite Special Event** has been **${enabled ? 'ENABLED ⚡ (All rewards cost 1 invite & no 30s timeouts)' : 'DISABLED ❌'}**!`, flags: MessageFlags.Ephemeral });
+    }
+
+    // /event2invite
+    if (commandName === 'event2invite') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      const enabled = interaction.options.getBoolean('enabled');
+      db.setSetting('event2invite', enabled);
+      if (enabled) db.setSetting('event1invite', false); // disable conflicting event
+      return interaction.reply({ content: `✅ **2-Invite Special Event** has been **${enabled ? 'ENABLED ⚡ (All rewards cost 2 invites)' : 'DISABLED ❌'}**!`, flags: MessageFlags.Ephemeral });
+    }
+
+    // /setbotname
+    if (commandName === 'setbotname') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      const newName = interaction.options.getString('name');
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      try {
+        await client.user.setUsername(newName);
+        return interaction.editReply({ content: `✅ Successfully changed bot username to **${newName}**!` });
+      } catch (err) {
+        console.error('Failed to change username:', err);
+        return interaction.editReply({ content: `❌ **Failed to change username**: ${err.message}` });
+      }
+    }
+
+    // /setbotavatar
+    if (commandName === 'setbotavatar') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      const url = interaction.options.getString('url');
+      const attachment = interaction.options.getAttachment('file');
+      if (!url && !attachment) {
+        return interaction.reply({ content: '❌ Please provide either an image URL or upload an image file!', flags: MessageFlags.Ephemeral });
+      }
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      try {
+        const targetUrl = attachment ? attachment.url : url;
+        await client.user.setAvatar(targetUrl);
+        return interaction.editReply({ content: `✅ Successfully updated bot profile picture!` });
+      } catch (err) {
+        console.error('Failed to change avatar:', err);
+        return interaction.editReply({ content: `❌ **Failed to change profile picture**: ${err.message}` });
+      }
     }
 
     // /invites
     if (commandName === 'invites') {
       const count = db.getInviteCount(interaction.user.id);
       const is1Inv = db.getSetting('event1invite', false);
+      const is2Inv = db.getSetting('event2invite', false);
+      const eventStatus = is1Inv ? ' [⚡ 1-INVITE EVENT ACTIVE]' : (is2Inv ? ' [⚡ 2-INVITE EVENT ACTIVE]' : '');
       const embed = new EmbedBuilder()
         .setColor('#1d4ed8')
         .setTitle('📊 Your Invite Balance')
         .setDescription(`**@${interaction.user.username}**\n\n🎟️ Available Invites: **${count}**`)
         .addFields({ 
-          name: 'Reward Costs' + (is1Inv ? ' [⚡ 1-INVITE EVENT ACTIVE]' : ''), 
-          value: REWARDS.map(r => `${r.emoji} ${r.label.split(' ').slice(1).join(' ')} — **${is1Inv ? 1 : r.invites} invites**`).join('\n') 
+          name: 'Reward Costs' + eventStatus, 
+          value: REWARDS.map(r => {
+            const cost = is1Inv ? 1 : (is2Inv ? 2 : r.invites);
+            return `${r.emoji} ${r.label.split(' ').slice(1).join(' ')} — **${cost} invites**`;
+          }).join('\n') 
         })
         .setFooter({ text: 'Invite friends to earn more!' });
       return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
@@ -860,8 +924,9 @@ client.on('interactionCreate', async (interaction) => {
     if (commandName === 'claim') {
       const count = db.getInviteCount(interaction.user.id);
       const is1Inv = db.getSetting('event1invite', false);
+      const is2Inv = db.getSetting('event2invite', false);
       const options = REWARDS.map(r => {
-        const cost = is1Inv ? 1 : r.invites;
+        const cost = is1Inv ? 1 : (is2Inv ? 2 : r.invites);
         return {
           label: r.label,
           description: `${cost} invites needed ${count >= cost ? '✓' : '✕'}`,
@@ -1523,7 +1588,8 @@ client.on('interactionCreate', async (interaction) => {
 
       const invCount = db.getInviteCount(interaction.user.id);
       const is1Inv = db.getSetting('event1invite', false);
-      const cost = is1Inv ? 1 : reward.invites;
+      const is2Inv = db.getSetting('event2invite', false);
+      const cost = is1Inv ? 1 : (is2Inv ? 2 : reward.invites);
 
       if (invCount < cost) {
         return interaction.reply({
@@ -1645,7 +1711,8 @@ client.on('interactionCreate', async (interaction) => {
 
       const invCount = db.getInviteCount(interaction.user.id);
       const is1Inv = db.getSetting('event1invite', false);
-      const cost = is1Inv ? 1 : reward.invites;
+      const is2Inv = db.getSetting('event2invite', false);
+      const cost = is1Inv ? 1 : (is2Inv ? 2 : reward.invites);
 
       if (invCount < cost) {
         const embed = new EmbedBuilder()
@@ -1698,17 +1765,32 @@ client.on('messageCreate', async (message) => {
 
   const content = message.content.toLowerCase();
 
-  // Positive feedback
-  if (content.includes('legit') || content.includes('working') || content.includes('work kar raha') || content.includes('work kr rha')) {
-    await message.reply(`✅ **Thank you for confirming!** We are thrilled that everything is working perfectly for you.\n\nThis ticket channel will **automatically close in 30 minutes** to keep our ticket queue clean. ⏳`);
-    setTimeout(() => {
-      message.channel.delete().catch(() => {});
-    }, 30 * 60 * 1000);
-    return;
-  }
+  // 1. Negative feedback / support needed (Checked first to prevent overlapping matches)
+  const isNegative = 
+    content.includes('not working') || 
+    content.includes('no working') || 
+    content.includes('not work') || 
+    content.includes('no work') || 
+    content.includes('work nhi') || 
+    content.includes('work nahi') || 
+    content.includes('work kr rha nhi') ||
+    content.includes('not legit') || 
+    content.includes('no legit') || 
+    content.includes('fake') || 
+    content.includes('scam') || 
+    content.includes('fraud') || 
+    content.includes('cheat') || 
+    content.includes('negative') || 
+    content.includes('bad') || 
+    content.includes('worst') || 
+    content.includes('problem') || 
+    content.includes('error') || 
+    content.includes('issue') ||
+    content.includes('fault') ||
+    content.includes('damaged') ||
+    content.includes('broken');
 
-  // Negative feedback / support needed
-  if (content.includes('not working') || content.includes('work nhi kar rhaa') || content.includes('work nhi kr rha') || content.includes('scam') || content.includes('fake')) {
+  if (isNegative) {
     await message.reply(`⚠️ **We are sorry to hear that you are facing issues!**\n\nYour concern has been **escalated directly to our Support Admins** (<@&1506193757681487943> / <@&1506193607802093598>). A staff member will join this ticket shortly to help you resolve this issue manually!`);
     
     // Rename ticket to signal immediate staff attention
@@ -1716,6 +1798,28 @@ client.on('messageCreate', async (message) => {
       const newName = `escalated-${message.channel.name.slice(6)}`;
       await message.channel.setName(newName).catch(err => console.error('[RENAME_FAILED]', err.message));
     }
+    return;
+  }
+
+  // 2. Positive feedback (Checked only if negative keywords are absent)
+  const isPositive = 
+    content.includes('legit') || 
+    content.includes('working') || 
+    content.includes('work kar raha') || 
+    content.includes('work kr rha') || 
+    content.includes('work kar rha') ||
+    content.includes('work kr raha') ||
+    content.includes('perfect') ||
+    content.includes('nice') ||
+    content.includes('awesome') ||
+    content.includes('thanks') ||
+    content.includes('thank you');
+
+  if (isPositive) {
+    await message.reply(`✅ **Thank you for confirming!** We are thrilled that everything is working perfectly for you.\n\nThis ticket channel will **automatically close in 30 minutes** to keep our ticket queue clean. ⏳`);
+    setTimeout(() => {
+      message.channel.delete().catch(() => {});
+    }, 30 * 60 * 1000);
     return;
   }
 });
