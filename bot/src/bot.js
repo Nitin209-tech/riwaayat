@@ -422,6 +422,27 @@ const commands = [
     .setDescription('Change the bot\'s Discord profile picture/avatar (Admin only)')
     .addStringOption(opt => opt.setName('url').setDescription('New avatar image URL').setRequired(false))
     .addAttachmentOption(opt => opt.setName('file').setDescription('New avatar image file').setRequired(false)),
+  new SlashCommandBuilder().setName('botmanager')
+    .setDescription('Multi-Agent Bot Token & Dispatch Manager (Admin only)')
+    .addSubcommand(sub => sub.setName('add')
+      .setDescription('Register a new bot token')
+      .addStringOption(opt => opt.setName('token').setDescription('The Discord bot token').setRequired(true)))
+    .addSubcommand(sub => sub.setName('list')
+      .setDescription('List all registered bot agents and generate their invite links'))
+    .addSubcommand(sub => sub.setName('remove')
+      .setDescription('Remove a bot token by its Client ID')
+      .addStringOption(opt => opt.setName('client_id').setDescription('The Client ID of the bot').setRequired(true)))
+    .addSubcommand(sub => sub.setName('update')
+      .setDescription('Update a registered bot agent\'s username and profile picture')
+      .addStringOption(opt => opt.setName('client_id').setDescription('The Client ID of the bot').setRequired(true))
+      .addStringOption(opt => opt.setName('name').setDescription('New username').setRequired(false))
+      .addStringOption(opt => opt.setName('avatar_url').setDescription('New avatar image URL').setRequired(false))
+      .addAttachmentOption(opt => opt.setName('avatar_file').setDescription('New avatar image file').setRequired(false)))
+    .addSubcommand(sub => sub.setName('send')
+      .setDescription('Broadcast an embed/component message through a registered bot agent')
+      .addStringOption(opt => opt.setName('client_id').setDescription('The Client ID of the bot').setRequired(true))
+      .addChannelOption(opt => opt.setName('channel').setDescription('Target channel to dispatch message').setRequired(true))
+      .addStringOption(opt => opt.setName('json').setDescription('Raw JSON message payload (embeds/components/text)').setRequired(true))),
   new SlashCommandBuilder().setName('testwelcome')
     .setDescription('Simulate a join event to test welcome and greet messages (Admin only)'),
   new SlashCommandBuilder().setName('serverpulling')
@@ -1236,6 +1257,234 @@ client.on('interactionCreate', async (interaction) => {
       user.count -= amount;
       db.saveDB(dbData);
       return interaction.reply({ content: `✅ Removed **${amount}** invites from **@${targetUser.username}**. New balance: **${user.count}**`, flags: MessageFlags.Ephemeral });
+    }
+
+    // /botmanager
+    if (commandName === 'botmanager') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+
+      const sub = interaction.options.getSubcommand();
+
+      // Subcommand: add
+      if (sub === 'add') {
+        const token = interaction.options.getString('token').trim();
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        try {
+          const response = await fetch('https://discord.com/api/v10/users/@me', {
+            headers: { Authorization: `Bot ${token}` }
+          });
+          if (!response.ok) {
+            return interaction.editReply({ content: '❌ **Failed to add bot**: Invalid bot token provided.' });
+          }
+          const botData = await response.json();
+          
+          let tokens = db.getSetting('botTokens', []);
+          if (!Array.isArray(tokens)) tokens = [];
+          
+          if (tokens.includes(token)) {
+            return interaction.editReply({ content: `⚠️ Bot **@${botData.username}** is already registered!` });
+          }
+          
+          tokens.push(token);
+          db.setSetting('botTokens', tokens);
+          
+          return interaction.editReply({ content: `✅ Bot **@${botData.username}** (ID: \`${botData.id}\`) has been successfully registered to the Multi-Agent Token Store!` });
+        } catch (err) {
+          return interaction.editReply({ content: `❌ **Error validating token**: ${err.message}` });
+        }
+      }
+
+      // Subcommand: list
+      if (sub === 'list') {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        let tokens = db.getSetting('botTokens', []);
+        if (!Array.isArray(tokens)) tokens = [];
+        
+        if (tokens.length === 0) {
+          return interaction.editReply({ content: '📋 There are no bot tokens stored. Use `/botmanager add <token>` to add one!' });
+        }
+        
+        const embed = new EmbedBuilder()
+          .setColor('#5865f2')
+          .setTitle('🤖 Registered Bot Agents')
+          .setDescription(`Displaying all **${tokens.length}** active multi-agents:`)
+          .setFooter({ text: 'RIWAAYAT Bot Token Store' });
+          
+        for (let i = 0; i < tokens.length; i++) {
+          const token = tokens[i];
+          let details = 'Unknown Bot (Invalid Token)';
+          let inviteLink = '#';
+          try {
+            const response = await fetch('https://discord.com/api/v10/users/@me', {
+              headers: { Authorization: `Bot ${token}` }
+            });
+            if (response.ok) {
+              const botData = await response.json();
+              details = `**Tag**: \`@${botData.username}\`\n**ID**: \`${botData.id}\``;
+              inviteLink = `https://discord.com/oauth2/authorize?client_id=${botData.id}&permissions=8&scope=bot%20applications.commands`;
+            }
+          } catch {}
+          
+          embed.addFields({
+            name: `Agent #${i + 1}`,
+            value: `${details}\n🔗 [Invite Bot](${inviteLink})\n\`Token\`: \`${token.slice(0, 16)}...\``
+          });
+        }
+        
+        return interaction.editReply({ embeds: [embed] });
+      }
+
+      // Subcommand: remove
+      if (sub === 'remove') {
+        const targetClientId = interaction.options.getString('client_id').trim();
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        
+        let tokens = db.getSetting('botTokens', []);
+        if (!Array.isArray(tokens)) tokens = [];
+        
+        let indexToRemove = -1;
+        for (let i = 0; i < tokens.length; i++) {
+          try {
+            const base64Part = tokens[i].split('.')[0];
+            const clientId = Buffer.from(base64Part, 'base64').toString('utf-8');
+            if (clientId === targetClientId) {
+              indexToRemove = i;
+              break;
+            }
+          } catch {}
+        }
+        
+        if (indexToRemove === -1) {
+          return interaction.editReply({ content: `❌ No bot found with Client ID \`${targetClientId}\` in the store.` });
+        }
+        
+        tokens.splice(indexToRemove, 1);
+        db.setSetting('botTokens', tokens);
+        return interaction.editReply({ content: `✅ Successfully removed bot with Client ID \`${targetClientId}\` from the store.` });
+      }
+
+      // Subcommand: update
+      if (sub === 'update') {
+        const targetClientId = interaction.options.getString('client_id').trim();
+        const newName = interaction.options.getString('name');
+        const avatarUrl = interaction.options.getString('avatar_url');
+        const avatarFile = interaction.options.getAttachment('avatar_file');
+        
+        if (!newName && !avatarUrl && !avatarFile) {
+          return interaction.reply({ content: '❌ Please specify a new name, avatar URL, or upload an avatar file to update!', flags: MessageFlags.Ephemeral });
+        }
+        
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        
+        let tokens = db.getSetting('botTokens', []);
+        if (!Array.isArray(tokens)) tokens = [];
+        
+        let botToken = null;
+        for (const t of tokens) {
+          try {
+            const base64Part = t.split('.')[0];
+            const clientId = Buffer.from(base64Part, 'base64').toString('utf-8');
+            if (clientId === targetClientId) {
+              botToken = t;
+              break;
+            }
+          } catch {}
+        }
+        
+        if (!botToken) {
+          return interaction.editReply({ content: `❌ No bot found with Client ID \`${targetClientId}\` in the store.` });
+        }
+        
+        try {
+          const payload = {};
+          if (newName) payload.username = newName;
+          
+          const targetPic = avatarFile ? avatarFile.url : avatarUrl;
+          if (targetPic) {
+            const imgRes = await fetch(targetPic);
+            const buffer = await imgRes.arrayBuffer();
+            const base64 = Buffer.from(buffer).toString('base64');
+            const mime = imgRes.headers.get('content-type') || 'image/png';
+            payload.avatar = `data:${mime};base64,${base64}`;
+          }
+          
+          const response = await fetch('https://discord.com/api/v10/users/@me', {
+            method: 'PATCH',
+            headers: {
+              Authorization: `Bot ${botToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+          
+          if (!response.ok) {
+            const errText = await response.text();
+            return interaction.editReply({ content: `❌ **Failed to update bot profile**: ${errText}` });
+          }
+          
+          const botData = await response.json();
+          return interaction.editReply({ content: `✅ Bot identity successfully updated to **@${botData.username}**!` });
+        } catch (err) {
+          return interaction.editReply({ content: `❌ **Failed to update bot profile**: ${err.message}` });
+        }
+      }
+
+      // Subcommand: send
+      if (sub === 'send') {
+        const targetClientId = interaction.options.getString('client_id').trim();
+        const targetChannel = interaction.options.getChannel('channel');
+        const jsonString = interaction.options.getString('json').trim();
+        
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        
+        let tokens = db.getSetting('botTokens', []);
+        if (!Array.isArray(tokens)) tokens = [];
+        
+        let botToken = null;
+        for (const t of tokens) {
+          try {
+            const base64Part = t.split('.')[0];
+            const clientId = Buffer.from(base64Part, 'base64').toString('utf-8');
+            if (clientId === targetClientId) {
+              botToken = t;
+              break;
+            }
+          } catch {}
+        }
+        
+        if (!botToken) {
+          return interaction.editReply({ content: `❌ No bot found with Client ID \`${targetClientId}\` in the store.` });
+        }
+        
+        let payload = {};
+        try {
+          payload = JSON.parse(jsonString);
+        } catch (err) {
+          return interaction.editReply({ content: `❌ **Invalid JSON syntax**: ${err.message}\n\n*Tip: Double check matching quotes and brackets.*` });
+        }
+        
+        try {
+          const response = await fetch(`https://discord.com/api/v10/channels/${targetChannel.id}/messages`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bot ${botToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+          
+          if (!response.ok) {
+            const errText = await response.text();
+            return interaction.editReply({ content: `❌ **Failed to broadcast message**: ${errText}` });
+          }
+          
+          return interaction.editReply({ content: `✅ Message payload successfully dispatched through bot agent to ${targetChannel}!` });
+        } catch (err) {
+          return interaction.editReply({ content: `❌ **Failed to broadcast message**: ${err.message}` });
+        }
+      }
     }
   }
 
