@@ -108,9 +108,9 @@ export default function Home() {
       
       {/* Premium Cyberpunk Background Grids & Chromatic Orb Effects */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,rgba(99,102,241,0.15),transparent_70%)] blur-[120px]" />
-        <div className="absolute top-[30%] right-[-10%] w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,rgba(6,182,212,0.12),transparent_70%)] blur-[150px]" />
-        <div className="absolute bottom-[10%] left-[10%] w-[700px] h-[700px] rounded-full bg-[radial-gradient(circle,rgba(139,92,246,0.1),transparent_70%)] blur-[180px]" />
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.04),transparent_70%)] blur-[120px]" />
+        <div className="absolute top-[30%] right-[-10%] w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.03),transparent_70%)] blur-[150px]" />
+        <div className="absolute bottom-[10%] left-[10%] w-[700px] h-[700px] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.02),transparent_70%)] blur-[180px]" />
         
         {/* Subtle Tech Grid overlay */}
         <div className="absolute inset-0 bg-grid opacity-[0.08]" />
@@ -122,14 +122,14 @@ export default function Home() {
           
           {/* Left Brand Brandmark */}
           <Link href="/" className="flex items-center gap-3.5 no-underline group shrink-0">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#2563eb] to-[#8b5cf6] text-white flex items-center justify-center font-black text-base shadow-[0_0_20px_rgba(99,102,241,0.4)] group-hover:scale-105 transition-transform duration-300">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-zinc-700 to-zinc-500 text-white flex items-center justify-center font-black text-base shadow-[0_0_20px_rgba(255,255,255,0.05)] group-hover:scale-105 transition-transform duration-300">
               R
             </div>
             <div>
               <div className="font-extrabold text-xl tracking-[0.08em] text-white uppercase bg-clip-text text-transparent bg-gradient-to-r from-white via-zinc-100 to-zinc-400">
                 RIWAAYAT
               </div>
-              <div className="text-[9px] text-[#06b6d4] tracking-widest font-extrabold uppercase">
+              <div className="text-[9px] text-zinc-400 tracking-widest font-extrabold uppercase">
                 Premium Rewards Portal
               </div>
             </div>
@@ -148,7 +148,7 @@ export default function Home() {
             {isAuthenticated && user ? (
               <div className="flex items-center gap-3">
                 <div className="hidden sm:flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-2">
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-[#2563eb] to-[#8b5cf6] text-white flex items-center justify-center text-[10px] font-black">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-zinc-700 to-zinc-500 text-white flex items-center justify-center text-[10px] font-black">
                     {user.username.substring(0, 2).toUpperCase()}
                   </div>
                   <span className="text-xs font-bold text-white/90">{user.username}</span>
@@ -186,7 +186,7 @@ export default function Home() {
             transition={{ duration: 0.5 }}
             className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-6 py-2.5 text-[10px] sm:text-xs font-bold tracking-widest uppercase text-zinc-300 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]"
           >
-            <Shield className="w-3.5 h-3.5 text-[#06b6d4]" />
+            <Shield className="w-3.5 h-3.5 text-zinc-400" />
             Secure OAuth2 Reward Authentication
           </motion.div>
 
@@ -198,7 +198,7 @@ export default function Home() {
             className="text-5xl sm:text-7xl lg:text-[85px] font-black tracking-tight leading-[0.95] text-white"
           >
             The Ultimate<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#8b5cf6] via-[#2563eb] to-[#06b6d4]">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-300 to-zinc-600">
               Discord Reward
             </span><br />
             Platform.
@@ -224,14 +224,14 @@ export default function Home() {
             {isAuthenticated ? (
               <a
                 href="#dashboard"
-                className="relative group overflow-hidden px-12 py-5 bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white hover:brightness-110 rounded-full text-xs font-black tracking-widest uppercase shadow-[0_0_30px_rgba(99,102,241,0.3)] hover:scale-[1.05] transition-all duration-300 no-underline flex items-center gap-2"
+                className="relative group overflow-hidden px-12 py-5 bg-gradient-to-r from-zinc-700 to-zinc-500 text-white hover:brightness-110 rounded-full text-xs font-black tracking-widest uppercase shadow-[0_0_30px_rgba(255,255,255,0.05)] hover:scale-[1.05] transition-all duration-300 no-underline flex items-center gap-2"
               >
                 Start Redeeming <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1.5 transition-transform duration-200" />
               </a>
             ) : (
               <button
                 onClick={() => loginWithDiscord()}
-                className="relative group overflow-hidden px-12 py-5 bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white hover:brightness-110 rounded-full text-xs font-black tracking-widest uppercase shadow-[0_0_30px_rgba(99,102,241,0.3)] hover:scale-[1.05] transition-all duration-300 flex items-center gap-2"
+                className="relative group overflow-hidden px-12 py-5 bg-gradient-to-r from-zinc-700 to-zinc-500 text-white hover:brightness-110 rounded-full text-xs font-black tracking-widest uppercase shadow-[0_0_30px_rgba(255,255,255,0.05)] hover:scale-[1.05] transition-all duration-300 flex items-center gap-2"
               >
                 Login with Discord <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1.5 transition-transform duration-200" />
               </button>
@@ -254,18 +254,18 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="bg-white/[0.02] border border-white/5 rounded-3xl p-8 text-center backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.4)] hover:border-indigo-500/30 transition-all duration-300 relative group"
+              className="bg-white/[0.02] border border-white/5 rounded-3xl p-8 text-center backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.4)] hover:border-zinc-500/30 transition-all duration-300 relative group"
             >
               {/* Corner tech lines */}
-              <div className="absolute top-0 left-0 w-4 h-[1px] bg-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="absolute top-0 left-0 w-[1px] h-4 bg-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="absolute bottom-0 right-0 w-4 h-[1px] bg-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="absolute bottom-0 right-0 w-[1px] h-4 bg-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute top-0 left-0 w-4 h-[1px] bg-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute top-0 left-0 w-[1px] h-4 bg-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute bottom-0 right-0 w-4 h-[1px] bg-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute bottom-0 right-0 w-[1px] h-4 bg-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
               <div className="text-4xl sm:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-white via-zinc-100 to-zinc-400 tracking-tight mb-2">
                 {st.num}
               </div>
-              <div className="text-[10px] font-extrabold text-[#06b6d4] uppercase tracking-widest mb-1.5 font-mono">
+              <div className="text-[10px] font-extrabold text-zinc-400 uppercase tracking-widest mb-1.5 font-mono">
                 {st.label}
               </div>
               <p className="text-xs text-zinc-400 leading-relaxed">
@@ -279,7 +279,7 @@ export default function Home() {
         <section id="dashboard" className="max-w-5xl mx-auto space-y-8 pt-12">
           
           <div className="text-center space-y-2">
-            <span className="text-[10px] font-extrabold tracking-widest uppercase text-[#06b6d4] font-mono">Redeem Center</span>
+            <span className="text-[10px] font-extrabold tracking-widest uppercase text-zinc-400 font-mono">Redeem Center</span>
             <h2 className="text-4xl font-black text-white tracking-tight uppercase">Command Dashboard</h2>
             <p className="text-xs text-zinc-400">Active reward categories connected to your Discord gaming instance.</p>
           </div>
@@ -290,18 +290,18 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 border-b border-white/5 pb-8 mb-8">
               <div className="flex items-center gap-4">
                 {/* Large Premium Avatar Block with gradient border ring */}
-                <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#2563eb] to-[#8b5cf6] p-[1.5px] shadow-[0_0_20px_rgba(99,102,241,0.2)]">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-zinc-700 to-zinc-500 p-[1.5px] shadow-[0_0_20px_rgba(255,255,255,0.05)]">
                   <div className="w-full h-full rounded-full bg-[#09090b] flex items-center justify-center text-white font-bold font-mono text-xl">
                     {isAuthenticated && user ? user.username.substring(0, 2).toUpperCase() : 'RW'}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] font-extrabold tracking-widest text-[#06b6d4] uppercase font-mono">Connected Account</div>
+                  <div className="text-[10px] font-extrabold tracking-widest text-zinc-400 uppercase font-mono">Connected Account</div>
                   <h3 className="text-xl font-black text-white">
                     {isAuthenticated && user ? `@${user.username}` : 'Login to connect'}
                   </h3>
                   <div className="flex items-center gap-2 text-xs text-zinc-400 mt-1">
-                    <span className="w-2 h-2 rounded-full bg-[#06b6d4] animate-pulse" />
+                    <span className="w-2 h-2 rounded-full bg-zinc-400 animate-pulse" />
                     Verified Discord Session Active
                   </div>
                 </div>
@@ -309,7 +309,7 @@ export default function Home() {
 
               {/* Status Badge */}
               <div className="bg-white/[0.02] border border-white/10 rounded-2xl px-6 py-4 flex items-center gap-3 shrink-0 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
-                <Shield className="w-5 h-5 text-[#06b6d4]" />
+                <Shield className="w-5 h-5 text-zinc-400" />
                 <div>
                   <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Verification Status</div>
                   <div className="text-xs font-black text-white tracking-wide uppercase mt-0.5 font-mono">
@@ -326,14 +326,14 @@ export default function Home() {
                   key={idx}
                   whileHover={{ y: -6 }}
                   transition={{ duration: 0.2 }}
-                  className="bg-white/[0.02] border border-white/5 rounded-3xl p-7 flex flex-col justify-between hover:border-indigo-500/40 hover:shadow-[0_15px_45px_rgba(99,102,241,0.1)] transition-all duration-300 group"
+                  className="bg-white/[0.02] border border-white/5 rounded-3xl p-7 flex flex-col justify-between hover:border-zinc-500/40 hover:shadow-[0_15px_45px_rgba(255,255,255,0.02)] transition-all duration-300 group"
                 >
                   <div className="space-y-5">
                     <div className="flex items-center justify-between">
-                      <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-[#06b6d4] transition-all duration-300">
-                        {React.cloneElement(card.ico, { className: 'w-7 h-7 text-[#06b6d4]' })}
+                      <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-zinc-400 transition-all duration-300">
+                        {React.cloneElement(card.ico, { className: 'w-7 h-7 text-zinc-400' })}
                       </div>
-                      <span className="text-[10px] font-black text-[#06b6d4] font-mono tracking-wider bg-[#06b6d4]/10 border border-[#06b6d4]/20 rounded-full px-3 py-1">{card.price}</span>
+                      <span className="text-[10px] font-black text-white font-mono tracking-wider bg-zinc-800 border border-zinc-700 rounded-full px-3 py-1">{card.price}</span>
                     </div>
 
                     <div className="space-y-2">
@@ -346,7 +346,7 @@ export default function Home() {
                     {isAuthenticated ? (
                       <button
                         onClick={() => handleOpenRedeem(card)}
-                        className="w-full py-4 bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white hover:brightness-110 rounded-xl text-xs font-black tracking-widest uppercase transition-all duration-250 text-center block shadow-[0_4px_15px_rgba(99,102,241,0.25)]"
+                        className="w-full py-4 bg-gradient-to-r from-zinc-700 to-zinc-500 text-white hover:brightness-110 rounded-xl text-xs font-black tracking-widest uppercase transition-all duration-250 text-center block shadow-[0_4px_15px_rgba(255,255,255,0.05)]"
                       >
                         Redeem Reward
                       </button>
@@ -372,7 +372,7 @@ export default function Home() {
                 href="/redeem/verify?category=minecraft"
                 className="px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-xs font-black tracking-wider uppercase hover:bg-white/15 hover:border-white/20 text-white transition duration-300 no-underline flex items-center gap-1.5 shrink-0"
               >
-                Apply Coupon Code <ExternalLink className="w-3.5 h-3.5 text-[#06b6d4]" />
+                Apply Coupon Code <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
               </Link>
             </div>
 
@@ -382,7 +382,7 @@ export default function Home() {
         {/* FEATURES SECTION */}
         <section id="features" className="max-w-5xl mx-auto space-y-12 pt-12">
           <div className="text-center space-y-3">
-            <span className="text-[10px] font-extrabold tracking-widest uppercase text-[#06b6d4] font-mono">Security & Architecture</span>
+            <span className="text-[10px] font-extrabold tracking-widest uppercase text-zinc-400 font-mono">Security & Architecture</span>
             <h2 className="text-4xl font-black text-white tracking-tight uppercase">Enterprise Shield Infrastructure</h2>
             <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
               We leverage cloud-grade anti-bot protocols, secure session structures, and fully encrypted database ledgers.
@@ -393,10 +393,10 @@ export default function Home() {
             {features.map((feat, i) => (
               <div 
                 key={i} 
-                className="bg-white/[0.02] border border-white/5 rounded-3xl p-8 relative overflow-hidden group hover:border-indigo-500/40 hover:shadow-[0_15px_45px_rgba(99,102,241,0.05)] transition-all duration-300"
+                className="bg-white/[0.02] border border-white/5 rounded-3xl p-8 relative overflow-hidden group hover:border-zinc-500/40 hover:shadow-[0_15px_45px_rgba(255,255,255,0.02)] transition-all duration-300"
               >
-                <div className="w-12 h-12 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-6 group-hover:border-[#06b6d4] transition-all duration-300">
-                  {React.cloneElement(feat.ico, { className: 'w-6 h-6 text-[#06b6d4]' })}
+                <div className="w-12 h-12 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-6 group-hover:border-zinc-500 transition-all duration-300">
+                  {React.cloneElement(feat.ico, { className: 'w-6 h-6 text-zinc-400' })}
                 </div>
                 <h3 className="text-base font-black text-white uppercase tracking-tight mb-2.5">{feat.title}</h3>
                 <p className="text-xs text-zinc-400 leading-relaxed">{feat.desc}</p>
@@ -407,7 +407,7 @@ export default function Home() {
 
         {/* CTA SECTION */}
         <section className="bg-gradient-to-tr from-[#09090b] to-[#121217] border border-white/5 rounded-3xl p-10 md:p-14 text-center relative overflow-hidden shadow-[0_30px_90px_rgba(0,0,0,0.8)] max-w-5xl mx-auto">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[radial-gradient(ellipse,rgba(99,102,241,0.05),transparent_70%)] pointer-events-none" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[radial-gradient(ellipse,rgba(255,255,255,0.02),transparent_70%)] pointer-events-none" />
           
           <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-white mb-4 uppercase">Join the Premium Circle</h2>
           <p className="text-xs sm:text-sm text-zinc-400 max-w-sm mx-auto leading-relaxed mb-8">
@@ -418,14 +418,14 @@ export default function Home() {
             {isAuthenticated ? (
               <a
                 href="#dashboard"
-                className="px-9 py-4 bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white hover:brightness-110 rounded-full text-xs font-black tracking-widest uppercase hover:scale-105 transition duration-300 no-underline flex items-center gap-2"
+                className="px-9 py-4 bg-gradient-to-r from-zinc-700 to-zinc-500 text-white hover:brightness-110 rounded-full text-xs font-black tracking-widest uppercase hover:scale-105 transition duration-300 no-underline flex items-center gap-2"
               >
                 Start Redeeming <ArrowRight className="w-3.5 h-3.5 text-white" />
               </a>
             ) : (
               <button
                 onClick={() => loginWithDiscord()}
-                className="px-9 py-4 bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white hover:brightness-110 rounded-full text-xs font-black tracking-widest uppercase hover:scale-105 transition duration-300 flex items-center gap-2"
+                className="px-9 py-4 bg-gradient-to-r from-zinc-700 to-zinc-500 text-white hover:brightness-110 rounded-full text-xs font-black tracking-widest uppercase hover:scale-105 transition duration-300 flex items-center gap-2"
               >
                 Login with Discord <ArrowRight className="w-3.5 h-3.5 text-white" />
               </button>
@@ -498,7 +498,7 @@ export default function Home() {
                       placeholder="steve@outlook.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-white/[0.02] border border-white/10 rounded-2xl p-4.5 pl-13 text-sm text-white focus:outline-none focus:border-indigo-500/80 transition"
+                      className="w-full bg-white/[0.02] border border-white/10 rounded-2xl p-4.5 pl-13 text-sm text-white focus:outline-none focus:border-zinc-500/80 transition"
                       required
                     />
                     <Mail className="absolute left-4.5 top-1/2 -translate-y-1/2 text-zinc-400 w-5 h-5" />
@@ -516,7 +516,7 @@ export default function Home() {
                       placeholder="e.g. SteveTheGamer"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="w-full bg-white/[0.02] border border-white/10 rounded-2xl p-4.5 pl-13 text-sm text-white focus:outline-none focus:border-indigo-500/80 transition"
+                      className="w-full bg-white/[0.02] border border-white/10 rounded-2xl p-4.5 pl-13 text-sm text-white focus:outline-none focus:border-zinc-500/80 transition"
                       required
                     />
                     <User className="absolute left-4.5 top-1/2 -translate-y-1/2 text-zinc-400 w-5 h-5" />
@@ -535,7 +535,7 @@ export default function Home() {
                         onClick={() => setSelectedPlan('Nitro Basic')}
                         className={`py-3.5 px-4 rounded-2xl border text-xs font-bold transition duration-200 ${
                           selectedPlan === 'Nitro Basic' 
-                            ? 'bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white border-transparent shadow-[0_4px_12px_rgba(99,102,241,0.25)]' 
+                            ? 'bg-gradient-to-r from-zinc-700 to-zinc-500 text-white border-transparent shadow-[0_4px_12px_rgba(255,255,255,0.05)]' 
                             : 'bg-white/[0.02] border-white/10 text-zinc-300 hover:bg-white/10'
                         }`}
                       >
@@ -546,7 +546,7 @@ export default function Home() {
                         onClick={() => setSelectedPlan('Nitro Boost')}
                         className={`py-3.5 px-4 rounded-2xl border text-xs font-bold transition duration-200 ${
                           selectedPlan === 'Nitro Boost' 
-                            ? 'bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white border-transparent shadow-[0_4px_12px_rgba(99,102,241,0.25)]' 
+                            ? 'bg-gradient-to-r from-zinc-700 to-zinc-500 text-white border-transparent shadow-[0_4px_12px_rgba(255,255,255,0.05)]' 
                             : 'bg-white/[0.02] border-white/10 text-zinc-300 hover:bg-white/10'
                         }`}
                       >
@@ -567,7 +567,7 @@ export default function Home() {
                         onClick={() => setSelectedPlan('10K Subscribers')}
                         className={`py-3.5 px-4 rounded-2xl border text-xs font-bold transition duration-200 ${
                           selectedPlan === '10K Subscribers' 
-                            ? 'bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white border-transparent shadow-[0_4px_12px_rgba(99,102,241,0.25)]' 
+                            ? 'bg-gradient-to-r from-zinc-700 to-zinc-500 text-white border-transparent shadow-[0_4px_12px_rgba(255,255,255,0.05)]' 
                             : 'bg-white/[0.02] border-white/10 text-zinc-300 hover:bg-white/10'
                         }`}
                       >
@@ -578,7 +578,7 @@ export default function Home() {
                         onClick={() => setSelectedPlan('30K Subscribers')}
                         className={`py-3.5 px-4 rounded-2xl border text-xs font-bold transition duration-200 ${
                           selectedPlan === '30K Subscribers' 
-                            ? 'bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white border-transparent shadow-[0_4px_12px_rgba(99,102,241,0.25)]' 
+                            ? 'bg-gradient-to-r from-zinc-700 to-zinc-500 text-white border-transparent shadow-[0_4px_12px_rgba(255,255,255,0.05)]' 
                             : 'bg-white/[0.02] border-white/10 text-zinc-300 hover:bg-white/10'
                         }`}
                       >
@@ -599,7 +599,7 @@ export default function Home() {
                         onClick={() => setSelectedPlan('$50 Giftcard')}
                         className={`py-3.5 px-4 rounded-2xl border text-xs font-bold transition duration-200 ${
                           selectedPlan === '$50 Giftcard' 
-                            ? 'bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white border-transparent shadow-[0_4px_12px_rgba(99,102,241,0.25)]' 
+                            ? 'bg-gradient-to-r from-zinc-700 to-zinc-500 text-white border-transparent shadow-[0_4px_12px_rgba(255,255,255,0.05)]' 
                             : 'bg-white/[0.02] border-white/10 text-zinc-300 hover:bg-white/10'
                         }`}
                       >
@@ -610,7 +610,7 @@ export default function Home() {
                         onClick={() => setSelectedPlan('$100 Giftcard')}
                         className={`py-3.5 px-4 rounded-2xl border text-xs font-bold transition duration-200 ${
                           selectedPlan === '$100 Giftcard' 
-                            ? 'bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white border-transparent shadow-[0_4px_12px_rgba(99,102,241,0.25)]' 
+                            ? 'bg-gradient-to-r from-zinc-700 to-zinc-500 text-white border-transparent shadow-[0_4px_12px_rgba(255,255,255,0.05)]' 
                             : 'bg-white/[0.02] border-white/10 text-zinc-300 hover:bg-white/10'
                         }`}
                       >
@@ -622,7 +622,7 @@ export default function Home() {
 
                 <button
                   type="submit"
-                  className="w-full py-4.5 bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white hover:brightness-110 rounded-2xl text-sm font-black tracking-widest uppercase transition duration-300 flex items-center justify-center gap-2 shadow-[0_4px_15px_rgba(99,102,241,0.3)] font-sans"
+                  className="w-full py-4.5 bg-gradient-to-r from-zinc-700 to-zinc-500 text-white hover:brightness-110 rounded-2xl text-sm font-black tracking-widest uppercase transition duration-300 flex items-center justify-center gap-2 shadow-[0_4px_15px_rgba(255,255,255,0.05)] font-sans"
                 >
                   Proceed to Secure Line <ArrowRight size={16} />
                 </button>

@@ -35,7 +35,7 @@ function Navbar() {
               <div className="font-extrabold text-sm tracking-wider text-black">
                 RIWAAYAT
               </div>
-              <div className="text-[8px] text-[#1d4ed8] tracking-widest font-extrabold uppercase">
+              <div className="text-[8px] text-zinc-500 tracking-widest font-extrabold uppercase">
                 Premium Rewards Platform
               </div>
             </div>
@@ -106,7 +106,7 @@ function Navbar() {
       {/* Mobile Drawer menu */}
       {mobileMenuOpen && (
         <div className="md:hidden fixed top-16 left-0 right-0 z-40 bg-white border-b border-black/5 p-3 flex flex-col gap-1 shadow-md animate-slideDown">
-          <div className="text-[9px] font-bold text-[#1d4ed8] uppercase tracking-wider px-2 py-1">MAIN NAVIGATION</div>
+          <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider px-2 py-1">MAIN NAVIGATION</div>
           {navItems.map((item) => (
             <Link
               key={item.path}

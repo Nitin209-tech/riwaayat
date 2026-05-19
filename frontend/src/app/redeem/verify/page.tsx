@@ -17,6 +17,7 @@ function VerifyRedeemContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [verifiedCode, setVerifiedCode] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
 
   useEffect(() => {
@@ -40,13 +41,13 @@ function VerifyRedeemContent() {
   const getCategoryIcon = () => {
     switch (category) {
       case 'youtube':
-        return <Tv className="w-6 h-6 text-[#1d4ed8]" />;
+        return <Tv className="w-6 h-6 text-zinc-400" />;
       case 'roblox':
-        return <Sparkles className="w-6 h-6 text-[#1d4ed8]" />;
+        return <Sparkles className="w-6 h-6 text-zinc-400" />;
       case 'nitro':
-        return <Award className="w-6 h-6 text-[#1d4ed8]" />;
+        return <Award className="w-6 h-6 text-zinc-400" />;
       default:
-        return <Gamepad2 className="w-6 h-6 text-[#1d4ed8]" />;
+        return <Gamepad2 className="w-6 h-6 text-zinc-400" />;
     }
   };
 
@@ -176,6 +177,7 @@ function VerifyRedeemContent() {
       }
 
       setLoading(false);
+      setVerifiedCode(data.payload || code);
       setSuccess(true);
     } catch (err) {
       console.error(err);
@@ -185,20 +187,20 @@ function VerifyRedeemContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#030303] text-white selection:bg-indigo-500/30 selection:text-white font-sans relative flex flex-col justify-between overflow-hidden">
+    <div className="min-h-screen bg-[#030303] text-white selection:bg-zinc-700 selection:text-white font-sans relative flex flex-col justify-between overflow-hidden">
       
       {/* Background patterns */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,rgba(99,102,241,0.05),transparent_70%)] blur-[120px]" />
-        <div className="absolute top-[40%] right-[-10%] w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle,rgba(99,102,241,0.03),transparent_70%)] blur-[150px]" />
-        <div className="absolute inset-0 bg-grid opacity-10" />
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.03),transparent_70%)] blur-[120px]" />
+        <div className="absolute top-[40%] right-[-10%] w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.01),transparent_70%)] blur-[150px]" />
+        <div className="absolute inset-0 bg-grid opacity-5" />
       </div>
 
       {/* Simple Header */}
       <nav className="border-b border-white/5 bg-[#09090b]/75 backdrop-blur-2xl py-4 px-8 relative z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 no-underline">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white flex items-center justify-center font-bold text-xs shadow-md">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-r from-zinc-700 to-zinc-500 text-white flex items-center justify-center font-bold text-xs shadow-md">
               R
             </div>
             <span className="font-extrabold text-sm tracking-wider text-white">RIWAAYAT</span>
@@ -233,18 +235,18 @@ function VerifyRedeemContent() {
             <div>
               <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block font-mono">Gamer Handle</span>
               <span className="font-bold text-white flex items-center gap-1.5 mt-0.5">
-                <User size={13} className="text-indigo-400" /> {username}
+                <User size={13} className="text-zinc-400" /> {username}
               </span>
             </div>
             <div>
               <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block font-mono">Outlook/Email</span>
               <span className="font-bold text-white flex items-center gap-1.5 mt-0.5 truncate">
-                <Mail size={13} className="text-indigo-400" /> {email}
+                <Mail size={13} className="text-zinc-400" /> {email}
               </span>
             </div>
             <div className="col-span-2 border-t border-white/5 pt-3.5">
               <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block font-mono">Selected Tier</span>
-              <span className="font-bold text-indigo-400 block mt-0.5">
+              <span className="font-bold text-zinc-300 block mt-0.5">
                 {plan}
               </span>
             </div>
@@ -253,7 +255,7 @@ function VerifyRedeemContent() {
 
         {/* Action Form card */}
         <div className="bg-[#0f0f13] border border-white/10 rounded-3xl p-8 shadow-[0_30px_90px_rgba(0,0,0,0.8)] space-y-6">
-          <h2 className="text-xs font-black tracking-widest text-indigo-400 uppercase text-center border-b border-white/5 pb-3">
+          <h2 className="text-xs font-black tracking-widest text-zinc-400 uppercase text-center border-b border-white/5 pb-3">
             ENTER PROMO REDEEM CODE
           </h2>
 
@@ -271,7 +273,7 @@ function VerifyRedeemContent() {
                   placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
                   value={code}
                   onChange={(e) => handleCodeChange(e.target.value)}
-                  className="w-full bg-white/[0.02] border border-white/10 rounded-xl p-3.5 pl-11 text-xs font-mono text-white focus:outline-none focus:border-indigo-500/80 transition tracking-widest"
+                  className="w-full bg-white/[0.02] border border-white/10 rounded-xl p-3.5 pl-11 text-xs font-mono text-white focus:outline-none focus:border-zinc-500 transition tracking-widest"
                   required
                 />
                 <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4" />
@@ -288,7 +290,7 @@ function VerifyRedeemContent() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white hover:brightness-110 rounded-xl text-xs font-black tracking-widest uppercase transition duration-300 flex items-center justify-center gap-2 shadow-[0_4px_15px_rgba(99,102,241,0.3)]"
+              className="w-full py-4 bg-gradient-to-r from-zinc-700 to-zinc-500 text-white hover:brightness-110 rounded-xl text-xs font-black tracking-widest uppercase transition duration-300 flex items-center justify-center gap-2 shadow-[0_4px_15px_rgba(255,255,255,0.05)]"
             >
               <span>{loading ? 'COMPILING TELEMETRY...' : 'EXECUTE CLAIM'}</span>
             </button>
@@ -335,7 +337,7 @@ function VerifyRedeemContent() {
               {/* Invoice Top header */}
               <div className="bg-white/[0.02] border-b border-white/5 p-4 flex items-center justify-between">
                 <div>
-                  <span className="text-[9px] font-extrabold text-[#2563eb] uppercase tracking-widest block font-mono">VOUCHER INVOICE</span>
+                  <span className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest block font-mono">VOUCHER INVOICE</span>
                   <span className="font-mono font-bold text-xs text-white">{invoiceNumber}</span>
                 </div>
                 <span className="bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider">
@@ -354,7 +356,7 @@ function VerifyRedeemContent() {
                   </div>
                   <div>
                     <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block font-mono">Provisioning Node</span>
-                    <span className="font-semibold text-indigo-400 mt-0.5 block font-mono">RIWAAYAT-US-NODE-09</span>
+                    <span className="font-semibold text-zinc-400 mt-0.5 block font-mono">RIWAAYAT-US-NODE-09</span>
                   </div>
                 </div>
 
@@ -371,15 +373,24 @@ function VerifyRedeemContent() {
                 </div>
 
                 {/* Enrolled voucher line items */}
-                <div>
+                <div className="border-b border-white/5 pb-3.5">
                   <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block mb-2 font-mono">Item Statement</span>
-                  <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                  <div className="flex items-center justify-between">
                     <div>
                       <span className="font-bold text-white block">{getCategoryLabel()} Bundle</span>
                       <span className="text-[10px] text-zinc-400">{plan} Activation</span>
                     </div>
                     <span className="font-mono font-bold text-white">$0.00</span>
                   </div>
+                </div>
+
+                {/* Secure Code Key Delivery */}
+                <div className="bg-[#10b981]/5 border border-[#10b981]/15 rounded-xl p-4 text-center space-y-2">
+                  <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest block font-mono">🔑 SECURE ACTIVATION KEY</span>
+                  <div className="font-mono font-bold text-base text-white select-all bg-[#09090b] border border-white/5 py-2.5 rounded-lg tracking-wider">
+                    {verifiedCode}
+                  </div>
+                  <span className="text-[8.5px] text-zinc-400 block">Copy this activation code and use it on the provider's platform to claim your reward.</span>
                 </div>
 
                 {/* Totals */}
@@ -390,7 +401,7 @@ function VerifyRedeemContent() {
 
                 {/* Delivery message */}
                 <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 text-[10px] text-zinc-400 leading-relaxed">
-                  📢 **Delivery Status Notification**: Activation voucher codes and Microsoft login validation certificates will be delivered directly to <span className="font-bold text-white">{email}</span> within <span className="font-bold text-indigo-400">72 Hours</span>.
+                  📢 **Delivery Status Notification**: Activation voucher codes and Microsoft login validation certificates will be delivered directly to <span className="font-bold text-white">{email}</span> within <span className="font-bold text-zinc-400">72 Hours</span>.
                 </div>
 
               </div>
@@ -403,14 +414,14 @@ function VerifyRedeemContent() {
                 onClick={handleDownloadPDF}
                 className="flex-1 py-3 border border-white/10 rounded-xl text-xs font-bold hover:bg-white/5 text-white flex items-center justify-center gap-2 transition"
               >
-                <Download size={14} className="text-indigo-400" /> Download Invoice
+                <Download size={14} className="text-zinc-400" /> Download Invoice
               </button>
               <button
                 onClick={() => {
                   setSuccess(false);
                   window.location.href = '/';
                 }}
-                className="flex-1 py-3 bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] text-white hover:brightness-110 rounded-xl text-xs font-black tracking-widest uppercase transition duration-200"
+                className="flex-1 py-3 bg-gradient-to-r from-zinc-700 to-zinc-500 text-white hover:brightness-110 rounded-xl text-xs font-black tracking-widest uppercase transition duration-200"
               >
                 Done — Return Home
               </button>
