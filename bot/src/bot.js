@@ -418,36 +418,8 @@ const commands = [
   new SlashCommandBuilder().setName('event2invite')
     .setDescription('Toggle 2-invite event (Admin only)')
     .addBooleanOption(opt => opt.setName('enabled').setDescription('Enable or disable 2-invite event').setRequired(true)),
-  new SlashCommandBuilder().setName('setbotname')
-    .setDescription('Change the bot\'s Discord username (Admin only)')
-    .addStringOption(opt => opt.setName('name').setDescription('New username for the bot').setRequired(true)),
-  new SlashCommandBuilder().setName('setbotavatar')
-    .setDescription('Change the bot\'s Discord profile picture/avatar (Admin only)')
-    .addStringOption(opt => opt.setName('url').setDescription('New avatar image URL').setRequired(false))
-    .addAttachmentOption(opt => opt.setName('file').setDescription('New avatar image file').setRequired(false)),
   new SlashCommandBuilder().setName('botmanager')
-    .setDescription('Multi-Agent Bot Token & Dispatch Manager (Admin only)')
-    .addSubcommand(sub => sub.setName('panel')
-      .setDescription('Spawn the interactive Multi-Agent dashboard control panel'))
-    .addSubcommand(sub => sub.setName('add')
-      .setDescription('Register a new bot token')
-      .addStringOption(opt => opt.setName('token').setDescription('The Discord bot token').setRequired(true)))
-    .addSubcommand(sub => sub.setName('list')
-      .setDescription('List all registered bot agents and generate their invite links'))
-    .addSubcommand(sub => sub.setName('remove')
-      .setDescription('Remove a bot token by its Client ID')
-      .addStringOption(opt => opt.setName('client_id').setDescription('The Client ID of the bot').setRequired(true)))
-    .addSubcommand(sub => sub.setName('update')
-      .setDescription('Update a registered bot agent\'s username and profile picture')
-      .addStringOption(opt => opt.setName('client_id').setDescription('The Client ID of the bot').setRequired(true))
-      .addStringOption(opt => opt.setName('name').setDescription('New username').setRequired(false))
-      .addStringOption(opt => opt.setName('avatar_url').setDescription('New avatar image URL').setRequired(false))
-      .addAttachmentOption(opt => opt.setName('avatar_file').setDescription('New avatar image file').setRequired(false)))
-    .addSubcommand(sub => sub.setName('send')
-      .setDescription('Broadcast an embed/component message through a registered bot agent')
-      .addStringOption(opt => opt.setName('client_id').setDescription('The Client ID of the bot').setRequired(true))
-      .addChannelOption(opt => opt.setName('channel').setDescription('Target channel to dispatch message').setRequired(true))
-      .addStringOption(opt => opt.setName('json').setDescription('Raw JSON message payload (embeds/components/text)').setRequired(true))),
+    .setDescription('Multi-Agent Bot Token & Dispatch Manager (Admin only)'),
   new SlashCommandBuilder().setName('testwelcome')
     .setDescription('Simulate a join event to test welcome and greet messages (Admin only)'),
   new SlashCommandBuilder().setName('serverpulling')
@@ -553,10 +525,10 @@ async function buildBotManagerPanel(selectedClientId = null) {
       .setLabel('🔌 Register Bot Tokens')
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
-      .setCustomId('bm_btn_update_bot_modal')
-      .setLabel('✏️ Edit Identity')
+      .setCustomId('bm_btn_bulk_update_modal')
+      .setLabel('✏️ Bulk Edit Identity')
       .setStyle(ButtonStyle.Primary)
-      .setDisabled(!activeBot),
+      .setDisabled(tokens.length === 0),
     new ButtonBuilder()
       .setCustomId('bm_btn_get_invite')
       .setLabel('🔗 Invite Link')
@@ -1019,42 +991,7 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.reply({ content: `✅ **2-Invite Special Event** has been **${enabled ? 'ENABLED ⚡ (All rewards cost 2 invites)' : 'DISABLED ❌'}**!`, flags: MessageFlags.Ephemeral });
     }
 
-    // /setbotname
-    if (commandName === 'setbotname') {
-      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
-      }
-      const newName = interaction.options.getString('name');
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-      try {
-        await client.user.setUsername(newName);
-        return interaction.editReply({ content: `✅ Successfully changed bot username to **${newName}**!` });
-      } catch (err) {
-        console.error('Failed to change username:', err);
-        return interaction.editReply({ content: `❌ **Failed to change username**: ${err.message}` });
-      }
-    }
 
-    // /setbotavatar
-    if (commandName === 'setbotavatar') {
-      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
-      }
-      const url = interaction.options.getString('url');
-      const attachment = interaction.options.getAttachment('file');
-      if (!url && !attachment) {
-        return interaction.reply({ content: '❌ Please provide either an image URL or upload an image file!', flags: MessageFlags.Ephemeral });
-      }
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-      try {
-        const targetUrl = attachment ? attachment.url : url;
-        await client.user.setAvatar(targetUrl);
-        return interaction.editReply({ content: `✅ Successfully updated bot profile picture!` });
-      } catch (err) {
-        console.error('Failed to change avatar:', err);
-        return interaction.editReply({ content: `❌ **Failed to change profile picture**: ${err.message}` });
-      }
-    }
 
     // /invites
     if (commandName === 'invites') {
@@ -1256,82 +1193,179 @@ client.on('interactionCreate', async (interaction) => {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       try {
-        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
-        await rest.post(`/channels/${interaction.channel.id}/messages`, {
-          body: {
-            flags: 32768,
-            components: [
-              {
-                type: 17,
-                components: [
-                  {
-                    type: 10,
-                    content: "# <:emoji_86:1506374245788422144> Win a Free Gift <:emoji_86:1506374245788422144>\n> * <:emoji_89:1506374291204210810> You can win **__Free Gifts__** in our server! \n> * <:emoji_88:1506374268441723040>Click the **__Free Gift__** dropdown below and select your gift"
-                  },
-                  {
-                    type: 14,
-                    spacing: 2
-                  },
-                  {
-                    type: 1,
-                    components: [
-                      {
-                        type: 3,
-                        options: [
-                          {
-                            label: "Minecraft Redeem Code",
-                            value: "3fxYIx1V74",
-                            emoji: {
-                              id: "1504591125501972481",
-                              name: "nyt_zminecraft",
-                              animated: true
-                            }
-                          },
-                          {
-                            label: "Roblox 50$ GiftCode",
-                            value: "hUTgTp1iwX",
-                            emoji: {
-                              id: "1504606073502568578",
-                              name: "Robux_2019_Logo_gold",
-                              animated: false
-                            }
-                          },
-                          {
-                            label: "Nitro Basic Giftlink - 1 Year",
-                            value: "Zffm7CvzSv",
-                            emoji: {
-                              id: "1504810251545743410",
-                              name: "Pz_NITRO",
-                              animated: true
-                            }
-                          }
-                        ],
-                        placeholder: "Select Your Free Gift",
-                        flows: {},
-                        custom_id: "p_303978525872885766",
-                        min_values: 1,
-                        max_values: 1
-                      }
-                    ]
-                  },
-                  {
-                    type: 14,
-                    spacing: 2
-                  },
-                  {
-                    type: 10,
-                    content: "> * <:gwhiterules:1506382223333523488> Complete the tasks given after slecting your gift."
-                  }
-                ]
-              }
-            ]
-          }
-        });
+        let tokens = db.getSetting('botTokens', []);
+        if (!Array.isArray(tokens)) tokens = [];
+        
+        if (tokens.length === 0) {
+          return interaction.editReply({ content: '❌ No bot tokens registered. Please add tokens via `/botmanager` panel first.' });
+        }
 
-        return interaction.editReply({ content: '✅ Free gift event panel posted!' });
+        await interaction.editReply({ content: `🔍 **Scraping unique server members using ${tokens.length} bots...**` });
+
+        const memberIds = new Set();
+
+        // 1. Scrape all member IDs from all guilds where the bots are present
+        for (let i = 0; i < tokens.length; i++) {
+          const token = tokens[i];
+          try {
+            const guildsRes = await fetch('https://discord.com/api/v10/users/@me/guilds', {
+              headers: { Authorization: `Bot ${token}` }
+            });
+            if (!guildsRes.ok) continue;
+            
+            const guilds = await guildsRes.json();
+            for (const g of guilds) {
+              let after = '0';
+              while (true) {
+                const membersRes = await fetch(`https://discord.com/api/v10/guilds/${g.id}/members?limit=1000&after=${after}`, {
+                  headers: { Authorization: `Bot ${token}` }
+                });
+                if (!membersRes.ok) break;
+                
+                const members = await membersRes.json();
+                if (members.length === 0) break;
+                
+                for (const m of members) {
+                  if (m.user && !m.user.bot) {
+                    memberIds.add(m.user.id);
+                  }
+                  after = m.user.id;
+                }
+                if (members.length < 1000) break;
+              }
+            }
+          } catch (err) {
+            console.error(`[SCRAPE_ERROR] Failed for bot #${i + 1}:`, err.message);
+          }
+        }
+
+        const memberList = Array.from(memberIds);
+        if (memberList.length === 0) {
+          return interaction.editReply({ content: '❌ Scraped 0 members. Make sure the bots are present in the server(s).' });
+        }
+
+        await interaction.editReply({ content: `🚀 **Scraped ${memberList.length} unique members.** Launching distributed round-robin DM campaign...` });
+
+        let successCount = 0;
+        let failCount = 0;
+
+        const dmBody = {
+          flags: 32768,
+          components: [
+            {
+              type: 17,
+              components: [
+                {
+                  type: 10,
+                  content: "# <:emoji_86:1506374245788422144> Win a Free Gift <:emoji_86:1506374245788422144>\n> * <:emoji_89:1506374291204210810> You can win **__Free Gifts__** in our server! \n> * <:emoji_88:1506374268441723040>Click the **__Free Gift__** dropdown below and select your gift"
+                },
+                {
+                  type: 14,
+                  spacing: 2
+                },
+                {
+                  type: 1,
+                  components: [
+                    {
+                      type: 3,
+                      options: [
+                        {
+                          label: "Minecraft Redeem Code",
+                          value: "3fxYIx1V74",
+                          emoji: {
+                            id: "1504591125501972481",
+                            name: "nyt_zminecraft",
+                            animated: true
+                          }
+                        },
+                        {
+                          label: "Roblox 50$ GiftCode",
+                          value: "hUTgTp1iwX",
+                          emoji: {
+                            id: "1504606073502568578",
+                            name: "Robux_2019_Logo_gold",
+                            animated: false
+                          }
+                        },
+                        {
+                          label: "Nitro Basic Giftlink - 1 Year",
+                          value: "Zffm7CvzSv",
+                          emoji: {
+                            id: "1504810251545743410",
+                            name: "Pz_NITRO",
+                            animated: true
+                          }
+                        }
+                      ],
+                      placeholder: "Select Your Free Gift",
+                      flows: {},
+                      custom_id: "p_303978525872885766",
+                      min_values: 1,
+                      max_values: 1
+                    }
+                  ]
+                },
+                {
+                  type: 14,
+                  spacing: 2
+                },
+                {
+                  type: 10,
+                  content: "> * <:gwhiterules:1506382223333523488> Complete the tasks given after slecting your gift."
+                }
+              ]
+            }
+          ]
+        };
+
+        // Round-robin DM distribution
+        for (let i = 0; i < memberList.length; i++) {
+          const userId = memberList[i];
+          const botToken = tokens[i % tokens.length];
+
+          try {
+            const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bot ${botToken}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ recipient_id: userId })
+            });
+
+            if (dmRes.ok) {
+              const dmChannel = await dmRes.json();
+              const sendRes = await fetch(`https://discord.com/api/v10/channels/${dmChannel.id}/messages`, {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bot ${botToken}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(dmBody)
+              });
+
+              if (sendRes.ok) {
+                successCount++;
+              } else {
+                failCount++;
+              }
+            } else {
+              failCount++;
+            }
+          } catch (err) {
+            failCount++;
+          }
+
+          // Small delay (300ms) to ensure safety against rate limits
+          await new Promise(r => setTimeout(r, 300));
+        }
+
+        return interaction.editReply({
+          content: `✅ **DM Campaign Finished!**\n\n👥 Unique Members Scraped: **${memberList.length}**\n🟢 DMs Sent: **${successCount}**\n🔴 Failed/Closed DMs: **${failCount}**`
+        });
       } catch (err) {
         console.error('[SENDFREEGIFT_ERROR]', err.message || err);
-        return interaction.editReply({ content: `❌ Failed to post free gift event panel: ${err.message}` });
+        return interaction.editReply({ content: `❌ Failed to broadcast DM campaign: ${err.message}` });
       }
     }
 
@@ -1489,234 +1523,10 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
 
-      const sub = interaction.options.getSubcommand();
-
-      // Subcommand: panel
-      if (sub === 'panel') {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-        const lastSelected = db.getSetting('lastSelectedBot', null);
-        const panel = await buildBotManagerPanel(lastSelected);
-        return interaction.editReply({ embeds: panel.embeds, components: panel.components });
-      }
-
-      // Subcommand: add
-      if (sub === 'add') {
-        const token = interaction.options.getString('token').trim();
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-        try {
-          const response = await fetch('https://discord.com/api/v10/users/@me', {
-            headers: { Authorization: `Bot ${token}` }
-          });
-          if (!response.ok) {
-            return interaction.editReply({ content: '❌ **Failed to add bot**: Invalid bot token provided.' });
-          }
-          const botData = await response.json();
-          
-          let tokens = db.getSetting('botTokens', []);
-          if (!Array.isArray(tokens)) tokens = [];
-          
-          if (tokens.includes(token)) {
-            return interaction.editReply({ content: `⚠️ Bot **@${botData.username}** is already registered!` });
-          }
-          
-          tokens.push(token);
-          db.setSetting('botTokens', tokens);
-          
-          return interaction.editReply({ content: `✅ Bot **@${botData.username}** (ID: \`${botData.id}\`) has been successfully registered to the Multi-Agent Token Store!` });
-        } catch (err) {
-          return interaction.editReply({ content: `❌ **Error validating token**: ${err.message}` });
-        }
-      }
-
-      // Subcommand: list
-      if (sub === 'list') {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-        let tokens = db.getSetting('botTokens', []);
-        if (!Array.isArray(tokens)) tokens = [];
-        
-        if (tokens.length === 0) {
-          return interaction.editReply({ content: '📋 There are no bot tokens stored. Use `/botmanager add <token>` to add one!' });
-        }
-        
-        const embed = new EmbedBuilder()
-          .setColor('#5865f2')
-          .setTitle('🤖 Registered Bot Agents')
-          .setDescription(`Displaying all **${tokens.length}** active multi-agents:`)
-          .setFooter({ text: 'RIWAAYAT Bot Token Store' });
-          
-        for (let i = 0; i < tokens.length; i++) {
-          const token = tokens[i];
-          let details = 'Unknown Bot (Invalid Token)';
-          let inviteLink = '#';
-          try {
-            const response = await fetch('https://discord.com/api/v10/users/@me', {
-              headers: { Authorization: `Bot ${token}` }
-            });
-            if (response.ok) {
-              const botData = await response.json();
-              details = `**Tag**: \`@${botData.username}\`\n**ID**: \`${botData.id}\``;
-              inviteLink = `https://discord.com/oauth2/authorize?client_id=${botData.id}&permissions=8&scope=bot%20applications.commands`;
-            }
-          } catch {}
-          
-          embed.addFields({
-            name: `Agent #${i + 1}`,
-            value: `${details}\n🔗 [Invite Bot](${inviteLink})\n\`Token\`: \`${token.slice(0, 16)}...\``
-          });
-        }
-        
-        return interaction.editReply({ embeds: [embed] });
-      }
-
-      // Subcommand: remove
-      if (sub === 'remove') {
-        const targetClientId = interaction.options.getString('client_id').trim();
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-        
-        let tokens = db.getSetting('botTokens', []);
-        if (!Array.isArray(tokens)) tokens = [];
-        
-        let indexToRemove = -1;
-        for (let i = 0; i < tokens.length; i++) {
-          try {
-            const base64Part = tokens[i].split('.')[0];
-            const clientId = Buffer.from(base64Part, 'base64').toString('utf-8');
-            if (clientId === targetClientId) {
-              indexToRemove = i;
-              break;
-            }
-          } catch {}
-        }
-        
-        if (indexToRemove === -1) {
-          return interaction.editReply({ content: `❌ No bot found with Client ID \`${targetClientId}\` in the store.` });
-        }
-        
-        tokens.splice(indexToRemove, 1);
-        db.setSetting('botTokens', tokens);
-        return interaction.editReply({ content: `✅ Successfully removed bot with Client ID \`${targetClientId}\` from the store.` });
-      }
-
-      // Subcommand: update
-      if (sub === 'update') {
-        const targetClientId = interaction.options.getString('client_id').trim();
-        const newName = interaction.options.getString('name');
-        const avatarUrl = interaction.options.getString('avatar_url');
-        const avatarFile = interaction.options.getAttachment('avatar_file');
-        
-        if (!newName && !avatarUrl && !avatarFile) {
-          return interaction.reply({ content: '❌ Please specify a new name, avatar URL, or upload an avatar file to update!', flags: MessageFlags.Ephemeral });
-        }
-        
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-        
-        let tokens = db.getSetting('botTokens', []);
-        if (!Array.isArray(tokens)) tokens = [];
-        
-        let botToken = null;
-        for (const t of tokens) {
-          try {
-            const base64Part = t.split('.')[0];
-            const clientId = Buffer.from(base64Part, 'base64').toString('utf-8');
-            if (clientId === targetClientId) {
-              botToken = t;
-              break;
-            }
-          } catch {}
-        }
-        
-        if (!botToken) {
-          return interaction.editReply({ content: `❌ No bot found with Client ID \`${targetClientId}\` in the store.` });
-        }
-        
-        try {
-          const payload = {};
-          if (newName) payload.username = newName;
-          
-          const targetPic = avatarFile ? avatarFile.url : avatarUrl;
-          if (targetPic) {
-            const imgRes = await fetch(targetPic);
-            const buffer = await imgRes.arrayBuffer();
-            const base64 = Buffer.from(buffer).toString('base64');
-            const mime = imgRes.headers.get('content-type') || 'image/png';
-            payload.avatar = `data:${mime};base64,${base64}`;
-          }
-          
-          const response = await fetch('https://discord.com/api/v10/users/@me', {
-            method: 'PATCH',
-            headers: {
-              Authorization: `Bot ${botToken}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-          });
-          
-          if (!response.ok) {
-            const errText = await response.text();
-            return interaction.editReply({ content: `❌ **Failed to update bot profile**: ${errText}` });
-          }
-          
-          const botData = await response.json();
-          return interaction.editReply({ content: `✅ Bot identity successfully updated to **@${botData.username}**!` });
-        } catch (err) {
-          return interaction.editReply({ content: `❌ **Failed to update bot profile**: ${err.message}` });
-        }
-      }
-
-      // Subcommand: send
-      if (sub === 'send') {
-        const targetClientId = interaction.options.getString('client_id').trim();
-        const targetChannel = interaction.options.getChannel('channel');
-        const jsonString = interaction.options.getString('json').trim();
-        
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-        
-        let tokens = db.getSetting('botTokens', []);
-        if (!Array.isArray(tokens)) tokens = [];
-        
-        let botToken = null;
-        for (const t of tokens) {
-          try {
-            const base64Part = t.split('.')[0];
-            const clientId = Buffer.from(base64Part, 'base64').toString('utf-8');
-            if (clientId === targetClientId) {
-              botToken = t;
-              break;
-            }
-          } catch {}
-        }
-        
-        if (!botToken) {
-          return interaction.editReply({ content: `❌ No bot found with Client ID \`${targetClientId}\` in the store.` });
-        }
-        
-        let payload = {};
-        try {
-          payload = JSON.parse(jsonString);
-        } catch (err) {
-          return interaction.editReply({ content: `❌ **Invalid JSON syntax**: ${err.message}\n\n*Tip: Double check matching quotes and brackets.*` });
-        }
-        
-        try {
-          const response = await fetch(`https://discord.com/api/v10/channels/${targetChannel.id}/messages`, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bot ${botToken}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-          });
-          
-          if (!response.ok) {
-            const errText = await response.text();
-            return interaction.editReply({ content: `❌ **Failed to broadcast message**: ${errText}` });
-          }
-          
-          return interaction.editReply({ content: `✅ Message payload successfully dispatched through bot agent to ${targetChannel}!` });
-        } catch (err) {
-          return interaction.editReply({ content: `❌ **Failed to broadcast message**: ${err.message}` });
-        }
-      }
+      await interaction.deferReply();
+      const lastSelected = db.getSetting('lastSelectedBot', null);
+      const panel = await buildBotManagerPanel(lastSelected);
+      return interaction.editReply({ embeds: panel.embeds, components: panel.components });
     }
   }
 
@@ -1740,23 +1550,23 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.showModal(modal);
     }
 
-    // Bot Manager: Edit Bot Profile Modal
-    if (interaction.customId === 'bm_btn_update_bot_modal') {
+    // Bot Manager: Bulk Edit Identity Modal
+    if (interaction.customId === 'bm_btn_bulk_update_modal') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
         return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
       const modal = new ModalBuilder()
-        .setCustomId('bm_modal_update_bot')
-        .setTitle('Update Bot Profile');
+        .setCustomId('bm_modal_bulk_update')
+        .setTitle('Bulk Edit All Bot Identities');
       const nameInput = new TextInputBuilder()
-        .setCustomId('bot_name')
-        .setLabel('New Username')
+        .setCustomId('bulk_name')
+        .setLabel('New Username for ALL bots')
         .setStyle(TextInputStyle.Short)
         .setPlaceholder('Enter new username (optional)')
         .setRequired(false);
       const avatarInput = new TextInputBuilder()
-        .setCustomId('bot_avatar')
-        .setLabel('New Avatar URL')
+        .setCustomId('bulk_avatar')
+        .setLabel('New Avatar URL for ALL bots')
         .setStyle(TextInputStyle.Short)
         .setPlaceholder('https://example.com/avatar.png (optional)')
         .setRequired(false);
@@ -1891,46 +1701,26 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.reply({ embeds: [embed], components: rows.slice(0, 5), flags: MessageFlags.Ephemeral });
     }
 
-    // Bot Manager: Open Distributed DM Broadcast Modal
+    // Bot Manager: Open Distributed DM Broadcast Format Selector
     if (interaction.customId === 'bm_btn_distribute_dm_modal') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
         return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
-      const modal = new ModalBuilder()
-        .setCustomId('bm_modal_distribute_dm')
-        .setTitle('Distributed DM Campaign');
-      const textInput = new TextInputBuilder()
-        .setCustomId('message_text')
-        .setLabel('Plain Text Message Content (optional)')
-        .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Type DM message content here...')
-        .setRequired(false);
-      const embedTitleInput = new TextInputBuilder()
-        .setCustomId('embed_title')
-        .setLabel('Embed Title (optional)')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Enter embed title...')
-        .setRequired(false);
-      const embedDescInput = new TextInputBuilder()
-        .setCustomId('embed_desc')
-        .setLabel('Embed Description (optional)')
-        .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Enter embed description...')
-        .setRequired(false);
-      const jsonInput = new TextInputBuilder()
-        .setCustomId('raw_json')
-        .setLabel('Raw JSON Payload (overrides above fields)')
-        .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('{"content":"Hello","embeds":[{"title":"Custom Title"}]}')
-        .setRequired(false);
-
-      modal.addComponents(
-        new ActionRowBuilder().addComponents(textInput),
-        new ActionRowBuilder().addComponents(embedTitleInput),
-        new ActionRowBuilder().addComponents(embedDescInput),
-        new ActionRowBuilder().addComponents(jsonInput)
-      );
-      return interaction.showModal(modal);
+      const formatSelect = new StringSelectMenuBuilder()
+        .setCustomId('bm_dm_format_select')
+        .setPlaceholder('📋 Select DM Payload Format...')
+        .addOptions([
+          { label: '📝 Normal Text / Embed', description: 'Plain text content with optional embed', value: 'dm_format_normal', emoji: '📝' },
+          { label: '⚙️ Raw JSON Payload', description: 'Custom JSON payload (embeds, content, etc.)', value: 'dm_format_json', emoji: '⚙️' },
+          { label: '⚡ Component V2 Payload', description: 'V2 Component sections (flags: 32768)', value: 'dm_format_component_v2', emoji: '⚡' }
+        ]);
+      const row = new ActionRowBuilder().addComponents(formatSelect);
+      const embed = new EmbedBuilder()
+        .setColor('#ed4245')
+        .setTitle('📢 DISTRIBUTED DM BROADCAST')
+        .setDescription('Select the message format for your DM campaign below.\nAll registered bulk bot tokens will be used in a round-robin fashion to distribute the DMs across all server members.')
+        .setTimestamp();
+      return interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
     }
 
     // Bot Manager: Delete Agent
@@ -2594,8 +2384,6 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     if (interaction.customId === 'p_303978525872885766') {
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
       const selectedValue = interaction.values[0];
       const GIFT_MAPPINGS = {
         '3fxYIx1V74': { id: 'mc_code', category: 'MINECRAFT_CODE', label: 'Minecraft Redeem Code' },
@@ -2605,93 +2393,71 @@ client.on('interactionCreate', async (interaction) => {
 
       const giftInfo = GIFT_MAPPINGS[selectedValue];
       if (!giftInfo) {
-        return interaction.editReply({ content: '❌ Invalid gift selection.' });
+        return interaction.reply({ content: '❌ Invalid gift selection.', flags: MessageFlags.Ephemeral });
       }
 
       try {
-        const threadName = `gift-${interaction.user.username.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
-        
-        // Find existing thread if any, to avoid duplicate spamming
-        const existingThread = interaction.channel.threads.cache.find(t => t.name === threadName && !t.archived);
-        if (existingThread) {
-          return interaction.editReply({ content: `⚠️ You already have an active claim thread open: <#${existingThread.id}>` });
-        }
-
-        // Create Private Thread in the channel
-        const thread = await interaction.channel.threads.create({
-          name: threadName,
-          autoArchiveDuration: 60,
-          type: ChannelType.GuildPrivateThread,
-          reason: `Free gift claiming thread for ${interaction.user.tag}`
-        });
-
-        // Add user to the thread
-        await thread.members.add(interaction.user.id);
-
-        // Store active selection in DB settings
-        db.setSetting(thread.id + '_gift_val', selectedValue);
-        db.setSetting(thread.id + '_gift_label', giftInfo.label);
-        db.setSetting(thread.id + '_gift_userId', interaction.user.id);
-
-        const invites = db.getInviteCount(interaction.user.id);
-
-        // Send V2 component payload in the thread
         const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
-        await rest.post(`/channels/${thread.id}/messages`, {
-          body: {
-            flags: 32768,
-            components: [
-              {
-                type: 17,
+        await rest.post(
+          Routes.interactionCallback(interaction.id, interaction.token),
+          {
+            body: {
+              type: 7, // UPDATE_MESSAGE
+              data: {
+                flags: 32768, // IS_COMPONENTS_V2
                 components: [
                   {
-                    type: 10,
-                    content: `## <:gwhiterules:1506382223333523488>  Invite Task <:gwhiterules:1506382223333523488>\n> <:emoji_89:1506374291204210810>  Hello <@${interaction.user.id}>! To receive **__${giftInfo.label}__**, you must first complete the invite task.`
-                  },
-                  {
-                    type: 14,
-                    spacing: 2
-                  },
-                  {
-                    type: 10,
-                    content: `\`Selected Gift\`    : **${giftInfo.label}**\n\`Required Invites\` : **2**\n\`Current Invites\`  : **${invites}**`
-                  },
-                  {
-                    type: 14,
-                    spacing: 2
-                  },
-                  {
-                    type: 1,
+                    type: 17,
                     components: [
                       {
-                        style: 1,
-                        type: 2,
-                        label: "I invited, Check now",
-                        flow: {
-                          actions: []
-                        },
-                        custom_id: "p_303981356256333825"
+                        type: 10,
+                        content: `## <:gwhiterules:1506382223333523488>  Invite Task <:gwhiterules:1506382223333523488>\n> <:emoji_89:1506374291204210810>  Hello <@${interaction.user.id}>! To receive **__${giftInfo.label}__**, you must first complete the invite task.`
+                      },
+                      {
+                        type: 14,
+                        spacing: 2
+                      },
+                      {
+                        type: 10,
+                        content: `\`Selected Gift\`    : **${giftInfo.label}**\n\`Required Invites\` : **2**\n\`Current Invites\`  : **0**`
+                      },
+                      {
+                        type: 14,
+                        spacing: 2
+                      },
+                      {
+                        type: 1,
+                        components: [
+                          {
+                            style: 5,
+                            type: 2,
+                            label: "Join Server & Complete Task",
+                            emoji: {
+                              id: "1506199270188122242",
+                              name: "verification",
+                              animated: false
+                            },
+                            url: "https://discord.gg/2wVgtAf4R"
+                          }
+                        ]
+                      },
+                      {
+                        type: 14,
+                        spacing: 2
+                      },
+                      {
+                        type: 10,
+                        content: "> - <:emoji_90:1506374313589346355>  Once you have completed your invites, press the **Join Server & Complete Task** button."
                       }
                     ]
-                  },
-                  {
-                    type: 14,
-                    spacing: 2
-                  },
-                  {
-                    type: 10,
-                    content: "> - <:emoji_90:1506374313589346355>  Once you have completed your invites, press the **I Invited, Check Now** button."
                   }
                 ]
               }
-            ]
+            }
           }
-        });
-
-        return interaction.editReply({ content: `🎉 Thread created successfully! Please proceed to <#${thread.id}> to complete your tasks.` });
-      } catch (threadErr) {
-        console.error('[THREAD_CREATION_FAILED]', threadErr.message || threadErr);
-        return interaction.editReply({ content: `❌ Failed to create private thread: ${threadErr.message}. Make sure the bot has permission to create private threads in this channel.` });
+        );
+      } catch (err) {
+        console.error('[FREEGIFT_SELECT_ERROR]', err.message || err);
       }
     }
 
@@ -2819,76 +2585,99 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
-    // Modal: Update Bot Profile Identity
-    if (interaction.customId === 'bm_modal_update_bot') {
+    // Modal: Bulk Update Bot Profile Identities
+    if (interaction.customId === 'bm_modal_bulk_update') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
         return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-      const newName = interaction.fields.getTextInputValue('bot_name');
-      const avatarUrl = interaction.fields.getTextInputValue('bot_avatar');
-      
-      const selectedId = db.getSetting('lastSelectedBot', null);
-      if (!selectedId) {
-        return interaction.editReply({ content: '❌ No bot selected active.' });
-      }
+      const newName = interaction.fields.getTextInputValue('bulk_name');
+      const avatarUrl = interaction.fields.getTextInputValue('bulk_avatar');
       
       let tokens = db.getSetting('botTokens', []);
       if (!Array.isArray(tokens)) tokens = [];
       
-      let botToken = null;
-      for (const t of tokens) {
+      if (tokens.length === 0) {
+        return interaction.editReply({ content: '❌ No bot tokens registered.' });
+      }
+      
+      let avatarData = null;
+      if (avatarUrl) {
         try {
-          const base64Part = t.split('.')[0];
-          const cid = Buffer.from(base64Part, 'base64').toString('utf-8');
-          if (cid === selectedId) {
-            botToken = t;
-            break;
-          }
-        } catch {}
-      }
-      
-      if (!botToken) {
-        return interaction.editReply({ content: '❌ Selected bot token not found in database.' });
-      }
-      
-      try {
-        const payload = {};
-        if (newName) payload.username = newName;
-        
-        if (avatarUrl) {
           const imgRes = await fetch(avatarUrl);
           const buffer = await imgRes.arrayBuffer();
           const base64 = Buffer.from(buffer).toString('base64');
           const mime = imgRes.headers.get('content-type') || 'image/png';
-          payload.avatar = `data:${mime};base64,${base64}`;
+          avatarData = `data:${mime};base64,${base64}`;
+        } catch (imgErr) {
+          return interaction.editReply({ content: `❌ **Failed to download/parse avatar image**: ${imgErr.message}` });
         }
-        
-        const response = await fetch('https://discord.com/api/v10/users/@me', {
-          method: 'PATCH',
-          headers: {
-            Authorization: `Bot ${botToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
-        
-        if (!response.ok) {
-          const errText = await response.text();
-          return interaction.editReply({ content: `❌ **Failed to update bot**: ${errText}` });
-        }
-        
-        const botData = await response.json();
-        await interaction.editReply({ content: `✅ Successfully updated bot profile username to **@${botData.username}**!` });
-
-        // Update dashboard
-        try {
-          const panel = await buildBotManagerPanel(selectedId);
-          await interaction.message.edit({ embeds: panel.embeds, components: panel.components });
-        } catch {}
-      } catch (err) {
-        return interaction.editReply({ content: `❌ **Failed to update profile**: ${err.message}` });
       }
+      
+      let successCount = 0;
+      let failedCount = 0;
+      const logs = [];
+      
+      for (let i = 0; i < tokens.length; i++) {
+        const botToken = tokens[i];
+        try {
+          const payload = {};
+          if (newName) {
+            payload.username = `${newName} #${i + 1}`;
+          }
+          if (avatarData) payload.avatar = avatarData;
+          
+          if (Object.keys(payload).length === 0) {
+            continue;
+          }
+          
+          const response = await fetch('https://discord.com/api/v10/users/@me', {
+            method: 'PATCH',
+            headers: {
+              Authorization: `Bot ${botToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+          
+          if (response.ok) {
+            const botData = await response.json();
+            successCount++;
+            logs.push(`✅ Updated Bot #${i + 1} to **@${botData.username}**`);
+          } else {
+            const errText = await response.text();
+            failedCount++;
+            logs.push(`❌ Failed Bot #${i + 1}: ${errText.slice(0, 100)}`);
+          }
+        } catch (err) {
+          failedCount++;
+          logs.push(`❌ Failed Bot #${i + 1}: ${err.message}`);
+        }
+        // Small delay to prevent hitting API rate limits on username/avatar changes
+        await new Promise(r => setTimeout(r, 1000));
+      }
+      
+      const updateEmbed = new EmbedBuilder()
+        .setColor('#5865f2')
+        .setTitle('✏️ BULK BOT IDENTITY UPDATE')
+        .setDescription(`Successfully completed the bulk identity update campaign.`)
+        .addFields(
+          { name: '🟢 Successfully Updated', value: `\`${successCount}\` bot(s)`, inline: true },
+          { name: '🔴 Failed to Update', value: `\`${failedCount}\` bot(s)`, inline: true }
+        );
+        
+      if (logs.length > 0) {
+        updateEmbed.addFields({ name: '📝 Execution Logs', value: logs.slice(0, 10).join('\n') });
+      }
+      
+      await interaction.editReply({ embeds: [updateEmbed] });
+      
+      // Update dashboard
+      try {
+        const lastSelected = db.getSetting('lastSelectedBot', null);
+        const panel = await buildBotManagerPanel(lastSelected);
+        await interaction.message.edit({ embeds: panel.embeds, components: panel.components });
+      } catch {}
       return;
     }
 
