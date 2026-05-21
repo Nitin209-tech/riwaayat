@@ -1833,121 +1833,338 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         return interaction.reply({ content: '❌ Please select or provide a valid target user.', flags: MessageFlags.Ephemeral });
       }
 
-      await interaction.reply({ content: '⏳ Generating simulated proof...', flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: '⏳ Rendering premium payout screenshot (Generating Canvas)...', flags: MessageFlags.Ephemeral });
 
       try {
-        // Fetch webhooks and get or create one
-        let webhook = null;
-        if (interaction.channel.createWebhook) {
-          const webhooks = await interaction.channel.fetchWebhooks().catch(() => null);
-          if (webhooks) {
-            webhook = webhooks.find(wh => wh.owner.id === client.user.id);
-          }
-          if (!webhook) {
-            webhook = await interaction.channel.createWebhook({
-              name: 'Riwaayat Proof Bot',
-              avatar: client.user.displayAvatarURL()
-            });
-          }
+        const { createCanvas, loadImage } = require('@napi-rs/canvas');
+        const { AttachmentBuilder } = require('discord.js');
+
+        // Helpers to draw rounded rectangles
+        function drawRoundedRect(ctx, x, y, width, height, radius) {
+          ctx.beginPath();
+          ctx.moveTo(x + radius, y);
+          ctx.lineTo(x + width - radius, y);
+          ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+          ctx.lineTo(x + width, y + height - radius);
+          ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+          ctx.lineTo(x + radius, y + height);
+          ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+          ctx.lineTo(x, y + radius);
+          ctx.quadraticCurveTo(x, y, x + radius, y);
+          ctx.closePath();
         }
 
-        if (!webhook) {
-          return interaction.editReply({ content: '❌ Webhook permissions are missing or failed to initialize in this channel.' });
+        // Helper to format timestamps organically
+        function getFormattedTime(offsetMinutes = 0) {
+          const d = new Date(Date.now() + offsetMinutes * 60 * 1000);
+          let hours = d.getHours();
+          const minutes = d.getMinutes();
+          const ampm = hours >= 12 ? 'PM' : 'AM';
+          hours = hours % 12;
+          hours = hours ? hours : 12;
+          const minutesStr = minutes < 10 ? '0' + minutes : minutes;
+          return `${hours}:${minutesStr} ${ampm}`;
+        }
+
+        // Safe image fetcher
+        async function fetchImageBuffer(url) {
+          return new Promise((resolve, reject) => {
+            const clientHttp = url.startsWith('https') ? https : http;
+            clientHttp.get(url, (res) => {
+              const data = [];
+              res.on('data', (chunk) => data.push(chunk));
+              res.on('end', () => resolve(Buffer.concat(data)));
+              res.on('error', reject);
+            }).on('error', reject);
+          });
+        }
+
+        async function loadImgSafely(url) {
+          try {
+            const buffer = await fetchImageBuffer(url);
+            return await loadImage(buffer);
+          } catch (err) {
+            console.error(`[ProofMake] Image download failed for ${url}:`, err.message);
+            return null;
+          }
         }
 
         // Generate random invites and promo gift code
         const randomInvites = Math.floor(Math.random() * 4) + 2; // 2 to 5 invites
         const giftCode = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10); // 16 character alphanumeric
+
+        // 1. Download Avatars and Nitro card image
+        const targetAvatarUrl = targetUser.displayAvatarURL({ extension: 'png', size: 128 });
+        const executorAvatarUrl = interaction.user.displayAvatarURL({ extension: 'png', size: 128 });
+        const nitroGiftCardUrl = 'https://i.imgur.com/v8tT4dD.png'; // Purple Wumpus gift box thumbnail
+
+        const [targetAvatarImg, executorAvatarImg, nitroGiftCardImg] = await Promise.all([
+          loadImgSafely(targetAvatarUrl),
+          loadImgSafely(executorAvatarUrl),
+          loadImgSafely(nitroGiftCardUrl)
+        ]);
+
+        // 2. Select conversation texts randomly
+        const conversationTemplates = [
+          {
+            first: [
+              `🤬`,
+              `i have made like ${randomInvites} invites`,
+              `@${interaction.user.username} WHEN U PAY MY NITRO BASIC BITCH`,
+              `HUH????`
+            ],
+            third: [
+              `HAHAHAHAH GOOOD BOOY`,
+              `REAL THOUGH BTW`
+            ]
+          },
+          {
+            first: [
+              `plss nitro basic dedo maine ${randomInvites} invites pure kar liye`,
+              `check fast @${interaction.user.username} plss`
+            ],
+            third: [
+              `thankyou legit server!`,
+              `proof vouch post kar diya hai 😭❤️`
+            ]
+          },
+          {
+            first: [
+              `yo @${interaction.user.username} completed my ${randomInvites} invites`,
+              `payout my nitro basic code plss send fast`
+            ],
+            third: [
+              `thankyou legit payout received!!`
+            ]
+          }
+        ];
+
+        const template = conversationTemplates[Math.floor(Math.random() * conversationTemplates.length)];
+
+        // Generate Canvas
+        // Dimensions: Width = 720px, Height = 580px
+        const canvas = createCanvas(720, 580);
+        const ctx = canvas.getContext('2d');
+
+        // Draw Discord dark theme background
+        ctx.fillStyle = '#313338';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Timestamps
+        const time1 = getFormattedTime(-1);
+        const time2 = getFormattedTime(0);
+        const time3 = getFormattedTime(0);
+
+        // --- DRAW BLOCK 1 (Target User requesting) ---
+        // Draw Avatar
+        if (targetAvatarImg) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(45, 50, 20, 0, Math.PI * 2, true);
+          ctx.closePath();
+          ctx.clip();
+          ctx.drawImage(targetAvatarImg, 25, 30, 40, 40);
+          ctx.restore();
+        } else {
+          ctx.fillStyle = '#5865F2';
+          ctx.beginPath();
+          ctx.arc(45, 50, 20, 0, Math.PI * 2, true);
+          ctx.fill();
+        }
+
+        // Draw Name
+        ctx.font = 'bold 16px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.fillStyle = '#F2F3F5';
+        ctx.fillText(targetUser.username, 80, 46);
+        const nameWidth1 = ctx.measureText(targetUser.username).width;
+
+        // Draw Timestamp
+        ctx.font = '12px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.fillStyle = '#949BA4';
+        ctx.fillText(time1, 80 + nameWidth1 + 10, 46);
+
+        // Draw Message lines
+        ctx.font = '15px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.fillStyle = '#DBDEE1';
+        let currentY = 74;
+        for (const line of template.first) {
+          ctx.fillText(line, 80, currentY);
+          currentY += 22;
+        }
+
+        // --- DRAW BLOCK 2 (Command Executor delivering prize) ---
+        const block2StartY = currentY + 15;
+
+        // Draw Avatar
+        if (executorAvatarImg) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(45, block2StartY + 20, 20, 0, Math.PI * 2, true);
+          ctx.closePath();
+          ctx.clip();
+          ctx.drawImage(executorAvatarImg, 25, block2StartY, 40, 40);
+          ctx.restore();
+        } else {
+          ctx.fillStyle = '#5865F2';
+          ctx.beginPath();
+          ctx.arc(45, block2StartY + 20, 20, 0, Math.PI * 2, true);
+          ctx.fill();
+        }
+
+        // Draw Name + Custom Tag 🎁 GIFT
+        ctx.font = 'bold 16px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.fillStyle = '#F2F3F5';
+        ctx.fillText(interaction.user.username, 80, block2StartY + 16);
+        const execNameWidth = ctx.measureText(interaction.user.username).width;
+
+        // Draw 🎁 GIFT tag
+        ctx.fillStyle = '#23A55A'; // Green tag background
+        drawRoundedRect(ctx, 80 + execNameWidth + 8, block2StartY + 2, 62, 18, 3);
+        ctx.fill();
+        ctx.font = 'bold 10px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText('🎁 GIFT', 80 + execNameWidth + 14, block2StartY + 14);
+
+        // Draw Timestamp
+        ctx.font = '12px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.fillStyle = '#949BA4';
+        ctx.fillText(time2, 80 + execNameWidth + 78, block2StartY + 16);
+
+        // Draw Message text
+        ctx.font = '15px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.fillStyle = '#DBDEE1';
+        ctx.fillText('🎁 Thank you for inviting users to my server!', 80, block2StartY + 42);
         
-        let firstMsgText = '';
-        let secondMsgText = '';
-        let secondMsgEmbed = null;
-        let thirdMsgText = '';
+        let linkText = '';
+        let embedTitle = '';
+        let embedDesc = '';
+        let embedColor = '#4f46e5';
 
-        // Configure messages based on prize selection
         if (prize === 'nitro_basic') {
-          firstMsgText = `🤬\ni have made like ${randomInvites} invites\n<@${interaction.user.id}> WHEN U PAY MY NITRO BASIC BITCH\nHUH????`;
-          secondMsgText = `🎁 Thank you for inviting users to my server!\n🌀 Here is your Nitro Basic 1 Month: https://discord.gift/${giftCode}`;
-          secondMsgEmbed = new EmbedBuilder()
-            .setColor('#4f46e5')
-            .setTitle("You've been gifted a subscription!")
-            .setDescription(`You've been gifted **Nitro Basic** for **1 month**!`)
-            .setThumbnail('https://i.imgur.com/w9rNuGZ.png')
-            .setFooter({ text: 'Expires in 48 hours' });
-          thirdMsgText = `HAHAHAHAH GOOOD BOOY\nREAL THOUGH BTW`;
+          linkText = `🌀 Here is your Nitro Basic 1 Month: https://discord.gift/${giftCode}`;
+          embedTitle = "You've been gifted a subscription!";
+          embedDesc = "You've been gifted Nitro Basic for 1 month!";
+          embedColor = '#4f46e5';
         } else if (prize === 'nitro_boost') {
-          firstMsgText = `🤬\ni did ${randomInvites} invites!\n<@${interaction.user.id}> send my nitro boost code immediately!`;
-          secondMsgText = `🎁 Thank you for inviting users to my server!\n🌀 Here is your Nitro Boost 1 Month: https://discord.gift/${giftCode}`;
-          secondMsgEmbed = new EmbedBuilder()
-            .setColor('#ff73fa')
-            .setTitle("You've been gifted a subscription!")
-            .setDescription(`You've been gifted **Nitro Boost** for **1 month**!`)
-            .setThumbnail('https://i.imgur.com/w9rNuGZ.png')
-            .setFooter({ text: 'Expires in 48 hours' });
-          thirdMsgText = `LET'S GOOOOO THANK YOU LEGIT SO FAST`;
+          linkText = `🌀 Here is your Nitro Boost 1 Month: https://discord.gift/${giftCode}`;
+          embedTitle = "You've been gifted a subscription!";
+          embedDesc = "You've been gifted Nitro Boost for 1 month!";
+          embedColor = '#ff73fa';
         } else if (prize === 'minecraft') {
-          firstMsgText = `yo <@${interaction.user.id}> done with ${randomInvites} invites\ncan you give my minecraft account now?`;
-          secondMsgText = `🎁 Thank you for inviting users to my server!\n⛏ Here are your Minecraft Account credentials:\n` +
-                          `**Email:** \`mc_play_${Math.floor(Math.random()*8999)+1000}@gmail.com\`\n` +
-                          `**Password:** \`${Math.random().toString(36).substring(2, 10).toUpperCase()}!\``;
-          thirdMsgText = `omg thank you! logged in successfully, you are the best!`;
+          linkText = `⛏ Here are your Minecraft Account credentials:`;
+          embedTitle = "Minecraft Premium Account Info";
+          embedDesc = `Email: mc_play_${Math.floor(Math.random()*8999)+1000}@gmail.com\nPassword: ${Math.random().toString(36).substring(2, 10).toUpperCase()}!`;
+          embedColor = '#23A55A';
         } else if (prize === 'robux_50') {
-          firstMsgText = `yo i got ${randomInvites} invites now\n<@${interaction.user.id}> pay my robux basic please`;
-          secondMsgText = `🎁 Thank you for inviting users to my server!\n🎮 Here is your Roblox $50 Gift Card Code:\n\`RBX-${giftCode.toUpperCase().substring(0, 12)}\``;
-          secondMsgEmbed = new EmbedBuilder()
-            .setColor('#f5be18')
-            .setTitle("Robux Premium Gift Card")
-            .setDescription(`**Value:** $50.00 USD\n**Status:** Activated`)
-            .setThumbnail('https://i.imgur.com/KdfQ97a.png')
-            .setFooter({ text: 'Redeemable on Roblox.com' });
-          thirdMsgText = `tysm! redeemed perfectly 😭`;
+          linkText = `🎮 Here is your Roblox $50 Gift Card Code:`;
+          embedTitle = "Roblox $50 Premium Card";
+          embedDesc = `Gift Card Pin: RBX-${giftCode.toUpperCase().substring(0, 12)}`;
+          embedColor = '#f5be18';
         } else if (prize === 'robux_100') {
-          firstMsgText = `yo <@${interaction.user.id}> done inviting people\npayout my robux 100$ fast bro`;
-          secondMsgText = `🎁 Thank you for inviting users to my server!\n🎮 Here is your Roblox $100 Gift Card Code:\n\`RBX-${giftCode.toUpperCase().substring(0, 12)}\``;
-          secondMsgEmbed = new EmbedBuilder()
-            .setColor('#f5be18')
-            .setTitle("Robux Premium Gift Card")
-            .setDescription(`**Value:** $100.00 USD\n**Status:** Activated`)
-            .setThumbnail('https://i.imgur.com/KdfQ97a.png')
-            .setFooter({ text: 'Redeemable on Roblox.com' });
-          thirdMsgText = `OMG $100 ROBUX TYSM BRO!`;
+          linkText = `🎮 Here is your Roblox $100 Gift Card Code:`;
+          embedTitle = "Roblox $100 Premium Card";
+          embedDesc = `Gift Card Pin: RBX-${giftCode.toUpperCase().substring(0, 12)}`;
+          embedColor = '#f5be18';
         }
 
-        // Send first message as target user
-        await webhook.send({
-          username: targetUser.username,
-          avatarURL: targetUser.displayAvatarURL({ dynamic: true }),
-          content: firstMsgText
-        });
+        ctx.fillText(linkText, 80, block2StartY + 64);
 
-        // Wait 1.5 seconds to simulate real conversation flow
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Draw Embed Card Box
+        const embedY = block2StartY + 80;
+        ctx.fillStyle = '#2B2D31'; // Dark card color
+        drawRoundedRect(ctx, 80, embedY, 520, 135, 8);
+        ctx.fill();
 
-        // Send second message as the executor
-        const executorOptions = {
-          username: `${interaction.user.username} 🎁 GIFT`,
-          avatarURL: interaction.user.displayAvatarURL({ dynamic: true }),
-          content: secondMsgText
-        };
-        if (secondMsgEmbed) {
-          executorOptions.embeds = [secondMsgEmbed];
+        // Left accent border color bar
+        ctx.fillStyle = embedColor;
+        drawRoundedRect(ctx, 80, embedY, 4, 135, 2);
+        ctx.fill();
+
+        // Title
+        ctx.font = 'bold 16px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText(embedTitle, 100, embedY + 32);
+
+        // Description
+        ctx.font = '14px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.fillStyle = '#DBDEE1';
+        const descLines = embedDesc.split('\n');
+        let descY = embedY + 54;
+        for (const line of descLines) {
+          ctx.fillText(line, 100, descY);
+          descY += 18;
         }
-        await webhook.send(executorOptions);
 
-        // Wait 1.5 seconds
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Draw Button "Open Gift" or "Claim Info"
+        ctx.fillStyle = '#5865F2'; // Discord Blurple
+        drawRoundedRect(ctx, 100, embedY + 86, 95, 34, 4);
+        ctx.fill();
 
-        // Send third message as target user
-        await webhook.send({
-          username: targetUser.username,
-          avatarURL: targetUser.displayAvatarURL({ dynamic: true }),
-          content: thirdMsgText
+        ctx.font = 'bold 14px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText('Open Gift', 118, embedY + 108);
+
+        // Draw Expires text
+        ctx.font = '12px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.fillStyle = '#949BA4';
+        ctx.fillText('Expires in 48 hours', 210, embedY + 107);
+
+        // Draw Wumpus Nitro Graphic if successfully loaded
+        if (nitroGiftCardImg) {
+          ctx.drawImage(nitroGiftCardImg, 420, embedY + 10, 160, 115);
+        }
+
+        // --- DRAW BLOCK 3 (Target User saying thankyou legit) ---
+        const block3StartY = embedY + 155;
+
+        // Draw Avatar
+        if (targetAvatarImg) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(45, block3StartY + 20, 20, 0, Math.PI * 2, true);
+          ctx.closePath();
+          ctx.clip();
+          ctx.drawImage(targetAvatarImg, 25, block3StartY, 40, 40);
+          ctx.restore();
+        } else {
+          ctx.fillStyle = '#5865F2';
+          ctx.beginPath();
+          ctx.arc(45, block3StartY + 20, 20, 0, Math.PI * 2, true);
+          ctx.fill();
+        }
+
+        // Draw Name
+        ctx.font = 'bold 16px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.fillStyle = '#F2F3F5';
+        ctx.fillText(targetUser.username, 80, block3StartY + 16);
+        const nameWidth3 = ctx.measureText(targetUser.username).width;
+
+        // Draw Timestamp
+        ctx.font = '12px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.fillStyle = '#949BA4';
+        ctx.fillText(time3, 80 + nameWidth3 + 10, block3StartY + 16);
+
+        // Draw Message text lines
+        ctx.font = '15px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.fillStyle = '#DBDEE1';
+        let currentY3 = block3StartY + 42;
+        for (const line of template.third) {
+          ctx.fillText(line, 80, currentY3);
+          currentY3 += 22;
+        }
+
+        // 3. Export to Buffer and send as Attachment
+        const buffer = canvas.toBuffer('image/png');
+        const attachment = new AttachmentBuilder(buffer, { name: 'legit-payout-proof.png' });
+
+        await interaction.editReply({ 
+          content: `✅ Here is your generated high-quality simulated payout proof screenshot for **${targetUser.username}**!`,
+          files: [attachment] 
         });
 
-        return interaction.editReply({ content: `✅ Simulated proof for **${targetUser.username}** posted successfully!` });
       } catch (err) {
-        console.error('Failed to generate proof:', err);
-        return interaction.editReply({ content: `❌ Error generating proof: ${err.message}` });
+        console.error('[Canvas Proof] Screenshot generation crashed:', err);
+        return interaction.editReply({ content: `❌ Screenshot engine crashed: ${err.message}` });
       }
     }
   }
