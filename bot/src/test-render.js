@@ -29,26 +29,20 @@ async function main() {
   // Draw a crisp native Gift Box emoji using Canvas path commands
   function drawGiftBox(ctx, x, y, size = 16) {
     ctx.save();
-    // Red box base
     ctx.fillStyle = '#DD2E44'; // Twemoji red
     ctx.fillRect(x, y + size * 0.35, size, size * 0.65);
 
-    // Dark red lid
-    ctx.fillStyle = '#A0041E';
+    ctx.fillStyle = '#A0041E'; // Dark red lid
     ctx.fillRect(x - size * 0.05, y + size * 0.25, size * 1.1, size * 0.15);
 
-    // Yellow vertical ribbon
-    ctx.fillStyle = '#FFCC4D'; // Twemoji yellow
+    ctx.fillStyle = '#FFCC4D'; // Twemoji yellow vertical ribbon
     ctx.fillRect(x + size * 0.4, y + size * 0.35, size * 0.2, size * 0.65);
     ctx.fillRect(x + size * 0.4, y + size * 0.25, size * 0.2, size * 0.15);
 
-    // Yellow bow loops at top
-    ctx.strokeStyle = '#FFCC4D';
+    ctx.strokeStyle = '#FFCC4D'; // Yellow bow loops at top
     ctx.lineWidth = size * 0.15;
     ctx.beginPath();
-    // Left loop
     ctx.arc(x + size * 0.3, y + size * 0.18, size * 0.15, 0, Math.PI * 2);
-    // Right loop
     ctx.arc(x + size * 0.7, y + size * 0.18, size * 0.15, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
@@ -61,20 +55,17 @@ async function main() {
     const cx = x + radius;
     const cy = y + radius;
 
-    // Dark gold/orange border
-    ctx.fillStyle = '#C87E0F';
+    ctx.fillStyle = '#C87E0F'; // Dark gold/orange border
     ctx.beginPath();
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.fill();
 
-    // Vibrant gold face
-    ctx.fillStyle = '#F5B418';
+    ctx.fillStyle = '#F5B418'; // Vibrant gold face
     ctx.beginPath();
     ctx.arc(cx, cy, radius * 0.8, 0, Math.PI * 2);
     ctx.fill();
 
-    // Inner gold ring accent
-    ctx.strokeStyle = '#FFD24D';
+    ctx.strokeStyle = '#FFD24D'; // Inner gold ring accent
     ctx.lineWidth = radius * 0.15;
     ctx.beginPath();
     ctx.arc(cx, cy, radius * 0.5, 0, Math.PI * 2);
@@ -85,21 +76,17 @@ async function main() {
   // Draw a crisp native Brick emoji (for Minecraft MC Redeem Code)
   function drawBrickBlock(ctx, x, y, size = 16) {
     ctx.save();
-    // Dark red brick base
-    ctx.fillStyle = '#9B382B';
+    ctx.fillStyle = '#9B382B'; // Dark red brick base
     ctx.fillRect(x, y, size, size);
 
-    // Accent grout lines (grey-brown)
-    ctx.strokeStyle = '#5E2018';
+    ctx.strokeStyle = '#5E2018'; // Accent grout lines
     ctx.lineWidth = 1;
     ctx.beginPath();
-    // Horizontal splits
     ctx.moveTo(x, y + size * 0.33);
     ctx.lineTo(x + size, y + size * 0.33);
     ctx.moveTo(x, y + size * 0.66);
     ctx.lineTo(x + size, y + size * 0.66);
 
-    // Vertical brick joints
     ctx.moveTo(x + size * 0.5, y);
     ctx.lineTo(x + size * 0.5, y + size * 0.33);
 
@@ -110,7 +97,6 @@ async function main() {
 
     ctx.moveTo(x + size * 0.5, y + size * 0.66);
     ctx.lineTo(x + size * 0.5, y + size);
-
     ctx.stroke();
     ctx.restore();
   }
@@ -118,26 +104,20 @@ async function main() {
   // Natively draw the white cloud on blue circle avatar
   function drawCloudAvatar(ctx, x, y, size) {
     ctx.save();
-    // Soft blue background circle
-    ctx.fillStyle = '#5865F2';
+    ctx.fillStyle = '#5865F2'; // Soft blue background circle
     ctx.beginPath();
     ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2, true);
     ctx.fill();
 
-    // White puffy cloud
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = '#FFFFFF'; // White puffy cloud
     const cx = x + size / 2;
     const cy = y + size / 2;
     const r = size / 32;
 
     ctx.beginPath();
-    // Left bump
     ctx.arc(cx - 5 * r, cy + 2 * r, 4 * r, 0, Math.PI * 2);
-    // Center-top bump
     ctx.arc(cx, cy - 2 * r, 6 * r, 0, Math.PI * 2);
-    // Right bump
     ctx.arc(cx + 5 * r, cy + 2 * r, 4 * r, 0, Math.PI * 2);
-    // Flat bottom rectangle
     ctx.rect(cx - 5 * r, cy, 10 * r, 4 * r);
     ctx.fill();
     ctx.restore();
@@ -148,168 +128,427 @@ async function main() {
     ctx.strokeStyle = '#4E5058';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    // Curves up and right from x = 36 (aligned with message left grid)
     ctx.moveTo(36, y + 10);
     ctx.quadraticCurveTo(36, y - 2, 46, y - 2);
     ctx.stroke();
 
-    // Draw small 16x16 cloud avatar at x = 48
     drawCloudAvatar(ctx, 48, y - 10, 16);
 
-    // Draw reply text next to avatar (removed raw arrow symbol)
     ctx.font = 'italic 12px "gg sans"';
     ctx.fillStyle = '#B5BAC1';
     ctx.fillText(text, 68, y + 2);
   }
 
-  // Simulated target user details (Vouching user)
-  const targetName = 'Weath3r_';
-  
-  // Create Canvas (Width = 905px, Height = 347px)
-  const canvas = createCanvas(905, 347);
-  const ctx = canvas.getContext('2d');
+  async function renderProof(prize, outFilename) {
+    // Create Canvas (Width = 905px, Height = 347px)
+    const canvas = createCanvas(905, 347);
+    const ctx = canvas.getContext('2d');
 
-  // Fill Discord Midnight theme background
-  ctx.fillStyle = '#1A1A1E';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Fill Discord Midnight theme background
+    ctx.fillStyle = '#1A1A1E';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Timestamps
-  const timeBot = '7:00 PM';
-  const timeUser = '7:37 PM';
+    const isNitroPrize = prize === 'nitro_basic' || prize === 'nitro_boost';
 
-  // --- 1. DRAW BOT PAYOUT BLOCK (Riwaayat APP) ---
-  // Top reply line
-  drawReply(ctx, 20, 'Message could not be loaded');
+    if (isNitroPrize) {
+      // --- AMOLED/MIDNIGHT CLASSIC NITRO CONVERSATION FLOW ---
+      const time1 = '6:41 PM';
+      const time2 = '6:42 PM';
+      const time3 = '6:42 PM';
+      const randomInvites = 4;
+      const giftCode = 'A1B2C3D4E5F6G7H8';
 
-  // Bot avatar (Cloud logo drawn at 32x32 size)
-  drawCloudAvatar(ctx, 6, 36, 32);
+      // Load wumpus image
+      let wumpusImg = null;
+      try {
+        wumpusImg = await loadImage(path.join(__dirname, 'fonts', 'wumpus.png'));
+      } catch (err) {
+        console.error('Wumpus image load failed:', err.message);
+      }
 
-  // Username: "Riwaayat" (white, bold 15px)
-  ctx.font = 'bold 15px "gg sans bold"';
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillText('Riwaayat', 48, 48);
-  const botNameWidth = ctx.measureText('Riwaayat').width;
+      // Template
+      const template = {
+        first: [
+          `i have made like ${randomInvites} invites`,
+          `@Count WHEN U PAY MY NITRO BASIC BITCH`,
+          'HUH????'
+        ],
+        third: [
+          'HAHAHAHAH GOOOD BOOY',
+          'REAL THOUGH BTW'
+        ]
+      };
 
-  // Blue APP Badge
-  const badgeX = 48 + botNameWidth + 6;
-  const badgeY = 37;
-  ctx.fillStyle = '#5865F2';
-  drawRoundedRect(ctx, badgeX, badgeY, 25, 14, 3);
-  ctx.fill();
+      // --- DRAW BLOCK 1 (Target User requesting) ---
+      const block1StartY = 11;
 
-  ctx.font = 'bold 9px "gg sans bold"';
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillText('APP', badgeX + 4, 47);
+      // Draw Avatar 1 (Warm Tone placeholder representing hamdabird)
+      ctx.fillStyle = '#C9947A';
+      ctx.beginPath();
+      ctx.arc(22, block1StartY + 16, 16, 0, Math.PI * 2, true);
+      ctx.fill();
 
-  // Bot Timestamp next to APP Badge
-  ctx.font = '12px "gg sans"';
-  ctx.fillStyle = '#949BA4';
-  ctx.fillText(timeBot, badgeX + 25 + 8, 48);
+      // Draw Username 1
+      ctx.font = '15px "gg sans bold"';
+      ctx.fillStyle = '#E1E1E3';
+      ctx.fillText('hamdabird', 48, block1StartY + 14);
+      const nameWidth1 = ctx.measureText('hamdabird').width;
 
-  // Bot Message content: Reward Claimed Header
-  ctx.font = 'bold 15px "gg sans bold"';
-  ctx.fillStyle = '#FFFFFF';
+      // Draw Timestamp 1
+      ctx.font = '12px "gg sans"';
+      ctx.fillStyle = '#949BA4';
+      ctx.fillText(time1, 48 + nameWidth1 + 8, block1StartY + 14);
 
-  // Draw native crisp Gift Box emoji
-  drawGiftBox(ctx, 48, 54, 16);
-  
-  // Draw header text
-  ctx.fillText('REWARD CLAIMED — 50$ ROBLOX GIFTCARD', 70, 68);
-  const headerTextWidth = ctx.measureText('REWARD CLAIMED — 50$ ROBLOX GIFTCARD').width;
+      // Draw Message lines with golden mention highlight support
+      let currentY = block1StartY + 31;
+      for (const line of template.first) {
+        if (line.includes('@Count')) {
+          const mentionStr = '@Count';
+          const parts = line.split(mentionStr);
+          const beforeStr = parts[0];
+          const afterStr = parts[1];
+          
+          // Draw golden highlight background
+          ctx.fillStyle = '#2D241C';
+          ctx.fillRect(1, currentY - 9, 903, 17);
+          
+          // Draw golden vertical border
+          ctx.fillStyle = '#B06B0A';
+          ctx.fillRect(0, currentY - 9, 2, 17);
+          
+          let startXText = 48;
+          ctx.font = '15px "gg sans"';
+          ctx.fillStyle = '#DBDEE1';
+          
+          if (beforeStr) {
+            ctx.fillText(beforeStr, startXText, currentY);
+            startXText += ctx.measureText(beforeStr).width;
+          }
+          
+          // Draw mention badge
+          ctx.font = 'bold 15px "gg sans bold"';
+          const badgeWidth = ctx.measureText(mentionStr).width + 8;
+          ctx.fillStyle = 'rgba(88, 101, 242, 0.3)';
+          drawRoundedRect(ctx, startXText, currentY - 8, badgeWidth, 15, 3);
+          ctx.fill();
+          
+          ctx.fillStyle = '#E3E7FD';
+          ctx.fillText(mentionStr, startXText + 4, currentY);
+          
+          startXText += badgeWidth;
+          
+          if (afterStr) {
+            ctx.font = '15px "gg sans"';
+            ctx.fillStyle = '#DBDEE1';
+            ctx.fillText(afterStr, startXText, currentY);
+          }
+        } else {
+          ctx.font = '15px "gg sans"';
+          ctx.fillStyle = '#DBDEE1';
+          ctx.fillText(line, 48, currentY);
+        }
+        currentY += 17;
+      }
 
-  // Draw native crisp Gold Coin emoji
-  drawGoldCoin(ctx, 70 + headerTextWidth + 6, 54, 16);
+      // --- DRAW BLOCK 2 (Command Executor delivering prize) ---
+      const block2StartY = currentY + 14;
 
-  // Redeem Code Row
-  ctx.font = '15px "gg sans"';
-  ctx.fillStyle = '#DBDEE1';
-  ctx.fillText('REDEEM CODE = ', 48, 88);
-  const codeLabelWidth = ctx.measureText('REDEEM CODE = ').width;
+      // Draw Avatar 2 (Deep Green placeholder representing Count)
+      ctx.fillStyle = '#375A3B';
+      ctx.beginPath();
+      ctx.arc(22, block2StartY + 16, 16, 0, Math.PI * 2, true);
+      ctx.fill();
 
-  // Draw code spoiler box next to it
-  ctx.fillStyle = '#2E3035';
-  drawRoundedRect(ctx, 48 + codeLabelWidth, 76, 240, 16, 3);
-  ctx.fill();
+      // Draw Username 2
+      ctx.font = '15px "gg sans bold"';
+      ctx.fillStyle = '#7396F1';
+      ctx.fillText('Count', 48, block2StartY + 14);
+      const execNameWidth = ctx.measureText('Count').width;
 
-  // Claim Website Row
-  ctx.fillStyle = '#DBDEE1';
-  ctx.fillText('CLAIM WEBSITE = ', 48, 108);
-  const siteLabelWidth = ctx.measureText('CLAIM WEBSITE = ').width;
+      // Draw Gift Role Icon (natively drawn) next to username
+      drawGiftBox(ctx, 48 + execNameWidth + 4, block2StartY + 3, 11);
 
-  // Draw website spoiler box
-  ctx.fillStyle = '#2E3035';
-  drawRoundedRect(ctx, 48 + siteLabelWidth, 96, 240, 16, 3);
-  ctx.fill();
+      // Draw BOT Tag Badge
+      ctx.fillStyle = '#59595E';
+      drawRoundedRect(ctx, 48 + execNameWidth + 20, block2StartY + 3, 16, 11, 2);
+      ctx.fill();
 
-  // Spoiler Image Attachment Block
-  const attachX = 48;
-  const attachY = 122;
-  const attachW = 460;
-  const attachH = 110;
+      ctx.font = 'bold 8px "gg sans bold"';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText('BOT', 48 + execNameWidth + 22, block2StartY + 11);
 
-  // Draw dark rounded attachment rectangle
-  ctx.fillStyle = '#2B2D31';
-  drawRoundedRect(ctx, attachX, attachY, attachW, attachH, 8);
-  ctx.fill();
+      // Draw Timestamp 2
+      ctx.font = '12px "gg sans"';
+      ctx.fillStyle = '#949BA4';
+      ctx.fillText(time2, 48 + execNameWidth + 42, block2StartY + 14);
 
-  // Draw centered black capsule spoiler button
-  const cx = attachX + attachW / 2;
-  const cy = attachY + attachH / 2;
-  const pillW = 76;
-  const pillH = 28;
+      // Draw Message text Line 1 (natively drawn Gift box emoji)
+      drawGiftBox(ctx, 48, block2StartY + 19, 15);
+      ctx.font = '15px "gg sans"';
+      ctx.fillStyle = '#DBDEE1';
+      ctx.fillText('Thank you for inviting users to my server!', 69, block2StartY + 31);
+      
+      let prefixText = '';
+      let embedTitle = '';
+      let embedDesc = '';
 
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.62)';
-  drawRoundedRect(ctx, cx - pillW / 2, cy - pillH / 2, pillW, pillH, 14);
-  ctx.fill();
+      if (prize === 'nitro_basic') {
+        prefixText = 'Here is your Nitro Basic 1 Month: ';
+        embedTitle = "You've been gifted a subscription!";
+        embedDesc = "You've been gifted Nitro Basic for 1 month!";
+      } else {
+        prefixText = 'Here is your Nitro Boost 1 Month: ';
+        embedTitle = "You've been gifted a subscription!";
+        embedDesc = "You've been gifted Nitro Boost for 1 month!";
+      }
 
-  // "SPOILER" text inside pill
-  ctx.font = 'bold 12px "gg sans bold"';
-  ctx.fillStyle = '#FFFFFF';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('SPOILER', cx, cy);
+      // Draw Message text Line 2
+      ctx.fillText(prefixText, 48, block2StartY + 48);
+      const prefixWidth = ctx.measureText(prefixText).width;
 
-  // Restore defaults for standard rendering
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
+      // Draw Redacted Spoiler Box
+      const codeText = `https://discord.gift/${giftCode}`;
+      const spoilerWidth = ctx.measureText(codeText).width + 12;
+      ctx.fillStyle = '#666770';
+      drawRoundedRect(ctx, 48 + prefixWidth, block2StartY + 35, spoilerWidth, 16, 3);
+      ctx.fill();
 
-  // --- 2. DRAW CONSECUTIVE BOT MESSAGE ("ARE WE LEGIT??") ---
-  ctx.font = 'bold 16px "gg sans bold"';
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillText('ARE WE LEGIT??', 48, 250);
+      // Draw Embed Card Box
+      const embedY = block2StartY + 60;
+      const embedW = 424;
+      const embedH = 115;
 
-  // --- 3. DRAW USER VOUCH BLOCK (Weath3r_) ---
-  // User block y anchor starts at 276
-  drawReply(ctx, 276, 'Original message was deleted');
+      ctx.fillStyle = '#242429';
+      drawRoundedRect(ctx, 46, embedY, embedW, embedH, 8);
+      ctx.fill();
 
-  // User avatar placeholder (circle, warm color representing avatar)
-  ctx.fillStyle = '#57F287'; // Bright legit-green avatar color for testing
-  ctx.beginPath();
-  ctx.arc(22, 308, 16, 0, Math.PI * 2, true);
-  ctx.fill();
+      ctx.strokeStyle = '#2C2C31';
+      ctx.lineWidth = 1;
+      drawRoundedRect(ctx, 45.5, embedY - 0.5, embedW + 1, embedH + 1, 8);
+      ctx.stroke();
 
-  // Username: "Weath3r_" in premium green role color
-  ctx.font = 'bold 15px "gg sans bold"';
-  ctx.fillStyle = '#57F287';
-  ctx.fillText(targetName, 48, 304);
-  const userNameWidth = ctx.measureText(targetName).width;
+      // Title
+      ctx.font = 'bold 13px "gg sans bold"';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText(embedTitle, 56, embedY + 19);
 
-  // User Timestamp
-  ctx.font = '12px "gg sans"';
-  ctx.fillStyle = '#949BA4';
-  ctx.fillText(timeUser, 48 + userNameWidth + 8, 304);
+      // Description
+      ctx.font = '12px "gg sans"';
+      ctx.fillStyle = '#DBDEE1';
+      const descLines = embedDesc.split('\n');
+      let descY = embedY + 36;
+      for (const line of descLines) {
+        ctx.fillText(line, 56, descY);
+        descY += 16;
+      }
 
-  // User Vouch Message lines: "Yes" and "Legit!"
-  ctx.font = '15px "gg sans"';
-  ctx.fillStyle = '#DBDEE1';
-  ctx.fillText('Yes', 48, 322);
-  ctx.fillText('Legit!', 48, 339);
+      // Draw Button "Open Gift"
+      ctx.fillStyle = '#5865F2';
+      drawRoundedRect(ctx, 56, embedY + 69, 52, 20, 3);
+      ctx.fill();
 
-  // Save rendering to test file
-  const outPath = path.join(__dirname, '..', 'data', 'test-proof-result.png');
-  const buffer = canvas.toBuffer('image/png');
-  fs.writeFileSync(outPath, buffer);
-  console.log('Successfully saved same-to-same mock proof to:', outPath);
+      ctx.font = 'bold 9px "gg sans bold"';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText('Open Gift', 61, embedY + 82);
+
+      // Draw Expires text
+      ctx.font = '11px "gg sans"';
+      ctx.fillStyle = '#949BA4';
+      ctx.fillText('Expires in 44 hours', 118, embedY + 82);
+
+      // Draw Wumpus Nitro Graphic
+      if (wumpusImg) {
+        ctx.drawImage(wumpusImg, 303, embedY + 7, 114, 72);
+      }
+
+      // --- DRAW BLOCK 3 (Target User saying thankyou legit) ---
+      const block3StartY = embedY + 115 + 16;
+
+      // Draw Avatar 3
+      ctx.fillStyle = '#C9947A';
+      ctx.beginPath();
+      ctx.arc(22, block3StartY + 16, 16, 0, Math.PI * 2, true);
+      ctx.fill();
+
+      // Draw Name
+      ctx.font = '15px "gg sans bold"';
+      ctx.fillStyle = '#E1E1E3';
+      ctx.fillText('hamdabird', 48, block3StartY + 14);
+      const nameWidth3 = ctx.measureText('hamdabird').width;
+
+      // Draw Timestamp
+      ctx.font = '12px "gg sans"';
+      ctx.fillStyle = '#949BA4';
+      ctx.fillText(time3, 48 + nameWidth3 + 8, block3StartY + 14);
+
+      // Draw Message text lines
+      ctx.font = '15px "gg sans"';
+      ctx.fillStyle = '#DBDEE1';
+      let currentY3 = block3StartY + 31;
+      for (const line of template.third) {
+        ctx.fillText(line, 48, currentY3);
+        currentY3 += 17;
+      }
+    } else {
+      // --- MODERN NON-NITRO (SPOILER-BASED) LAYOUT ---
+      const timeBot = '7:00 PM';
+      const timeUser = '7:37 PM';
+
+      // --- 1. DRAW BOT PAYOUT BLOCK (Riwaayat APP) ---
+      drawReply(ctx, 20, 'Message could not be loaded');
+
+      // Bot avatar (Cloud logo fallback)
+      drawCloudAvatar(ctx, 6, 36, 32);
+
+      // Username: "Riwaayat" (white, bold 15px)
+      ctx.font = 'bold 15px "gg sans bold"';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText('Riwaayat', 48, 48);
+      const botNameWidth = ctx.measureText('Riwaayat').width;
+
+      // Blue APP Badge next to name
+      const badgeX = 48 + botNameWidth + 6;
+      const badgeY = 37;
+      ctx.fillStyle = '#5865F2';
+      drawRoundedRect(ctx, badgeX, badgeY, 25, 14, 3);
+      ctx.fill();
+
+      ctx.font = 'bold 9px "gg sans bold"';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText('APP', badgeX + 4, 47);
+
+      // Bot Timestamp next to APP Badge
+      ctx.font = '12px "gg sans"';
+      ctx.fillStyle = '#949BA4';
+      ctx.fillText(timeBot, badgeX + 25 + 8, 48);
+
+      // Reward Claimed Header
+      let headerText = '';
+      let drawSecondEmoji = drawGoldCoin;
+
+      if (prize === 'minecraft') {
+        headerText = 'REWARD CLAIMED — MC REDEEM CODE';
+        drawSecondEmoji = drawBrickBlock;
+      } else if (prize === 'robux_50') {
+        headerText = 'REWARD CLAIMED — 50$ ROBLOX GIFTCARD';
+        drawSecondEmoji = drawGoldCoin;
+      } else if (prize === 'robux_100') {
+        headerText = 'REWARD CLAIMED — 100$ ROBLOX GIFTCARD';
+        drawSecondEmoji = drawGoldCoin;
+      } else {
+        headerText = `REWARD CLAIMED — ${prize.replace('_', ' ').toUpperCase()}`;
+        drawSecondEmoji = drawGoldCoin;
+      }
+
+      // Draw crisp native Gift Box emoji
+      drawGiftBox(ctx, 48, 54, 16);
+
+      // Draw header text
+      ctx.font = 'bold 15px "gg sans bold"';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText(headerText, 70, 68);
+      const headerTextWidth = ctx.measureText(headerText).width;
+
+      // Draw specific prize emoji at the end
+      drawSecondEmoji(ctx, 70 + headerTextWidth + 6, 54, 16);
+
+      // Redeem Code Row
+      ctx.font = '15px "gg sans"';
+      ctx.fillStyle = '#DBDEE1';
+      ctx.fillText('REDEEM CODE = ', 48, 88);
+      const codeLabelWidth = ctx.measureText('REDEEM CODE = ').width;
+
+      // Draw code spoiler box
+      ctx.fillStyle = '#2E3035';
+      drawRoundedRect(ctx, 48 + codeLabelWidth, 76, 240, 16, 3);
+      ctx.fill();
+
+      // Claim Website Row
+      ctx.fillStyle = '#DBDEE1';
+      ctx.fillText('CLAIM WEBSITE = ', 48, 108);
+      const siteLabelWidth = ctx.measureText('CLAIM WEBSITE = ').width;
+
+      // Draw website spoiler box
+      ctx.fillStyle = '#2E3035';
+      drawRoundedRect(ctx, 48 + siteLabelWidth, 96, 240, 16, 3);
+      ctx.fill();
+
+      // Spoiler Image Attachment Block
+      const attachX = 48;
+      const attachY = 122;
+      const attachW = 460;
+      const attachH = 110;
+
+      ctx.fillStyle = '#2B2D31';
+      drawRoundedRect(ctx, attachX, attachY, attachW, attachH, 8);
+      ctx.fill();
+
+      // Draw centered black capsule spoiler button
+      const cx = attachX + attachW / 2;
+      const cy = attachY + attachH / 2;
+      const pillW = 76;
+      const pillH = 28;
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.62)';
+      drawRoundedRect(ctx, cx - pillW / 2, cy - pillH / 2, pillW, pillH, 14);
+      ctx.fill();
+
+      // "SPOILER" text inside pill
+      ctx.font = 'bold 12px "gg sans bold"';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('SPOILER', cx, cy);
+
+      // Restore defaults for standard rendering
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+
+      // --- 2. CONSECUTIVE BOT MESSAGE ("ARE WE LEGIT??") ---
+      ctx.font = 'bold 16px "gg sans bold"';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText('ARE WE LEGIT??', 48, 250);
+
+      // --- 3. DRAW USER VOUCH BLOCK ---
+      const vouchStartY = 276;
+
+      // User block reply line
+      drawReply(ctx, vouchStartY, 'Original message was deleted');
+
+      // User avatar
+      ctx.fillStyle = '#57F287'; // Premium green fallback
+      ctx.beginPath();
+      ctx.arc(22, vouchStartY + 32, 16, 0, Math.PI * 2, true);
+      ctx.fill();
+
+      // Username in vibrant legit-green role color
+      ctx.font = 'bold 15px "gg sans bold"';
+      ctx.fillStyle = '#57F287';
+      ctx.fillText('Weath3r_', 48, vouchStartY + 28);
+      const userNameWidth = ctx.measureText('Weath3r_').width;
+
+      // User Timestamp next to username
+      ctx.font = '12px "gg sans"';
+      ctx.fillStyle = '#949BA4';
+      ctx.fillText(timeUser, 48 + userNameWidth + 8, vouchStartY + 28);
+
+      // Vouch text lines
+      ctx.font = '15px "gg sans"';
+      ctx.fillStyle = '#DBDEE1';
+      ctx.fillText('Yes', 48, vouchStartY + 46);
+      ctx.fillText('Legit!', 48, vouchStartY + 63);
+    }
+
+    // Save rendering to test file
+    const outPath = path.join(__dirname, '..', 'data', `${outFilename}.png`);
+    const buffer = canvas.toBuffer('image/png');
+    fs.writeFileSync(outPath, buffer);
+    console.log(`Successfully saved same-to-same mock proof [${prize}] to:`, outPath);
+  }
+
+  // Generate both for verification
+  await renderProof('robux_50', 'test-proof-result-robux');
+  await renderProof('nitro_basic', 'test-proof-result-nitro');
 }
 
 main().catch(console.error);

@@ -2026,213 +2026,529 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           }
         }
 
-        // Load Avatars in parallel
+        // Load Avatars and local assets in parallel
         const targetAvatarUrl = targetUser.displayAvatarURL({ extension: 'png', size: 128 });
         const botAvatarUrl = interaction.client.user.displayAvatarURL({ extension: 'png', size: 128 });
+        const executorAvatarUrl = interaction.user.displayAvatarURL({ extension: 'png', size: 128 });
+        const wumpusPath = path.join(__dirname, 'fonts', 'wumpus.png');
 
-        const [targetAvatarImg, botAvatarImg] = await Promise.all([
+        const [targetAvatarImg, botAvatarImg, executorAvatarImg, nitroGiftCardImg] = await Promise.all([
           loadImgSafely(targetAvatarUrl),
-          loadImgSafely(botAvatarUrl)
+          loadImgSafely(botAvatarUrl),
+          loadImgSafely(executorAvatarUrl),
+          loadImgSafely(wumpusPath)
         ]);
 
         // Create Canvas (905 x 347)
         const canvas = createCanvas(905, 347);
         const ctx = canvas.getContext('2d');
 
-        // Draw Discord Midnight theme background
-        ctx.fillStyle = '#1A1A1E';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const isNitroPrize = prize === 'nitro_basic' || prize === 'nitro_boost';
 
-        // Timestamps
-        const timeBot = getFormattedTime(-5);
-        const timeUser = getFormattedTime(0);
+        if (isNitroPrize) {
+          // --- AMOLED/MIDNIGHT CLASSIC NITRO CONVERSATION FLOW ---
+          // Timestamps
+          const time1 = getFormattedTime(-1);
+          const time2 = getFormattedTime(0);
+          const time3 = getFormattedTime(0);
 
-        // --- 1. DRAW BOT PAYOUT BLOCK (Riwaayat APP) ---
-        // Top reply line
-        const botReplyText = Math.random() < 0.5 ? 'Message could not be loaded' : 'Original message was deleted';
-        drawReply(ctx, 20, botReplyText, botAvatarImg);
+          // Random invites to make it look organic
+          const randomInvites = Math.floor(Math.random() * 5) + 3; // 3 to 7
+          const giftCode = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10); // 16 char
 
-        // Bot avatar (loaded bot avatar image or cloud fallback)
-        if (botAvatarImg) {
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(22, 52, 16, 0, Math.PI * 2, true);
-          ctx.closePath();
-          ctx.clip();
-          ctx.drawImage(botAvatarImg, 6, 36, 32, 32);
-          ctx.restore();
-        } else {
-          drawCloudAvatar(ctx, 6, 36, 32);
-        }
+          // Templates for classic Nitro conversations
+          const templates = [
+            {
+              first: [
+                `i have made like ${randomInvites} invites`,
+                `@${interaction.user.username} WHEN U PAY MY NITRO BASIC BITCH`,
+                'HUH????'
+              ],
+              third: [
+                'HAHAHAHAH GOOOD BOOY',
+                'REAL THOUGH BTW'
+              ]
+            },
+            {
+              first: [
+                'hello bro',
+                `i invite ${randomInvites} people now`,
+                `pls @${interaction.user.username} give nitro basic`,
+                'fast reply pls'
+              ],
+              third: [
+                'omg it is real!',
+                'tysm for the legit nitro!! <3'
+              ]
+            },
+            {
+              first: [
+                'Sir i completed the invite milestone',
+                `already got ${randomInvites} invites successfully`,
+                `let me know when @${interaction.user.username} sends it`,
+                'waiting here'
+              ],
+              third: [
+                'Yo no way it actually worked!',
+                'legit bot and server tysm!'
+              ]
+            },
+            {
+              first: [
+                'hey',
+                `i did the ${randomInvites} invites for nitro`,
+                `@${interaction.user.username} check ticket pls and pay`,
+                'is it active?'
+              ],
+              third: [
+                'Thank you so much!!',
+                'highly recommended legit proof'
+              ]
+            }
+          ];
 
-        // Username: "Riwaayat" (white, bold 15px)
-        ctx.font = 'bold 15px "gg sans bold"';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillText('Riwaayat', 48, 48);
-        const botNameWidth = ctx.measureText('Riwaayat').width;
+          const template = templates[Math.floor(Math.random() * templates.length)];
 
-        // Blue APP Badge next to name
-        const badgeX = 48 + botNameWidth + 6;
-        const badgeY = 37;
-        ctx.fillStyle = '#5865F2';
-        drawRoundedRect(ctx, badgeX, badgeY, 25, 14, 3);
-        ctx.fill();
+          // Fill Discord Midnight theme background
+          ctx.fillStyle = '#1A1A1E';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        ctx.font = 'bold 9px "gg sans bold"';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillText('APP', badgeX + 4, 47);
+          // --- DRAW BLOCK 1 (Target User requesting) ---
+          const block1StartY = 11;
 
-        // Bot Timestamp next to APP Badge
-        ctx.font = '12px "gg sans"';
-        ctx.fillStyle = '#949BA4';
-        ctx.fillText(timeBot, badgeX + 25 + 8, 48);
+          // Draw Avatar 1
+          if (targetAvatarImg) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(22, block1StartY + 16, 16, 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(targetAvatarImg, 6, block1StartY, 32, 32);
+            ctx.restore();
+          } else {
+            ctx.fillStyle = '#C9947A'; // Standard warm avatar fallback
+            ctx.beginPath();
+            ctx.arc(22, block1StartY + 16, 16, 0, Math.PI * 2, true);
+            ctx.fill();
+          }
 
-        // Reward Claimed Header
-        let headerText = '';
-        let drawSecondEmoji = drawGoldCoin;
+          // Draw Username 1
+          ctx.font = '15px "gg sans bold"';
+          ctx.fillStyle = '#E1E1E3';
+          ctx.fillText(targetUser.username, 48, block1StartY + 14);
+          const nameWidth1 = ctx.measureText(targetUser.username).width;
 
-        if (prize === 'nitro_basic') {
-          headerText = 'REWARD CLAIMED — NITRO BASIC GIFT CARD';
-          drawSecondEmoji = drawGoldCoin;
-        } else if (prize === 'nitro_boost') {
-          headerText = 'REWARD CLAIMED — NITRO BOOST GIFT CARD';
-          drawSecondEmoji = drawGoldCoin;
-        } else if (prize === 'minecraft') {
-          headerText = 'REWARD CLAIMED — MC REDEEM CODE';
-          drawSecondEmoji = drawBrickBlock;
-        } else if (prize === 'robux_50') {
-          headerText = 'REWARD CLAIMED — 50$ ROBLOX GIFTCARD';
-          drawSecondEmoji = drawGoldCoin;
-        } else if (prize === 'robux_100') {
-          headerText = 'REWARD CLAIMED — 100$ ROBLOX GIFTCARD';
-          drawSecondEmoji = drawGoldCoin;
-        } else {
-          headerText = `REWARD CLAIMED — ${prize.replace('_', ' ').toUpperCase()}`;
-          drawSecondEmoji = drawGoldCoin;
-        }
+          // Draw Timestamp 1
+          ctx.font = '12px "gg sans"';
+          ctx.fillStyle = '#949BA4';
+          ctx.fillText(time1, 48 + nameWidth1 + 8, block1StartY + 14);
 
-        // Draw crisp native Gift Box emoji
-        drawGiftBox(ctx, 48, 54, 16);
+          // Draw Message lines with golden mention highlight support
+          let currentY = block1StartY + 31;
+          for (const line of template.first) {
+            if (line.includes(`@${interaction.user.username}`)) {
+              const mentionStr = `@${interaction.user.username}`;
+              const parts = line.split(mentionStr);
+              const beforeStr = parts[0];
+              const afterStr = parts[1];
+              
+              // Draw golden highlight background across the full width of the canvas (excluding boundaries)
+              ctx.fillStyle = '#2D241C'; // AMOLED golden mention highlight background
+              ctx.fillRect(1, currentY - 9, 903, 17);
+              
+              // Draw golden vertical border on the left edge (width 2px)
+              ctx.fillStyle = '#B06B0A';
+              ctx.fillRect(0, currentY - 9, 2, 17);
+              
+              // Draw text components
+              let startXText = 48;
+              ctx.font = '15px "gg sans"';
+              ctx.fillStyle = '#DBDEE1';
+              
+              if (beforeStr) {
+                ctx.fillText(beforeStr, startXText, currentY);
+                startXText += ctx.measureText(beforeStr).width;
+              }
+              
+              // Draw mention badge
+              ctx.font = 'bold 15px "gg sans bold"';
+              const badgeWidth = ctx.measureText(mentionStr).width + 8;
+              ctx.fillStyle = 'rgba(88, 101, 242, 0.3)'; // Semi-transparent purple
+              drawRoundedRect(ctx, startXText, currentY - 8, badgeWidth, 15, 3);
+              ctx.fill();
+              
+              ctx.fillStyle = '#E3E7FD'; // Light blue-purple text
+              ctx.fillText(mentionStr, startXText + 4, currentY);
+              
+              startXText += badgeWidth;
+              
+              if (afterStr) {
+                ctx.font = '15px "gg sans"';
+                ctx.fillStyle = '#DBDEE1';
+                ctx.fillText(afterStr, startXText, currentY);
+              }
+            } else {
+              ctx.font = '15px "gg sans"';
+              ctx.fillStyle = '#DBDEE1';
+              ctx.fillText(line, 48, currentY);
+            }
+            currentY += 17;
+          }
 
-        // Draw header text
-        ctx.font = 'bold 15px "gg sans bold"';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillText(headerText, 70, 68);
-        const headerTextWidth = ctx.measureText(headerText).width;
+          // --- DRAW BLOCK 2 (Command Executor delivering prize) ---
+          const block2StartY = currentY + 14;
 
-        // Draw specific prize emoji at the end
-        drawSecondEmoji(ctx, 70 + headerTextWidth + 6, 54, 16);
+          // Draw Avatar 2
+          if (executorAvatarImg) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(22, block2StartY + 16, 16, 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(executorAvatarImg, 6, block2StartY, 32, 32);
+            ctx.restore();
+          } else {
+            ctx.fillStyle = '#375A3B'; // Standard deep green fallback
+            ctx.beginPath();
+            ctx.arc(22, block2StartY + 16, 16, 0, Math.PI * 2, true);
+            ctx.fill();
+          }
 
-        // Redeem Code Row
-        ctx.font = '15px "gg sans"';
-        ctx.fillStyle = '#DBDEE1';
-        ctx.fillText('REDEEM CODE = ', 48, 88);
-        const codeLabelWidth = ctx.measureText('REDEEM CODE = ').width;
+          // Draw Username 2 (colored in Executor's light blue role color)
+          ctx.font = '15px "gg sans bold"';
+          ctx.fillStyle = '#7396F1';
+          ctx.fillText(interaction.user.username, 48, block2StartY + 14);
+          const execNameWidth = ctx.measureText(interaction.user.username).width;
 
-        // Draw code spoiler box
-        ctx.fillStyle = '#2E3035';
-        drawRoundedRect(ctx, 48 + codeLabelWidth, 76, 240, 16, 3);
-        ctx.fill();
+          // Draw Gift Role Icon (natively drawn) next to username
+          drawGiftBox(ctx, 48 + execNameWidth + 4, block2StartY + 3, 11);
 
-        // Claim Website Row
-        ctx.fillStyle = '#DBDEE1';
-        ctx.fillText('CLAIM WEBSITE = ', 48, 108);
-        const siteLabelWidth = ctx.measureText('CLAIM WEBSITE = ').width;
-
-        // Draw website spoiler box
-        ctx.fillStyle = '#2E3035';
-        drawRoundedRect(ctx, 48 + siteLabelWidth, 96, 240, 16, 3);
-        ctx.fill();
-
-        // Spoiler Image Attachment Block
-        const attachX = 48;
-        const attachY = 122;
-        const attachW = 460;
-        const attachH = 110;
-
-        ctx.fillStyle = '#2B2D31';
-        drawRoundedRect(ctx, attachX, attachY, attachW, attachH, 8);
-        ctx.fill();
-
-        // Draw centered black capsule spoiler button
-        const cx = attachX + attachW / 2;
-        const cy = attachY + attachH / 2;
-        const pillW = 76;
-        const pillH = 28;
-
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.62)';
-        drawRoundedRect(ctx, cx - pillW / 2, cy - pillH / 2, pillW, pillH, 14);
-        ctx.fill();
-
-        // "SPOILER" text inside pill
-        ctx.font = 'bold 12px "gg sans bold"';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('SPOILER', cx, cy);
-
-        // Restore defaults for standard rendering
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'alphabetic';
-
-        // --- 2. CONSECUTIVE BOT MESSAGE ("ARE WE LEGIT??") ---
-        const drawConsecutive = Math.random() < 0.5;
-        if (drawConsecutive) {
-          ctx.font = 'bold 16px "gg sans bold"';
-          ctx.fillStyle = '#FFFFFF';
-          ctx.fillText('ARE WE LEGIT??', 48, 250);
-        }
-
-        // --- 3. DRAW USER VOUCH BLOCK ---
-        const vouchStartY = drawConsecutive ? 276 : 246;
-
-        // User block reply line
-        drawReply(ctx, vouchStartY, 'Original message was deleted', botAvatarImg);
-
-        // User avatar
-        const userAvatarY = vouchStartY + 32;
-        if (targetAvatarImg) {
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(22, userAvatarY, 16, 0, Math.PI * 2, true);
-          ctx.closePath();
-          ctx.clip();
-          ctx.drawImage(targetAvatarImg, 6, userAvatarY - 16, 32, 32);
-          ctx.restore();
-        } else {
-          ctx.fillStyle = '#57F287'; // Premium green fallback
-          ctx.beginPath();
-          ctx.arc(22, userAvatarY, 16, 0, Math.PI * 2, true);
+          // Draw BOT Tag Badge next to the role icon
+          ctx.fillStyle = '#59595E';
+          drawRoundedRect(ctx, 48 + execNameWidth + 20, block2StartY + 3, 16, 11, 2);
           ctx.fill();
-        }
 
-        // Username in vibrant legit-green role color
-        ctx.font = 'bold 15px "gg sans bold"';
-        ctx.fillStyle = '#57F287';
-        ctx.fillText(targetUser.username, 48, userAvatarY - 4);
-        const userNameWidth = ctx.measureText(targetUser.username).width;
+          ctx.font = 'bold 8px "gg sans bold"';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillText('BOT', 48 + execNameWidth + 22, block2StartY + 11);
 
-        // User Timestamp next to username
-        ctx.font = '12px "gg sans"';
-        ctx.fillStyle = '#949BA4';
-        ctx.fillText(timeUser, 48 + userNameWidth + 8, userAvatarY - 4);
+          // Draw Timestamp 2
+          ctx.font = '12px "gg sans"';
+          ctx.fillStyle = '#949BA4';
+          ctx.fillText(time2, 48 + execNameWidth + 42, block2StartY + 14);
 
-        // Vouch text lines selected randomly
-        const vouchPool = [
-          ['Legit'],
-          ['Yes', 'Legit!'],
-          ['Yes Legit!'],
-          ['legit tysm!'],
-          ['Yes']
-        ];
-        const chosenVouch = vouchPool[Math.floor(Math.random() * vouchPool.length)];
+          // Draw Message text Line 1 (natively drawn Gift box emoji)
+          drawGiftBox(ctx, 48, block2StartY + 19, 15);
+          ctx.font = '15px "gg sans"';
+          ctx.fillStyle = '#DBDEE1';
+          ctx.fillText('Thank you for inviting users to my server!', 69, block2StartY + 31);
+          
+          let prefixText = '';
+          let codeText = '';
+          let embedTitle = '';
+          let embedDesc = '';
 
-        ctx.font = '15px "gg sans"';
-        ctx.fillStyle = '#DBDEE1';
-        let currentVouchTextY = userAvatarY + 14;
-        for (const line of chosenVouch) {
-          ctx.fillText(line, 48, currentVouchTextY);
-          currentVouchTextY += 17;
+          if (prize === 'nitro_basic') {
+            prefixText = 'Here is your Nitro Basic 1 Month: ';
+            codeText = `https://discord.gift/${giftCode}`;
+            embedTitle = "You've been gifted a subscription!";
+            embedDesc = "You've been gifted Nitro Basic for 1 month!";
+          } else if (prize === 'nitro_boost') {
+            prefixText = 'Here is your Nitro Boost 1 Month: ';
+            codeText = `https://discord.gift/${giftCode}`;
+            embedTitle = "You've been gifted a subscription!";
+            embedDesc = "You've been gifted Nitro Boost for 1 month!";
+          }
+
+          // Draw Message text Line 2
+          ctx.fillText(prefixText, 48, block2StartY + 48);
+          const prefixWidth = ctx.measureText(prefixText).width;
+
+          // Draw Redacted Spoiler Box (instead of plain text, matching reference screenshot perfectly)
+          const spoilerWidth = ctx.measureText(codeText).width + 12;
+          ctx.fillStyle = '#666770'; // Extracted gray redaction brush color
+          drawRoundedRect(ctx, 48 + prefixWidth, block2StartY + 35, spoilerWidth, 16, 3);
+          ctx.fill();
+
+          // Draw Embed Card Box
+          const embedY = block2StartY + 60;
+          const embedW = 424;
+          const embedH = 115;
+
+          // Fill background
+          ctx.fillStyle = '#242429';
+          drawRoundedRect(ctx, 46, embedY, embedW, embedH, 8);
+          ctx.fill();
+
+          // Draw solid gray 1px border
+          ctx.strokeStyle = '#2C2C31';
+          ctx.lineWidth = 1;
+          drawRoundedRect(ctx, 45.5, embedY - 0.5, embedW + 1, embedH + 1, 8);
+          ctx.stroke();
+
+          // Title
+          ctx.font = 'bold 13px "gg sans bold"';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillText(embedTitle, 56, embedY + 19);
+
+          // Description
+          ctx.font = '12px "gg sans"';
+          ctx.fillStyle = '#DBDEE1';
+          const descLines = embedDesc.split('\n');
+          let descY = embedY + 36;
+          for (const line of descLines) {
+            ctx.fillText(line, 56, descY);
+            descY += 16;
+          }
+
+          // Draw Button "Open Gift"
+          ctx.fillStyle = '#5865F2'; // Discord Blurple button
+          drawRoundedRect(ctx, 56, embedY + 69, 52, 20, 3);
+          ctx.fill();
+
+          ctx.font = 'bold 9px "gg sans bold"';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillText('Open Gift', 61, embedY + 82);
+
+          // Draw Expires text next to the button
+          ctx.font = '11px "gg sans"';
+          ctx.fillStyle = '#949BA4';
+          ctx.fillText('Expires in 44 hours', 118, embedY + 82);
+
+          // Draw Wumpus Nitro Graphic if successfully loaded
+          if (nitroGiftCardImg) {
+            ctx.drawImage(nitroGiftCardImg, 303, embedY + 7, 114, 72);
+          }
+
+          // --- DRAW BLOCK 3 (Target User saying thankyou legit) ---
+          const block3StartY = embedY + 115 + 16;
+
+          // Draw Avatar 3
+          if (targetAvatarImg) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(22, block3StartY + 16, 16, 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(targetAvatarImg, 6, block3StartY, 32, 32);
+            ctx.restore();
+          } else {
+            ctx.fillStyle = '#C9947A';
+            ctx.beginPath();
+            ctx.arc(22, block3StartY + 16, 16, 0, Math.PI * 2, true);
+            ctx.fill();
+          }
+
+          // Draw Name
+          ctx.font = '15px "gg sans bold"';
+          ctx.fillStyle = '#E1E1E3';
+          ctx.fillText(targetUser.username, 48, block3StartY + 14);
+          const nameWidth3 = ctx.measureText(targetUser.username).width;
+
+          // Draw Timestamp
+          ctx.font = '12px "gg sans"';
+          ctx.fillStyle = '#949BA4';
+          ctx.fillText(time3, 48 + nameWidth3 + 8, block3StartY + 14);
+
+          // Draw Message text lines
+          ctx.font = '15px "gg sans"';
+          ctx.fillStyle = '#DBDEE1';
+          let currentY3 = block3StartY + 31;
+          for (const line of template.third) {
+            ctx.fillText(line, 48, currentY3);
+            currentY3 += 17;
+          }
+        } else {
+          // --- MODERN NON-NITRO (SPOILER-BASED) LAYOUT ---
+          // Fill Discord Midnight theme background
+          ctx.fillStyle = '#1A1A1E';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          // Timestamps
+          const timeBot = getFormattedTime(-5);
+          const timeUser = getFormattedTime(0);
+
+          // --- 1. DRAW BOT PAYOUT BLOCK (Riwaayat APP) ---
+          // Top reply line
+          const botReplyText = Math.random() < 0.5 ? 'Message could not be loaded' : 'Original message was deleted';
+          drawReply(ctx, 20, botReplyText, botAvatarImg);
+
+          // Bot avatar (loaded bot avatar image or cloud fallback)
+          if (botAvatarImg) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(22, 52, 16, 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(botAvatarImg, 6, 36, 32, 32);
+            ctx.restore();
+          } else {
+            drawCloudAvatar(ctx, 6, 36, 32);
+          }
+
+          // Username: "Riwaayat" (white, bold 15px)
+          ctx.font = 'bold 15px "gg sans bold"';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillText('Riwaayat', 48, 48);
+          const botNameWidth = ctx.measureText('Riwaayat').width;
+
+          // Blue APP Badge next to name
+          const badgeX = 48 + botNameWidth + 6;
+          const badgeY = 37;
+          ctx.fillStyle = '#5865F2';
+          drawRoundedRect(ctx, badgeX, badgeY, 25, 14, 3);
+          ctx.fill();
+
+          ctx.font = 'bold 9px "gg sans bold"';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillText('APP', badgeX + 4, 47);
+
+          // Bot Timestamp next to APP Badge
+          ctx.font = '12px "gg sans"';
+          ctx.fillStyle = '#949BA4';
+          ctx.fillText(timeBot, badgeX + 25 + 8, 48);
+
+          // Reward Claimed Header
+          let headerText = '';
+          let drawSecondEmoji = drawGoldCoin;
+
+          if (prize === 'minecraft') {
+            headerText = 'REWARD CLAIMED — MC REDEEM CODE';
+            drawSecondEmoji = drawBrickBlock;
+          } else if (prize === 'robux_50') {
+            headerText = 'REWARD CLAIMED — 50$ ROBLOX GIFTCARD';
+            drawSecondEmoji = drawGoldCoin;
+          } else if (prize === 'robux_100') {
+            headerText = 'REWARD CLAIMED — 100$ ROBLOX GIFTCARD';
+            drawSecondEmoji = drawGoldCoin;
+          } else {
+            headerText = `REWARD CLAIMED — ${prize.replace('_', ' ').toUpperCase()}`;
+            drawSecondEmoji = drawGoldCoin;
+          }
+
+          // Draw crisp native Gift Box emoji
+          drawGiftBox(ctx, 48, 54, 16);
+
+          // Draw header text
+          ctx.font = 'bold 15px "gg sans bold"';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillText(headerText, 70, 68);
+          const headerTextWidth = ctx.measureText(headerText).width;
+
+          // Draw specific prize emoji at the end
+          drawSecondEmoji(ctx, 70 + headerTextWidth + 6, 54, 16);
+
+          // Redeem Code Row
+          ctx.font = '15px "gg sans"';
+          ctx.fillStyle = '#DBDEE1';
+          ctx.fillText('REDEEM CODE = ', 48, 88);
+          const codeLabelWidth = ctx.measureText('REDEEM CODE = ').width;
+
+          // Draw code spoiler box
+          ctx.fillStyle = '#2E3035';
+          drawRoundedRect(ctx, 48 + codeLabelWidth, 76, 240, 16, 3);
+          ctx.fill();
+
+          // Claim Website Row
+          ctx.fillStyle = '#DBDEE1';
+          ctx.fillText('CLAIM WEBSITE = ', 48, 108);
+          const siteLabelWidth = ctx.measureText('CLAIM WEBSITE = ').width;
+
+          // Draw website spoiler box
+          ctx.fillStyle = '#2E3035';
+          drawRoundedRect(ctx, 48 + siteLabelWidth, 96, 240, 16, 3);
+          ctx.fill();
+
+          // Spoiler Image Attachment Block
+          const attachX = 48;
+          const attachY = 122;
+          const attachW = 460;
+          const attachH = 110;
+
+          ctx.fillStyle = '#2B2D31';
+          drawRoundedRect(ctx, attachX, attachY, attachW, attachH, 8);
+          ctx.fill();
+
+          // Draw centered black capsule spoiler button
+          const cx = attachX + attachW / 2;
+          const cy = attachY + attachH / 2;
+          const pillW = 76;
+          const pillH = 28;
+
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.62)';
+          drawRoundedRect(ctx, cx - pillW / 2, cy - pillH / 2, pillW, pillH, 14);
+          ctx.fill();
+
+          // "SPOILER" text inside pill
+          ctx.font = 'bold 12px "gg sans bold"';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('SPOILER', cx, cy);
+
+          // Restore defaults for standard rendering
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'alphabetic';
+
+          // --- 2. CONSECUTIVE BOT MESSAGE ("ARE WE LEGIT??") ---
+          const drawConsecutive = Math.random() < 0.5;
+          if (drawConsecutive) {
+            ctx.font = 'bold 16px "gg sans bold"';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillText('ARE WE LEGIT??', 48, 250);
+          }
+
+          // --- 3. DRAW USER VOUCH BLOCK ---
+          const vouchStartY = drawConsecutive ? 276 : 246;
+
+          // User block reply line
+          drawReply(ctx, vouchStartY, 'Original message was deleted', botAvatarImg);
+
+          // User avatar
+          const userAvatarY = vouchStartY + 32;
+          if (targetAvatarImg) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(22, userAvatarY, 16, 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(targetAvatarImg, 6, userAvatarY - 16, 32, 32);
+            ctx.restore();
+          } else {
+            ctx.fillStyle = '#57F287'; // Premium green fallback
+            ctx.beginPath();
+            ctx.arc(22, userAvatarY, 16, 0, Math.PI * 2, true);
+            ctx.fill();
+          }
+
+          // Username in vibrant legit-green role color
+          ctx.font = 'bold 15px "gg sans bold"';
+          ctx.fillStyle = '#57F287';
+          ctx.fillText(targetUser.username, 48, userAvatarY - 4);
+          const userNameWidth = ctx.measureText(targetUser.username).width;
+
+          // User Timestamp next to username
+          ctx.font = '12px "gg sans"';
+          ctx.fillStyle = '#949BA4';
+          ctx.fillText(timeUser, 48 + userNameWidth + 8, userAvatarY - 4);
+
+          // Vouch text lines selected randomly
+          const vouchPool = [
+            ['Legit'],
+            ['Yes', 'Legit!'],
+            ['Yes Legit!'],
+            ['legit tysm!'],
+            ['Yes']
+          ];
+          const chosenVouch = vouchPool[Math.floor(Math.random() * vouchPool.length)];
+
+          ctx.font = '15px "gg sans"';
+          ctx.fillStyle = '#DBDEE1';
+          let currentVouchTextY = userAvatarY + 14;
+          for (const line of chosenVouch) {
+            ctx.fillText(line, 48, currentVouchTextY);
+            currentVouchTextY += 17;
+          }
         }
 
         // 3. Export to Buffer and send as Attachment
