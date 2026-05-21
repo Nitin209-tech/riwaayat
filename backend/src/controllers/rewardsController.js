@@ -354,7 +354,7 @@ async function redeemReward(req, res) {
         for (const hours of intervals) {
           const scheduledTime = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
           await resend.emails.send({
-            from: 'rewards@elevateiq.shop',
+            from: 'onboarding@resend.dev',
             to: emailUsed,
             subject: subjectLine,
             scheduledAt: scheduledTime,
