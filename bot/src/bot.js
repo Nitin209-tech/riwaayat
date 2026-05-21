@@ -2881,8 +2881,8 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-      const newName = interaction.fields.getTextInputValue('bulk_name');
-      const avatarUrl = interaction.fields.getTextInputValue('bulk_avatar');
+      const newName = (interaction.fields.getTextInputValue('bulk_name') || '').trim();
+      const avatarUrl = (interaction.fields.getTextInputValue('bulk_avatar') || '').trim();
       
       let tokens = db.getSetting('botTokens', []);
       if (!Array.isArray(tokens)) tokens = [];
@@ -2895,9 +2895,21 @@ client.on('interactionCreate', async (interaction) => {
       if (avatarUrl) {
         try {
           const imgRes = await fetch(avatarUrl);
+          if (!imgRes.ok) throw new Error(`HTTP status ${imgRes.status}`);
           const buffer = await imgRes.arrayBuffer();
           const base64 = Buffer.from(buffer).toString('base64');
-          const mime = imgRes.headers.get('content-type') || 'image/png';
+          let mime = imgRes.headers.get('content-type') || 'image/png';
+          mime = mime.split(';')[0].trim();
+          
+          if (!mime.startsWith('image/')) {
+            if (avatarUrl.toLowerCase().endsWith('.jpg') || avatarUrl.toLowerCase().endsWith('.jpeg')) {
+              mime = 'image/jpeg';
+            } else if (avatarUrl.toLowerCase().endsWith('.gif')) {
+              mime = 'image/gif';
+            } else {
+              mime = 'image/png';
+            }
+          }
           avatarData = `data:${mime};base64,${base64}`;
         } catch (imgErr) {
           return interaction.editReply({ content: `❌ **Failed to download/parse avatar image**: ${imgErr.message}` });
@@ -2913,7 +2925,12 @@ client.on('interactionCreate', async (interaction) => {
         try {
           const payload = {};
           if (newName) {
-            payload.username = `${newName} #${i + 1}`;
+            let sanitizedName = newName.replace(/[@#:`]/g, '').replace(/\s+/g, ' ').trim();
+            const suffix = ` ${i + 1}`;
+            if (sanitizedName.length + suffix.length > 32) {
+              sanitizedName = sanitizedName.slice(0, 32 - suffix.length).trim();
+            }
+            payload.username = `${sanitizedName}${suffix}`;
           }
           if (avatarData) payload.avatar = avatarData;
           
@@ -2936,8 +2953,20 @@ client.on('interactionCreate', async (interaction) => {
             logs.push(`✅ Updated Bot #${i + 1} to **@${botData.username}**`);
           } else {
             const errText = await response.text();
+            let errMsg = errText.slice(0, 100);
+            try {
+              const errJson = JSON.parse(errText);
+              if (errJson.message) {
+                errMsg = errJson.message;
+                if (errJson.errors && errJson.errors.username && errJson.errors.username._errors) {
+                  errMsg += `: ${errJson.errors.username._errors[0].message}`;
+                } else if (errJson.errors && errJson.errors.avatar && errJson.errors.avatar._errors) {
+                  errMsg += `: ${errJson.errors.avatar._errors[0].message}`;
+                }
+              }
+            } catch {}
             failedCount++;
-            logs.push(`❌ Failed Bot #${i + 1}: ${errText.slice(0, 100)}`);
+            logs.push(`❌ Failed Bot #${i + 1}: ${errMsg}`);
           }
         } catch (err) {
           failedCount++;
