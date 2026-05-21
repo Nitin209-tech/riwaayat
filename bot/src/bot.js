@@ -10,7 +10,7 @@ const { Client, GatewayIntentBits, Partials, ActivityType, EmbedBuilder,
 require('dotenv').config();
 const db = require('./database');
 const { decrypt } = require('./utils/encryption');
-const { REWARDS, getRewardById, emojiStr } = require('./rewards');
+const { REWARDS, getRewardById, getRewardByCategory, emojiStr } = require('./rewards');
 const https = require('https');
 const http = require('http');
 const fs = require('fs');
@@ -350,6 +350,8 @@ const commands = [
     .setDescription('Post the premium styled event layout to this channel (Admin only)'),
   new SlashCommandBuilder().setName('sendfreegiftevent')
     .setDescription('Post the free gift event dropdown panel (Admin only)'),
+  new SlashCommandBuilder().setName('sendticketpanel')
+    .setDescription('Post the ticket creation panel (Admin only)'),
   new SlashCommandBuilder().setName('stock')
     .setDescription('Manage reward stock (Admin only)')
     .addSubcommand(sub => sub.setName('add')
@@ -562,22 +564,7 @@ async function buildBotManagerPanel(selectedClientId = null) {
   );
   components.push(rowButtons);
 
-  // Row 3: System Panel Launchers
-  const rowPanels = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId('bm_btn_post_ticket_panel')
-      .setLabel('🎟️ Ticket Panel')
-      .setStyle(ButtonStyle.Success),
-    new ButtonBuilder()
-      .setCustomId('bm_btn_post_event_panel')
-      .setLabel('⚡ Event Panel')
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId('bm_btn_post_free_gift_panel')
-      .setLabel('🎁 Free Gift Panel')
-      .setStyle(ButtonStyle.Secondary)
-  );
-  components.push(rowPanels);
+
 
   // Row 4: Distributed Engines
   const rowEngines = new ActionRowBuilder().addComponents(
@@ -1208,6 +1195,37 @@ client.on('interactionCreate', async (interaction) => {
       }
     }
 
+    // /sendticketpanel
+    if (commandName === 'sendticketpanel') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      try {
+        const embed = new EmbedBuilder()
+          .setColor('#2b2d31')
+          .setTitle('⩩﹕ᨒ﹒click here to create ticket')
+          .setDescription('<a:hwart:1504576267788357742> To create a ticket use the Create ticket button')
+          .setFooter({ text: 'RIWAAYAT — Invite to Earn' });
+
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId('open_ticket')
+            .setLabel('Create ticket')
+            .setEmoji('📩')
+            .setStyle(ButtonStyle.Secondary)
+        );
+
+        await interaction.channel.send({ embeds: [embed], components: [row] });
+        return interaction.editReply({ content: '✅ Ticket panel posted publicly!' });
+      } catch (err) {
+        console.error('[SENDTICKETPANEL_ERROR]', err.message || err);
+        return interaction.editReply({ content: `❌ Failed to post ticket panel: ${err.message}` });
+      }
+    }
+
     // /sendfreegiftevent
     if (commandName === 'sendfreegiftevent') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
@@ -1637,8 +1655,47 @@ client.on('interactionCreate', async (interaction) => {
           });
         }
 
+        // Use mock data for testing or check administrator's last redemption
+        const dbData = db.loadDB();
+        const adminRedemptions = (dbData.redemptions || []).filter(r => r.discordId === interaction.user.id);
+        adminRedemptions.sort((a, b) => new Date(b.date) - new Date(a.date));
+        const latestClaim = adminRedemptions[0];
+
+        let prizeLabel = 'Roblox 100$ GiftCard';
+        let prizeEmoji = '<:Robux_2019_Logo_gold:1504606073502568578>';
+        
+        if (latestClaim) {
+          const rewardObj = getRewardByCategory(latestClaim.category);
+          if (rewardObj) {
+            prizeLabel = rewardObj.label;
+            prizeEmoji = emojiStr(rewardObj);
+          } else {
+            prizeLabel = latestClaim.category.replace(/_/g, ' ');
+          }
+        }
+
+        const embed = new EmbedBuilder()
+          .setColor('#57F287') // Beautiful Discord green color
+          .setAuthor({
+            name: `${interaction.user.username} • Verified Payout Vouch (Simulated)`,
+            iconURL: interaction.user.displayAvatarURL({ dynamic: true })
+          })
+          .setTitle('✅ LEGIT CLAIM & VOUCH!')
+          .setDescription(
+            `✨ **User**: ${interaction.user}\n` +
+            `🎁 **Claimed Reward**: ${prizeEmoji} **${prizeLabel}**\n` +
+            `💬 **Vouch Feedback**: "Legit! Received my reward within seconds, highly recommend!"\n\n` +
+            `*Thank you for verifying! All premium rewards are instantly processed and delivered.*`
+          )
+          .setImage('attachment://proof.png')
+          .setTimestamp()
+          .setFooter({ 
+            text: `${interaction.guild.name} Community Rewards • Legit Proof`, 
+            iconURL: interaction.guild.iconURL() || undefined 
+          });
+
         await proofChannel.send({
-          content: `✨ **Test Payout Vouch Proof (Admin Simulated)!**`,
+          embeds: [embed],
           files: [proofPath]
         });
 
@@ -1651,305 +1708,6 @@ client.on('interactionCreate', async (interaction) => {
 
   // ── BUTTON INTERACTIONS ──
   if (interaction.isButton()) {
-    // Launcher: Post Ticket Panel
-    if (interaction.customId === 'bm_btn_post_ticket_panel') {
-      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
-      }
-
-      await interaction.deferReply();
-
-      const embed = new EmbedBuilder()
-        .setColor('#2b2d31')
-        .setTitle('⩩﹕ᨒ﹒click here to create ticket')
-        .setDescription('<a:hwart:1504576267788357742> To create a ticket use the Create ticket button')
-        .setFooter({ text: 'RIWAAYAT — Invite to Earn' });
-
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId('open_ticket')
-          .setLabel('Create ticket')
-          .setEmoji('📩')
-          .setStyle(ButtonStyle.Secondary)
-      );
-
-      await interaction.channel.send({ embeds: [embed], components: [row] });
-      return interaction.editReply({ content: '✅ Ticket panel posted publicly!' });
-    }
-
-    // Launcher: Post Event Panel
-    if (interaction.customId === 'bm_btn_post_event_panel') {
-      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
-      }
-
-      await interaction.deferReply();
-
-      try {
-        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
-        await rest.post(`/channels/${interaction.channel.id}/messages`, {
-          body: {
-            flags: 32768,
-            components: [
-              {
-                type: 17,
-                components: [
-                  {
-                    type: 12,
-                    items: [
-                      {
-                        media: {
-                          url: "https://cdn.discordapp.com/attachments/1343602374991806476/1506194924268425256/file_00000000f5a87207a97920ef212fa323.png?ex=6a0d60d5&is=6a0c0f55&hm=52ce26cf5212dc7c511446162d9218f7405d89b6771aae51b8bc9dbd29f598a8"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    type: 14,
-                    spacing: 2
-                  },
-                  {
-                    type: 10,
-                    content: "# INVITE EVENT 2026\n<:infoBlue:1506195998245130352> This is a **LIMITED-TIME** event until <t:1780222800:R>. "
-                  },
-                  {
-                    type: 14
-                  },
-                  {
-                    type: 10,
-                    content: "<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Roblox 50$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Roblox 100$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **MineCraft Account** <a:Minecraft:1504810470153126042>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **MC Redeem Code** <a:Minecraft:1504810470153126042>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Nitro Basic GiftCode** <a:AHNitroBoosts:1506197135157231738>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Nitro Boost GiftCode** <a:AHNitroBoosts:1506197135157231738>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **YT 10k Subs** <a:RG_yt:1504591010888683600>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **YT 30k Subs** <a:RG_yt:1504591010888683600>"
-                  },
-                  {
-                    type: 14,
-                    spacing: 2
-                  },
-                  {
-                    type: 10,
-                    content: "# NOTICE \n<:Inviteh:1506198676375343105> **DONE INVITING?** Create <#1504803227990888598> to claim your reward!"
-                  },
-                  {
-                    type: 14,
-                    spacing: 2
-                  },
-                  {
-                    type: 1,
-                    components: [
-                      {
-                        type: 2,
-                        style: 5,
-                        label: "Are We Legit? Check here",
-                        emoji: {
-                          id: "1506199235052175400",
-                          name: "gift",
-                          animated: false
-                        },
-                        url: "https://discord.com/channels/1485628774178623568/1485628774665158760"
-                      },
-                      {
-                        style: 1,
-                        type: 2,
-                        label: "Check Invites",
-                        emoji: {
-                          id: "1506199270188122242",
-                          name: "verification",
-                          animated: false
-                        },
-                        flow: {
-                          actions: []
-                        },
-                        custom_id: "p_303796426524069889"
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        });
-        return interaction.editReply({ content: '✅ Event panel posted publicly!' });
-      } catch (err) {
-        console.error('[SENDEVENT_ERROR]', err.message || err);
-        return interaction.editReply({ content: `❌ Failed to post event panel: ${err.message}` });
-      }
-    }
-
-    // Launcher: Post Free Gift Panel
-    if (interaction.customId === 'bm_btn_post_free_gift_panel') {
-      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
-      }
-
-      await interaction.deferReply();
-
-      try {
-        let tokens = db.getSetting('botTokens', []);
-        if (!Array.isArray(tokens)) tokens = [];
-        
-        if (tokens.length === 0) {
-          return interaction.editReply({ content: '❌ No bot tokens registered. Please add tokens via panel first.' });
-        }
-
-        await interaction.editReply({ content: `🔍 **Scraping unique server members using ${tokens.length} bots...**` });
-
-        const memberIds = new Set();
-
-        for (let i = 0; i < tokens.length; i++) {
-          const token = tokens[i];
-          try {
-            const guildsRes = await fetch('https://discord.com/api/v10/users/@me/guilds', {
-              headers: { Authorization: `Bot ${token}` }
-            });
-            if (!guildsRes.ok) continue;
-            
-            const guilds = await guildsRes.json();
-            for (const g of guilds) {
-              let after = '0';
-              while (true) {
-                const membersRes = await fetch(`https://discord.com/api/v10/guilds/${g.id}/members?limit=1000&after=${after}`, {
-                  headers: { Authorization: `Bot ${token}` }
-                });
-                if (!membersRes.ok) break;
-                
-                const members = await membersRes.json();
-                if (members.length === 0) break;
-                
-                for (const m of members) {
-                  if (m.user && !m.user.bot) {
-                    memberIds.add(m.user.id);
-                  }
-                  after = m.user.id;
-                }
-                if (members.length < 1000) break;
-              }
-            }
-          } catch (err) {
-            console.error(`[SCRAPE_ERROR] Failed for bot #${i + 1}:`, err.message);
-          }
-        }
-
-        const memberList = Array.from(memberIds);
-        if (memberList.length === 0) {
-          return interaction.editReply({ content: '❌ Scraped 0 members. Make sure the bots are present in the server(s).' });
-        }
-
-        await interaction.editReply({ content: `🚀 **Scraped ${memberList.length} unique members.** Launching distributed round-robin DM campaign...` });
-
-        let successCount = 0;
-        let failCount = 0;
-
-        const dmBody = {
-          flags: 32768,
-          components: [
-            {
-              type: 17,
-              components: [
-                {
-                  type: 10,
-                  content: "# <:emoji_86:1506374245788422144> Win a Free Gift <:emoji_86:1506374245788422144>\n> * <:emoji_89:1506374291204210810> You can win **__Free Gifts__** in our server! \n> * <:emoji_88:1506374268441723040>Click the **__Free Gift__** dropdown below and select your gift"
-                },
-                {
-                  type: 14,
-                  spacing: 2
-                },
-                {
-                  type: 1,
-                  components: [
-                    {
-                      type: 3,
-                      options: [
-                        {
-                          label: "Minecraft Redeem Code",
-                          value: "3fxYIx1V74",
-                          emoji: {
-                            id: "1504591125501972481",
-                            name: "nyt_zminecraft",
-                            animated: true
-                          }
-                        },
-                        {
-                          label: "Roblox 50$ GiftCode",
-                          value: "hUTgTp1iwX",
-                          emoji: {
-                            id: "1504606073502568578",
-                            name: "Robux_2019_Logo_gold",
-                            animated: false
-                          }
-                        },
-                        {
-                          label: "Nitro Basic Giftlink - 1 Year",
-                          value: "Zffm7CvzSv",
-                          emoji: {
-                            id: "1504810251545743410",
-                            name: "Pz_NITRO",
-                            animated: true
-                          }
-                        }
-                      ],
-                      placeholder: "Select Your Free Gift",
-                      flows: {},
-                      custom_id: "p_303978525872885766",
-                      min_values: 1,
-                      max_values: 1
-                    }
-                  ]
-                },
-                {
-                  type: 14,
-                  spacing: 2
-                },
-                {
-                  type: 10,
-                  content: "> * <:gwhiterules:1506382223333523488> Complete the tasks given after slecting your gift."
-                }
-              ]
-            }
-          ]
-        };
-
-        for (let i = 0; i < memberList.length; i++) {
-          const userId = memberList[i];
-          const botToken = tokens[i % tokens.length];
-
-          try {
-            const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
-              method: 'POST',
-              headers: {
-                Authorization: `Bot ${botToken}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ recipient_id: userId })
-            });
-
-            if (dmRes.ok) {
-              const dmChannel = await dmRes.json();
-              const sendRes = await fetch(`https://discord.com/api/v10/channels/${dmChannel.id}/messages`, {
-                method: 'POST',
-                headers: {
-                  Authorization: `Bot ${botToken}`,
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(dmBody)
-              });
-
-              if (sendRes.ok) successCount++;
-              else failCount++;
-            } else {
-              failCount++;
-            }
-          } catch (err) {
-            failCount++;
-          }
-        }
-
-        return interaction.editReply({ 
-          content: `✅ **Distributed DM Broadcast complete!**\n📦 **Total Scraped Members:** \`${memberList.length}\`\n🟢 **Success Sent:** \`${successCount}\`\n🔴 **Failed Sent:** \`${failCount}\`` 
-        });
-      } catch (err) {
-        console.error('[FREE_GIFT_LAUNCH_FAILED]', err.message || err);
-        return interaction.editReply({ content: `❌ Failed to launch free gift campaign: ${err.message}` });
-      }
-    }
-
     // Bot Manager: Register Bot Tokens Modal
     if (interaction.customId === 'bm_btn_add_tokens_modal') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
@@ -3385,8 +3143,47 @@ client.on('messageCreate', async (message) => {
       if (proofChannel) {
         const proofPath = path.join(__dirname, '..', 'data', 'proof.png');
         if (fs.existsSync(proofPath)) {
+          // Resolve user's latest claim category from database.json
+          const dbData = db.loadDB();
+          const userRedemptions = (dbData.redemptions || []).filter(r => r.discordId === message.author.id);
+          userRedemptions.sort((a, b) => new Date(b.date) - new Date(a.date));
+          const latestClaim = userRedemptions[0];
+
+          let prizeLabel = 'Premium Reward';
+          let prizeEmoji = '🎁';
+          
+          if (latestClaim) {
+            const rewardObj = getRewardByCategory(latestClaim.category);
+            if (rewardObj) {
+              prizeLabel = rewardObj.label;
+              prizeEmoji = emojiStr(rewardObj);
+            } else {
+              prizeLabel = latestClaim.category.replace(/_/g, ' ');
+            }
+          }
+
+          const embed = new EmbedBuilder()
+            .setColor('#57F287') // Green
+            .setAuthor({
+              name: `${message.author.username} • Verified Payout Vouch`,
+              iconURL: message.author.displayAvatarURL({ dynamic: true })
+            })
+            .setTitle('✅ LEGIT CLAIM & VOUCH!')
+            .setDescription(
+              `✨ **User**: ${message.author}\n` +
+              `🎁 **Claimed Reward**: ${prizeEmoji} **${prizeLabel}**\n` +
+              `💬 **Vouch Feedback**: "${message.content}"\n\n` +
+              `*Thank you for verifying! All premium rewards are instantly processed and delivered.*`
+            )
+            .setImage('attachment://proof.png')
+            .setTimestamp()
+            .setFooter({ 
+              text: `${message.guild.name} Community Rewards • Legit Proof`, 
+              iconURL: message.guild.iconURL() || undefined 
+            });
+
           await proofChannel.send({
-            content: `✨ **New Payout Vouch from @${message.author.username}!**`,
+            embeds: [embed],
             files: [proofPath]
           });
         } else {
