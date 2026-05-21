@@ -1836,8 +1836,17 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       await interaction.reply({ content: '⏳ Rendering premium payout screenshot (Generating Canvas)...', flags: MessageFlags.Ephemeral });
 
       try {
-        const { createCanvas, loadImage } = require('@napi-rs/canvas');
+        const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
         const { AttachmentBuilder } = require('discord.js');
+        const path = require('path');
+
+        // Dynamically register Inter fonts under 'gg sans' and 'gg sans bold'
+        try {
+          GlobalFonts.registerFromPath(path.join(__dirname, 'fonts', 'Inter-Regular.ttf'), 'gg sans');
+          GlobalFonts.registerFromPath(path.join(__dirname, 'fonts', 'Inter-Bold.ttf'), 'gg sans bold');
+        } catch (fontErr) {
+          console.error('[ProofMake] Font registration failed:', fontErr);
+        }
 
         // Helpers to draw rounded rectangles
         function drawRoundedRect(ctx, x, y, width, height, radius) {
@@ -1879,12 +1888,16 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           });
         }
 
-        async function loadImgSafely(url) {
+        async function loadImgSafely(urlOrPath) {
           try {
-            const buffer = await fetchImageBuffer(url);
-            return await loadImage(buffer);
+            if (typeof urlOrPath === 'string' && (urlOrPath.startsWith('http://') || urlOrPath.startsWith('https://'))) {
+              const buffer = await fetchImageBuffer(urlOrPath);
+              return await loadImage(buffer);
+            } else {
+              return await loadImage(urlOrPath);
+            }
           } catch (err) {
-            console.error(`[ProofMake] Image download failed for ${url}:`, err.message);
+            console.error(`[ProofMake] Image load failed for ${urlOrPath}:`, err.message);
             return null;
           }
         }
@@ -1893,10 +1906,10 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         const randomInvites = Math.floor(Math.random() * 4) + 2; // 2 to 5 invites
         const giftCode = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10); // 16 character alphanumeric
 
-        // 1. Download Avatars and Nitro card image
+        // 1. Download Avatars and local Nitro card image
         const targetAvatarUrl = targetUser.displayAvatarURL({ extension: 'png', size: 128 });
         const executorAvatarUrl = interaction.user.displayAvatarURL({ extension: 'png', size: 128 });
-        const nitroGiftCardUrl = 'https://i.imgur.com/v8tT4dD.png'; // Purple Wumpus gift box thumbnail
+        const nitroGiftCardUrl = path.join(__dirname, 'fonts', 'wumpus.png');
 
         const [targetAvatarImg, executorAvatarImg, nitroGiftCardImg] = await Promise.all([
           loadImgSafely(targetAvatarUrl),
@@ -1973,22 +1986,65 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         }
 
         // Draw Name
-        ctx.font = 'bold 16px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.font = '16px "gg sans bold"';
         ctx.fillStyle = '#F2F3F5';
         ctx.fillText(targetUser.username, 80, 46);
         const nameWidth1 = ctx.measureText(targetUser.username).width;
 
         // Draw Timestamp
-        ctx.font = '12px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.font = '12px "gg sans"';
         ctx.fillStyle = '#949BA4';
         ctx.fillText(time1, 80 + nameWidth1 + 10, 46);
 
-        // Draw Message lines
-        ctx.font = '15px "Segoe UI", "GG Sans", Arial, sans-serif';
-        ctx.fillStyle = '#DBDEE1';
+        // Draw Message lines with golden mention highlight support
         let currentY = 74;
         for (const line of template.first) {
-          ctx.fillText(line, 80, currentY);
+          if (line.includes(`@${interaction.user.username}`)) {
+            const mentionStr = `@${interaction.user.username}`;
+            const parts = line.split(mentionStr);
+            const beforeStr = parts[0];
+            const afterStr = parts[1];
+            
+            // Draw golden highlight background across the full width of the canvas
+            ctx.fillStyle = 'rgba(250, 166, 26, 0.08)'; // Yellowish/golden highlight tint
+            ctx.fillRect(0, currentY - 16, canvas.width, 24);
+            
+            // Draw golden vertical border on the left edge (width 2px)
+            ctx.fillStyle = '#FAA61A'; // Discord golden mention color
+            ctx.fillRect(0, currentY - 16, 2, 24);
+            
+            // Draw text components
+            let startXText = 80;
+            ctx.font = '15px "gg sans"';
+            ctx.fillStyle = '#DBDEE1';
+            
+            if (beforeStr) {
+              ctx.fillText(beforeStr, startXText, currentY);
+              startXText += ctx.measureText(beforeStr).width;
+            }
+            
+            // Draw mention badge
+            const badgeWidth = ctx.measureText(mentionStr).width + 8;
+            ctx.fillStyle = 'rgba(88, 101, 242, 0.3)'; // Blurple background
+            drawRoundedRect(ctx, startXText, currentY - 14, badgeWidth, 18, 3);
+            ctx.fill();
+            
+            ctx.fillStyle = '#E3E7FD'; // Light blurple text
+            ctx.font = '15px "gg sans bold"';
+            ctx.fillText(mentionStr, startXText + 4, currentY - 1);
+            
+            startXText += badgeWidth + 4;
+            
+            if (afterStr) {
+              ctx.font = '15px "gg sans"';
+              ctx.fillStyle = '#DBDEE1';
+              ctx.fillText(afterStr, startXText, currentY);
+            }
+          } else {
+            ctx.font = '15px "gg sans"';
+            ctx.fillStyle = '#DBDEE1';
+            ctx.fillText(line, 80, currentY);
+          }
           currentY += 22;
         }
 
@@ -2012,7 +2068,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         }
 
         // Draw Name + Custom Tag 🎁 GIFT
-        ctx.font = 'bold 16px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.font = '16px "gg sans bold"';
         ctx.fillStyle = '#F2F3F5';
         ctx.fillText(interaction.user.username, 80, block2StartY + 16);
         const execNameWidth = ctx.measureText(interaction.user.username).width;
@@ -2021,53 +2077,73 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         ctx.fillStyle = '#23A55A'; // Green tag background
         drawRoundedRect(ctx, 80 + execNameWidth + 8, block2StartY + 2, 62, 18, 3);
         ctx.fill();
-        ctx.font = 'bold 10px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.font = '10px "gg sans bold"';
         ctx.fillStyle = '#FFFFFF';
         ctx.fillText('🎁 GIFT', 80 + execNameWidth + 14, block2StartY + 14);
 
         // Draw Timestamp
-        ctx.font = '12px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.font = '12px "gg sans"';
         ctx.fillStyle = '#949BA4';
         ctx.fillText(time2, 80 + execNameWidth + 78, block2StartY + 16);
 
         // Draw Message text
-        ctx.font = '15px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.font = '15px "gg sans"';
         ctx.fillStyle = '#DBDEE1';
         ctx.fillText('🎁 Thank you for inviting users to my server!', 80, block2StartY + 42);
         
-        let linkText = '';
+        let prefixText = '';
+        let codeText = '';
         let embedTitle = '';
         let embedDesc = '';
         let embedColor = '#4f46e5';
 
         if (prize === 'nitro_basic') {
-          linkText = `🌀 Here is your Nitro Basic 1 Month: https://discord.gift/${giftCode}`;
+          prefixText = '🌀 Here is your Nitro Basic 1 Month: ';
+          codeText = `https://discord.gift/${giftCode}`;
           embedTitle = "You've been gifted a subscription!";
           embedDesc = "You've been gifted Nitro Basic for 1 month!";
           embedColor = '#4f46e5';
         } else if (prize === 'nitro_boost') {
-          linkText = `🌀 Here is your Nitro Boost 1 Month: https://discord.gift/${giftCode}`;
+          prefixText = '🌀 Here is your Nitro Boost 1 Month: ';
+          codeText = `https://discord.gift/${giftCode}`;
           embedTitle = "You've been gifted a subscription!";
           embedDesc = "You've been gifted Nitro Boost for 1 month!";
           embedColor = '#ff73fa';
         } else if (prize === 'minecraft') {
-          linkText = `⛏ Here are your Minecraft Account credentials:`;
+          prefixText = '⛏ Here are your Minecraft Account credentials: ';
+          codeText = `mc_play_${Math.floor(Math.random()*8999)+1000}@gmail.com`;
           embedTitle = "Minecraft Premium Account Info";
           embedDesc = `Email: mc_play_${Math.floor(Math.random()*8999)+1000}@gmail.com\nPassword: ${Math.random().toString(36).substring(2, 10).toUpperCase()}!`;
           embedColor = '#23A55A';
         } else if (prize === 'robux_50') {
-          linkText = `🎮 Here is your Roblox $50 Gift Card Code:`;
+          prefixText = '🎮 Here is your Roblox $50 Gift Card Code: ';
+          codeText = `RBX-${giftCode.toUpperCase().substring(0, 12)}`;
           embedTitle = "Roblox $50 Premium Card";
           embedDesc = `Gift Card Pin: RBX-${giftCode.toUpperCase().substring(0, 12)}`;
           embedColor = '#f5be18';
         } else if (prize === 'robux_100') {
-          linkText = `🎮 Here is your Roblox $100 Gift Card Code:`;
+          prefixText = '🎮 Here is your Roblox $100 Gift Card Code: ';
+          codeText = `RBX-${giftCode.toUpperCase().substring(0, 12)}`;
           embedTitle = "Roblox $100 Premium Card";
           embedDesc = `Gift Card Pin: RBX-${giftCode.toUpperCase().substring(0, 12)}`;
           embedColor = '#f5be18';
         }
 
-        ctx.fillText(linkText, 80, block2StartY + 64);
+        ctx.font = '15px "gg sans"';
+        ctx.fillStyle = '#DBDEE1';
+        ctx.fillText(prefixText, 80, block2StartY + 64);
+        const prefixWidth = ctx.measureText(prefixText).width;
+
+        // Draw inline code block background
+        const codeWidth = ctx.measureText(codeText).width + 12;
+        ctx.fillStyle = '#2B2D31'; // Darker gray pill background
+        drawRoundedRect(ctx, 80 + prefixWidth, block2StartY + 49, codeWidth, 22, 3);
+        ctx.fill();
+
+        // Draw code text
+        ctx.font = '14px "gg sans"';
+        ctx.fillStyle = '#E3E5E8';
+        ctx.fillText(codeText, 80 + prefixWidth + 6, block2StartY + 64);
 
         // Draw Embed Card Box
         const embedY = block2StartY + 80;
@@ -2081,12 +2157,12 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         ctx.fill();
 
         // Title
-        ctx.font = 'bold 16px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.font = '16px "gg sans bold"';
         ctx.fillStyle = '#FFFFFF';
         ctx.fillText(embedTitle, 100, embedY + 32);
 
         // Description
-        ctx.font = '14px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.font = '14px "gg sans"';
         ctx.fillStyle = '#DBDEE1';
         const descLines = embedDesc.split('\n');
         let descY = embedY + 54;
@@ -2100,14 +2176,14 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         drawRoundedRect(ctx, 100, embedY + 86, 95, 34, 4);
         ctx.fill();
 
-        ctx.font = 'bold 14px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.font = '14px "gg sans bold"';
         ctx.fillStyle = '#FFFFFF';
         ctx.fillText('Open Gift', 118, embedY + 108);
 
         // Draw Expires text
-        ctx.font = '12px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.font = '12px "gg sans"';
         ctx.fillStyle = '#949BA4';
-        ctx.fillText('Expires in 48 hours', 210, embedY + 107);
+        ctx.fillText('Expires in 44 hours', 210, embedY + 107);
 
         // Draw Wumpus Nitro Graphic if successfully loaded
         if (nitroGiftCardImg) {
@@ -2134,18 +2210,18 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         }
 
         // Draw Name
-        ctx.font = 'bold 16px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.font = '16px "gg sans bold"';
         ctx.fillStyle = '#F2F3F5';
         ctx.fillText(targetUser.username, 80, block3StartY + 16);
         const nameWidth3 = ctx.measureText(targetUser.username).width;
 
         // Draw Timestamp
-        ctx.font = '12px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.font = '12px "gg sans"';
         ctx.fillStyle = '#949BA4';
         ctx.fillText(time3, 80 + nameWidth3 + 10, block3StartY + 16);
 
         // Draw Message text lines
-        ctx.font = '15px "Segoe UI", "GG Sans", Arial, sans-serif';
+        ctx.font = '15px "gg sans"';
         ctx.fillStyle = '#DBDEE1';
         let currentY3 = block3StartY + 42;
         for (const line of template.third) {
