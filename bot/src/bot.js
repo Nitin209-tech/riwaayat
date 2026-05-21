@@ -493,6 +493,18 @@ const commands = [
     .setDescription('Check if the bot is successfully connected to the PostgreSQL database (Admin only)'),
   new SlashCommandBuilder().setName('send1invite')
     .setDescription('Post the premium styled 1-invite promo banner (Admin only)'),
+  new SlashCommandBuilder().setName('proofmake')
+    .setDescription('Generate simulated payout proof conversation (Admin only)')
+    .addUserOption(opt => opt.setName('user').setDescription('The target user to display in proof').setRequired(true))
+    .addStringOption(opt => opt.setName('prize').setDescription('Choose the prize to payout')
+      .setRequired(false)
+      .addChoices(
+        { name: '💎 Nitro Basic', value: 'nitro_basic' },
+        { name: '🚀 Nitro Boost', value: 'nitro_boost' },
+        { name: '⛏ Minecraft Account', value: 'minecraft' },
+        { name: '🎮 Robux $50', value: 'robux_50' },
+        { name: '🎮 Robux $100', value: 'robux_100' }
+      )),
 ].map(cmd => cmd.toJSON());
 
 // ─── BOT CLIENT ────────────────────────────────────────────────────
@@ -1806,6 +1818,137 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       await interaction.reply({ content: '✅ Promotional banner posted!', flags: MessageFlags.Ephemeral });
       await interaction.channel.send({ content: bannerText });
       return;
+    }
+
+    // /proofmake
+    if (commandName === 'proofmake') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
+      }
+
+      const targetUser = interaction.options.getUser('user');
+      const prize = interaction.options.getString('prize') || 'nitro_basic';
+
+      if (!targetUser) {
+        return interaction.reply({ content: '❌ Please select or provide a valid target user.', flags: MessageFlags.Ephemeral });
+      }
+
+      await interaction.reply({ content: '⏳ Generating simulated proof...', flags: MessageFlags.Ephemeral });
+
+      try {
+        // Fetch webhooks and get or create one
+        let webhook = null;
+        if (interaction.channel.createWebhook) {
+          const webhooks = await interaction.channel.fetchWebhooks().catch(() => null);
+          if (webhooks) {
+            webhook = webhooks.find(wh => wh.owner.id === client.user.id);
+          }
+          if (!webhook) {
+            webhook = await interaction.channel.createWebhook({
+              name: 'Riwaayat Proof Bot',
+              avatar: client.user.displayAvatarURL()
+            });
+          }
+        }
+
+        if (!webhook) {
+          return interaction.editReply({ content: '❌ Webhook permissions are missing or failed to initialize in this channel.' });
+        }
+
+        // Generate random invites and promo gift code
+        const randomInvites = Math.floor(Math.random() * 4) + 2; // 2 to 5 invites
+        const giftCode = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10); // 16 character alphanumeric
+        
+        let firstMsgText = '';
+        let secondMsgText = '';
+        let secondMsgEmbed = null;
+        let thirdMsgText = '';
+
+        // Configure messages based on prize selection
+        if (prize === 'nitro_basic') {
+          firstMsgText = `🤬\ni have made like ${randomInvites} invites\n<@${interaction.user.id}> WHEN U PAY MY NITRO BASIC BITCH\nHUH????`;
+          secondMsgText = `🎁 Thank you for inviting users to my server!\n🌀 Here is your Nitro Basic 1 Month: https://discord.gift/${giftCode}`;
+          secondMsgEmbed = new EmbedBuilder()
+            .setColor('#4f46e5')
+            .setTitle("You've been gifted a subscription!")
+            .setDescription(`You've been gifted **Nitro Basic** for **1 month**!`)
+            .setThumbnail('https://i.imgur.com/w9rNuGZ.png')
+            .setFooter({ text: 'Expires in 48 hours' });
+          thirdMsgText = `HAHAHAHAH GOOOD BOOY\nREAL THOUGH BTW`;
+        } else if (prize === 'nitro_boost') {
+          firstMsgText = `🤬\ni did ${randomInvites} invites!\n<@${interaction.user.id}> send my nitro boost code immediately!`;
+          secondMsgText = `🎁 Thank you for inviting users to my server!\n🌀 Here is your Nitro Boost 1 Month: https://discord.gift/${giftCode}`;
+          secondMsgEmbed = new EmbedBuilder()
+            .setColor('#ff73fa')
+            .setTitle("You've been gifted a subscription!")
+            .setDescription(`You've been gifted **Nitro Boost** for **1 month**!`)
+            .setThumbnail('https://i.imgur.com/w9rNuGZ.png')
+            .setFooter({ text: 'Expires in 48 hours' });
+          thirdMsgText = `LET'S GOOOOO THANK YOU LEGIT SO FAST`;
+        } else if (prize === 'minecraft') {
+          firstMsgText = `yo <@${interaction.user.id}> done with ${randomInvites} invites\ncan you give my minecraft account now?`;
+          secondMsgText = `🎁 Thank you for inviting users to my server!\n⛏ Here are your Minecraft Account credentials:\n` +
+                          `**Email:** \`mc_play_${Math.floor(Math.random()*8999)+1000}@gmail.com\`\n` +
+                          `**Password:** \`${Math.random().toString(36).substring(2, 10).toUpperCase()}!\``;
+          thirdMsgText = `omg thank you! logged in successfully, you are the best!`;
+        } else if (prize === 'robux_50') {
+          firstMsgText = `yo i got ${randomInvites} invites now\n<@${interaction.user.id}> pay my robux basic please`;
+          secondMsgText = `🎁 Thank you for inviting users to my server!\n🎮 Here is your Roblox $50 Gift Card Code:\n\`RBX-${giftCode.toUpperCase().substring(0, 12)}\``;
+          secondMsgEmbed = new EmbedBuilder()
+            .setColor('#f5be18')
+            .setTitle("Robux Premium Gift Card")
+            .setDescription(`**Value:** $50.00 USD\n**Status:** Activated`)
+            .setThumbnail('https://i.imgur.com/KdfQ97a.png')
+            .setFooter({ text: 'Redeemable on Roblox.com' });
+          thirdMsgText = `tysm! redeemed perfectly 😭`;
+        } else if (prize === 'robux_100') {
+          firstMsgText = `yo <@${interaction.user.id}> done inviting people\npayout my robux 100$ fast bro`;
+          secondMsgText = `🎁 Thank you for inviting users to my server!\n🎮 Here is your Roblox $100 Gift Card Code:\n\`RBX-${giftCode.toUpperCase().substring(0, 12)}\``;
+          secondMsgEmbed = new EmbedBuilder()
+            .setColor('#f5be18')
+            .setTitle("Robux Premium Gift Card")
+            .setDescription(`**Value:** $100.00 USD\n**Status:** Activated`)
+            .setThumbnail('https://i.imgur.com/KdfQ97a.png')
+            .setFooter({ text: 'Redeemable on Roblox.com' });
+          thirdMsgText = `OMG $100 ROBUX TYSM BRO!`;
+        }
+
+        // Send first message as target user
+        await webhook.send({
+          username: targetUser.username,
+          avatarURL: targetUser.displayAvatarURL({ dynamic: true }),
+          content: firstMsgText
+        });
+
+        // Wait 1.5 seconds to simulate real conversation flow
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // Send second message as the executor
+        const executorOptions = {
+          username: `${interaction.user.username} 🎁 GIFT`,
+          avatarURL: interaction.user.displayAvatarURL({ dynamic: true }),
+          content: secondMsgText
+        };
+        if (secondMsgEmbed) {
+          executorOptions.embeds = [secondMsgEmbed];
+        }
+        await webhook.send(executorOptions);
+
+        // Wait 1.5 seconds
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // Send third message as target user
+        await webhook.send({
+          username: targetUser.username,
+          avatarURL: targetUser.displayAvatarURL({ dynamic: true }),
+          content: thirdMsgText
+        });
+
+        return interaction.editReply({ content: `✅ Simulated proof for **${targetUser.username}** posted successfully!` });
+      } catch (err) {
+        console.error('Failed to generate proof:', err);
+        return interaction.editReply({ content: `❌ Error generating proof: ${err.message}` });
+      }
     }
   }
 
