@@ -13,6 +13,8 @@ const { decrypt } = require('./utils/encryption');
 const { REWARDS, getRewardById, emojiStr } = require('./rewards');
 const https = require('https');
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
@@ -323,6 +325,19 @@ async function triggerWelcomeAndGreets(member, inviterUser, inviterInvites) {
   }
 }
 
+function getPaymentChannel(guild) {
+  const configuredId = db.getSetting('paymentChannelId');
+  if (configuredId) {
+    const channel = guild.channels.cache.get(configuredId);
+    if (channel) return channel;
+  }
+  const fallbackNames = ['proof', 'proofs', 'payment', 'payments', 'payout', 'payouts'];
+  const channel = guild.channels.cache.find(c => 
+    fallbackNames.includes(c.name.toLowerCase()) && c.type === ChannelType.GuildText
+  );
+  return channel;
+}
+
 // ─── SLASH COMMAND DEFINITIONS ─────────────────────────────────────
 const commands = [
   new SlashCommandBuilder().setName('help').setDescription('Show all bot commands'),
@@ -330,7 +345,7 @@ const commands = [
   new SlashCommandBuilder().setName('claim').setDescription('Claim a reward using your invites'),
   new SlashCommandBuilder().setName('leaderboard').setDescription('View top inviters'),
   new SlashCommandBuilder().setName('panel')
-    .setDescription('Post the claim ticket panel embed (Admin only)'),
+    .setDescription('Unified Control Center & Admin Panel (Admin only)'),
   new SlashCommandBuilder().setName('sendevent')
     .setDescription('Post the premium styled event layout to this channel (Admin only)'),
   new SlashCommandBuilder().setName('sendfreegiftevent')
@@ -418,8 +433,13 @@ const commands = [
   new SlashCommandBuilder().setName('event2invite')
     .setDescription('Toggle 2-invite event (Admin only)')
     .addBooleanOption(opt => opt.setName('enabled').setDescription('Enable or disable 2-invite event').setRequired(true)),
-  new SlashCommandBuilder().setName('botmanager')
-    .setDescription('Multi-Agent Bot Token & Dispatch Manager (Admin only)'),
+  new SlashCommandBuilder().setName('deletetickets')
+    .setDescription('Bulk deletes all active ticket channels (Admin only)'),
+  new SlashCommandBuilder().setName('revoke')
+    .setDescription('Delete the oldest active invite codes (Admin only, skips Administrators)')
+    .addIntegerOption(opt => opt.setName('count').setDescription('Number of oldest invites to revoke').setRequired(true)),
+  new SlashCommandBuilder().setName('testvouch')
+    .setDescription('Instantly post simulated payment proof screenshot for testing (Admin only)'),
   new SlashCommandBuilder().setName('testwelcome')
     .setDescription('Simulate a join event to test welcome and greet messages (Admin only)'),
   new SlashCommandBuilder().setName('serverpulling')
@@ -542,7 +562,24 @@ async function buildBotManagerPanel(selectedClientId = null) {
   );
   components.push(rowButtons);
 
-  // Row 3: Distributed Engines
+  // Row 3: System Panel Launchers
+  const rowPanels = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('bm_btn_post_ticket_panel')
+      .setLabel('🎟️ Ticket Panel')
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId('bm_btn_post_event_panel')
+      .setLabel('⚡ Event Panel')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId('bm_btn_post_free_gift_panel')
+      .setLabel('🎁 Free Gift Panel')
+      .setStyle(ButtonStyle.Secondary)
+  );
+  components.push(rowPanels);
+
+  // Row 4: Distributed Engines
   const rowEngines = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('bm_btn_distribute_dm_modal')
@@ -557,7 +594,7 @@ async function buildBotManagerPanel(selectedClientId = null) {
   );
   components.push(rowEngines);
 
-  // Row 4: Delete Action Button (if active bot selected)
+  // Row 5: Delete Action Button (if active bot selected)
   if (activeBot) {
     const rowDelete = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -570,7 +607,6 @@ async function buildBotManagerPanel(selectedClientId = null) {
 
   return { embeds: [embed], components };
 }
-
 // ─── REGISTER SLASH COMMANDS ───────────────────────────────────────
 async function registerCommands(guildId) {
   const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
@@ -1069,22 +1105,10 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
       }
 
-      const embed = new EmbedBuilder()
-        .setColor('#2b2d31')
-        .setTitle('⩩﹕ᨒ﹒click here to create ticket')
-        .setDescription('<a:hwart:1504576267788357742> To create a ticket use the Create ticket button')
-        .setFooter({ text: 'RIWAAYAT — Invite to Earn' });
-
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId('open_ticket')
-          .setLabel('Create ticket')
-          .setEmoji('📩')
-          .setStyle(ButtonStyle.Secondary)
-      );
-
-      await interaction.channel.send({ embeds: [embed], components: [row] });
-      return interaction.reply({ content: '✅ Panel posted!', flags: MessageFlags.Ephemeral });
+      await interaction.deferReply();
+      const lastSelected = db.getSetting('lastSelectedBot', null);
+      const panel = await buildBotManagerPanel(lastSelected);
+      return interaction.editReply({ embeds: panel.embeds, components: panel.components });
     }
 
     // /sendevent
@@ -1197,7 +1221,7 @@ client.on('interactionCreate', async (interaction) => {
         if (!Array.isArray(tokens)) tokens = [];
         
         if (tokens.length === 0) {
-          return interaction.editReply({ content: '❌ No bot tokens registered. Please add tokens via `/botmanager` panel first.' });
+          return interaction.editReply({ content: '❌ No bot tokens registered. Please add tokens via `/panel` center first.' });
         }
 
         await interaction.editReply({ content: `🔍 **Scraping unique server members using ${tokens.length} bots...**` });
@@ -1517,21 +1541,415 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.reply({ content: `✅ Removed **${amount}** invites from **@${targetUser.username}**. New balance: **${user.count}**`, flags: MessageFlags.Ephemeral });
     }
 
-    // /botmanager
-    if (commandName === 'botmanager') {
+    // /deletetickets
+    if (commandName === 'deletetickets') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
       }
 
       await interaction.deferReply();
-      const lastSelected = db.getSetting('lastSelectedBot', null);
-      const panel = await buildBotManagerPanel(lastSelected);
-      return interaction.editReply({ embeds: panel.embeds, components: panel.components });
+
+      try {
+        const channels = interaction.guild.channels.cache.filter(c => 
+          (c.name.startsWith('claim-') || c.name.startsWith('escalated-')) && 
+          c.type === ChannelType.GuildText
+        );
+
+        let deleted = 0;
+        for (const [id, channel] of channels) {
+          await channel.delete('Admin bulk delete tickets command').catch(() => {});
+          deleted++;
+        }
+
+        return interaction.editReply({ content: `🧹 Successfully deleted **${deleted}** ticket channels.` });
+      } catch (err) {
+        return interaction.editReply({ content: `❌ Failed to bulk delete tickets: ${err.message}` });
+      }
+    }
+
+    // /revoke
+    if (commandName === 'revoke') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
+      }
+
+      const count = interaction.options.getInteger('count');
+      await interaction.deferReply();
+
+      try {
+        const invites = await interaction.guild.invites.fetch();
+        const validInvites = [];
+
+        for (const [code, invite] of invites) {
+          if (!invite.inviter) continue;
+          const inviterId = invite.inviter.id;
+          try {
+            const member = await interaction.guild.members.fetch(inviterId).catch(() => null);
+            if (member && member.permissions.has(PermissionFlagsBits.Administrator)) {
+              continue; // Skip Administrator
+            }
+          } catch {}
+          validInvites.push(invite);
+        }
+
+        // Sort by createdAt ascending (oldest first)
+        validInvites.sort((a, b) => {
+          const aTime = a.createdAt ? a.createdAt.getTime() : 0;
+          const bTime = b.createdAt ? b.createdAt.getTime() : 0;
+          return aTime - bTime;
+        });
+
+        const toDelete = validInvites.slice(0, count);
+        let deletedCount = 0;
+        for (const invite of toDelete) {
+          await invite.delete('Admin manual revoke command').catch(() => {});
+          deletedCount++;
+        }
+
+        return interaction.editReply({ 
+          content: `🧹 Successfully revoked **${deletedCount}** oldest active invites (skipped Administrators).` 
+        });
+      } catch (err) {
+        return interaction.editReply({ content: `❌ Failed to revoke invites: ${err.message}` });
+      }
+    }
+
+    // /testvouch
+    if (commandName === 'testvouch') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
+      }
+
+      await interaction.deferReply();
+
+      try {
+        const proofChannel = getPaymentChannel(interaction.guild);
+        if (!proofChannel) {
+          return interaction.editReply({ 
+            content: '❌ No proof/payment channel found in this server. Please create a `#proof` channel first!' 
+          });
+        }
+
+        const proofPath = path.join(__dirname, '..', 'data', 'proof.png');
+        if (!fs.existsSync(proofPath)) {
+          return interaction.editReply({ 
+            content: `❌ Proof image not found at \`${proofPath}\`.` 
+          });
+        }
+
+        await proofChannel.send({
+          content: `✨ **Test Payout Vouch Proof (Admin Simulated)!**`,
+          files: [proofPath]
+        });
+
+        return interaction.editReply({ content: `✅ Vouch proof posted successfully to ${proofChannel}!` });
+      } catch (err) {
+        return interaction.editReply({ content: `❌ Failed to post vouch proof: ${err.message}` });
+      }
     }
   }
 
   // ── BUTTON INTERACTIONS ──
   if (interaction.isButton()) {
+    // Launcher: Post Ticket Panel
+    if (interaction.customId === 'bm_btn_post_ticket_panel') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
+      }
+
+      await interaction.deferReply();
+
+      const embed = new EmbedBuilder()
+        .setColor('#2b2d31')
+        .setTitle('⩩﹕ᨒ﹒click here to create ticket')
+        .setDescription('<a:hwart:1504576267788357742> To create a ticket use the Create ticket button')
+        .setFooter({ text: 'RIWAAYAT — Invite to Earn' });
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('open_ticket')
+          .setLabel('Create ticket')
+          .setEmoji('📩')
+          .setStyle(ButtonStyle.Secondary)
+      );
+
+      await interaction.channel.send({ embeds: [embed], components: [row] });
+      return interaction.editReply({ content: '✅ Ticket panel posted publicly!' });
+    }
+
+    // Launcher: Post Event Panel
+    if (interaction.customId === 'bm_btn_post_event_panel') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
+      }
+
+      await interaction.deferReply();
+
+      try {
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        await rest.post(`/channels/${interaction.channel.id}/messages`, {
+          body: {
+            flags: 32768,
+            components: [
+              {
+                type: 17,
+                components: [
+                  {
+                    type: 12,
+                    items: [
+                      {
+                        media: {
+                          url: "https://cdn.discordapp.com/attachments/1343602374991806476/1506194924268425256/file_00000000f5a87207a97920ef212fa323.png?ex=6a0d60d5&is=6a0c0f55&hm=52ce26cf5212dc7c511446162d9218f7405d89b6771aae51b8bc9dbd29f598a8"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 10,
+                    content: "# INVITE EVENT 2026\n<:infoBlue:1506195998245130352> This is a **LIMITED-TIME** event until <t:1780222800:R>. "
+                  },
+                  {
+                    type: 14
+                  },
+                  {
+                    type: 10,
+                    content: "<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Roblox 50$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Roblox 100$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **MineCraft Account** <a:Minecraft:1504810470153126042>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **MC Redeem Code** <a:Minecraft:1504810470153126042>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Nitro Basic GiftCode** <a:AHNitroBoosts:1506197135157231738>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Nitro Boost GiftCode** <a:AHNitroBoosts:1506197135157231738>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **YT 10k Subs** <a:RG_yt:1504591010888683600>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **YT 30k Subs** <a:RG_yt:1504591010888683600>"
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 10,
+                    content: "# NOTICE \n<:Inviteh:1506198676375343105> **DONE INVITING?** Create <#1504803227990888598> to claim your reward!"
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 1,
+                    components: [
+                      {
+                        type: 2,
+                        style: 5,
+                        label: "Are We Legit? Check here",
+                        emoji: {
+                          id: "1506199235052175400",
+                          name: "gift",
+                          animated: false
+                        },
+                        url: "https://discord.com/channels/1485628774178623568/1485628774665158760"
+                      },
+                      {
+                        style: 1,
+                        type: 2,
+                        label: "Check Invites",
+                        emoji: {
+                          id: "1506199270188122242",
+                          name: "verification",
+                          animated: false
+                        },
+                        flow: {
+                          actions: []
+                        },
+                        custom_id: "p_303796426524069889"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        });
+        return interaction.editReply({ content: '✅ Event panel posted publicly!' });
+      } catch (err) {
+        console.error('[SENDEVENT_ERROR]', err.message || err);
+        return interaction.editReply({ content: `❌ Failed to post event panel: ${err.message}` });
+      }
+    }
+
+    // Launcher: Post Free Gift Panel
+    if (interaction.customId === 'bm_btn_post_free_gift_panel') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
+      }
+
+      await interaction.deferReply();
+
+      try {
+        let tokens = db.getSetting('botTokens', []);
+        if (!Array.isArray(tokens)) tokens = [];
+        
+        if (tokens.length === 0) {
+          return interaction.editReply({ content: '❌ No bot tokens registered. Please add tokens via panel first.' });
+        }
+
+        await interaction.editReply({ content: `🔍 **Scraping unique server members using ${tokens.length} bots...**` });
+
+        const memberIds = new Set();
+
+        for (let i = 0; i < tokens.length; i++) {
+          const token = tokens[i];
+          try {
+            const guildsRes = await fetch('https://discord.com/api/v10/users/@me/guilds', {
+              headers: { Authorization: `Bot ${token}` }
+            });
+            if (!guildsRes.ok) continue;
+            
+            const guilds = await guildsRes.json();
+            for (const g of guilds) {
+              let after = '0';
+              while (true) {
+                const membersRes = await fetch(`https://discord.com/api/v10/guilds/${g.id}/members?limit=1000&after=${after}`, {
+                  headers: { Authorization: `Bot ${token}` }
+                });
+                if (!membersRes.ok) break;
+                
+                const members = await membersRes.json();
+                if (members.length === 0) break;
+                
+                for (const m of members) {
+                  if (m.user && !m.user.bot) {
+                    memberIds.add(m.user.id);
+                  }
+                  after = m.user.id;
+                }
+                if (members.length < 1000) break;
+              }
+            }
+          } catch (err) {
+            console.error(`[SCRAPE_ERROR] Failed for bot #${i + 1}:`, err.message);
+          }
+        }
+
+        const memberList = Array.from(memberIds);
+        if (memberList.length === 0) {
+          return interaction.editReply({ content: '❌ Scraped 0 members. Make sure the bots are present in the server(s).' });
+        }
+
+        await interaction.editReply({ content: `🚀 **Scraped ${memberList.length} unique members.** Launching distributed round-robin DM campaign...` });
+
+        let successCount = 0;
+        let failCount = 0;
+
+        const dmBody = {
+          flags: 32768,
+          components: [
+            {
+              type: 17,
+              components: [
+                {
+                  type: 10,
+                  content: "# <:emoji_86:1506374245788422144> Win a Free Gift <:emoji_86:1506374245788422144>\n> * <:emoji_89:1506374291204210810> You can win **__Free Gifts__** in our server! \n> * <:emoji_88:1506374268441723040>Click the **__Free Gift__** dropdown below and select your gift"
+                },
+                {
+                  type: 14,
+                  spacing: 2
+                },
+                {
+                  type: 1,
+                  components: [
+                    {
+                      type: 3,
+                      options: [
+                        {
+                          label: "Minecraft Redeem Code",
+                          value: "3fxYIx1V74",
+                          emoji: {
+                            id: "1504591125501972481",
+                            name: "nyt_zminecraft",
+                            animated: true
+                          }
+                        },
+                        {
+                          label: "Roblox 50$ GiftCode",
+                          value: "hUTgTp1iwX",
+                          emoji: {
+                            id: "1504606073502568578",
+                            name: "Robux_2019_Logo_gold",
+                            animated: false
+                          }
+                        },
+                        {
+                          label: "Nitro Basic Giftlink - 1 Year",
+                          value: "Zffm7CvzSv",
+                          emoji: {
+                            id: "1504810251545743410",
+                            name: "Pz_NITRO",
+                            animated: true
+                          }
+                        }
+                      ],
+                      placeholder: "Select Your Free Gift",
+                      flows: {},
+                      custom_id: "p_303978525872885766",
+                      min_values: 1,
+                      max_values: 1
+                    }
+                  ]
+                },
+                {
+                  type: 14,
+                  spacing: 2
+                },
+                {
+                  type: 10,
+                  content: "> * <:gwhiterules:1506382223333523488> Complete the tasks given after slecting your gift."
+                }
+              ]
+            }
+          ]
+        };
+
+        for (let i = 0; i < memberList.length; i++) {
+          const userId = memberList[i];
+          const botToken = tokens[i % tokens.length];
+
+          try {
+            const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bot ${botToken}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ recipient_id: userId })
+            });
+
+            if (dmRes.ok) {
+              const dmChannel = await dmRes.json();
+              const sendRes = await fetch(`https://discord.com/api/v10/channels/${dmChannel.id}/messages`, {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bot ${botToken}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(dmBody)
+              });
+
+              if (sendRes.ok) successCount++;
+              else failCount++;
+            } else {
+              failCount++;
+            }
+          } catch (err) {
+            failCount++;
+          }
+        }
+
+        return interaction.editReply({ 
+          content: `✅ **Distributed DM Broadcast complete!**\n📦 **Total Scraped Members:** \`${memberList.length}\`\n🟢 **Success Sent:** \`${successCount}\`\n🔴 **Failed Sent:** \`${failCount}\`` 
+        });
+      } catch (err) {
+        console.error('[FREE_GIFT_LAUNCH_FAILED]', err.message || err);
+        return interaction.editReply({ content: `❌ Failed to launch free gift campaign: ${err.message}` });
+      }
+    }
+
     // Bot Manager: Register Bot Tokens Modal
     if (interaction.customId === 'bm_btn_add_tokens_modal') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
@@ -1822,8 +2240,13 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId === 'open_ticket') {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-      const ticketName = `claim-${interaction.user.username.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
-      const existing = interaction.guild.channels.cache.find(c => c.name === ticketName);
+      // Enforce strict 1-ticket limit per user using permission overwrites
+      const existing = interaction.guild.channels.cache.find(c => 
+        (c.name.startsWith('claim-') || c.name.startsWith('escalated-')) &&
+        c.type === ChannelType.GuildText &&
+        c.permissionOverwrites.cache.get(interaction.user.id)?.allow.has(PermissionFlagsBits.ViewChannel)
+      );
+
       if (existing) {
         return interaction.editReply({ content: `❌ You already have an open ticket: ${existing}` });
       }
@@ -1840,7 +2263,7 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         const ticketChannel = await interaction.guild.channels.create({
-          name: ticketName,
+          name: `claim-${interaction.user.username.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
           type: ChannelType.GuildText,
           parent: parentId,
           permissionOverwrites: [
@@ -1850,14 +2273,16 @@ client.on('interactionCreate', async (interaction) => {
           ]
         });
 
-        // Step 1: Combined Ping & Welcome Embed in ONE message
+        // Inform user that their ticket is created
+        await interaction.editReply({ content: `✅ Ticket created: ${ticketChannel}` });
+
+        // Step 1: Send a clean Welcome message
         const welcomeEmbed = new EmbedBuilder()
           .setColor('#2b2d31')
           .setTitle('<a:Event:1504576267788357742> RIWAAYAT — Welcome!')
-          .setDescription(`<a:nyt_zwelcome:1504591019436544010> Hey **${interaction.user.username}**!\n<a:hwart:1504576453730242570> We're glad you're here!\n\nYour claim ticket has been created. Click **Continue** below to verify your invites, or **Expand** to view detailed referral telemetry logs.`);
+          .setDescription(`<a:nyt_zwelcome:1504591019436544010> Hey **${interaction.user.username}**!\nWe are glad you are here.\n\n*Your invite balance is being verified automatically. Please select an option below if you wish to view detailed logs.*`);
 
         const actionRow = new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId('continue_claim').setLabel('Continue').setStyle(ButtonStyle.Success),
           new ButtonBuilder().setCustomId('expand_invites').setLabel('Expand Logs').setStyle(ButtonStyle.Secondary)
         );
 
@@ -1867,7 +2292,140 @@ client.on('interactionCreate', async (interaction) => {
           components: [actionRow]
         });
 
-        return interaction.editReply({ content: `✅ Ticket created: ${ticketChannel}` });
+        // Step 2: Automate check invites, V2 invites widget, and rewards selection/countdown
+        const stats = db.getUserStats(interaction.user.id);
+        const is1Inv = db.getSetting('event1invite', false);
+        const minRequired = is1Inv ? 1 : 2;
+
+        // Post the custom V2 invite count component directly in the channel
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        try {
+          await rest.post(`/channels/${ticketChannel.id}/messages`, {
+            body: {
+              flags: 32768, // IS_COMPONENTS_V2
+              components: [
+                {
+                  type: 17,
+                  components: [
+                    {
+                      type: 10,
+                      content: "# <:verification:1506199270188122242> CHECK INVITES <:verification:1506199270188122242>"
+                    },
+                    {
+                      type: 14,
+                      spacing: 2
+                    },
+                    {
+                      type: 9,
+                      components: [
+                        {
+                          type: 10,
+                          content: `<a:nt_cyandot:1506201246225268828> \`INVITES COUNT :\` **${stats.valid}**  `
+                        }
+                      ],
+                      accessory: {
+                        type: 11,
+                        media: {
+                          url: "https://cdn.discordapp.com/attachments/1343602374991806476/1506201739630481498/file_0000000032e47208b64a8a8e8825a619.png?ex=6a0d672e&is=6a0c15ae&hm=4ae404a77e3532c51935664ee482b5813e4cb8ce6b2b927095899e5724b6beea"
+                        }
+                      }
+                    },
+                    {
+                      type: 14,
+                      spacing: 2
+                    }
+                  ]
+                }
+              ]
+            }
+          });
+        } catch (err) {
+          console.error('[TICKET_TELEMETRY_SEND_FAILED]', err.message);
+        }
+
+        // Small delay for smooth transition
+        await new Promise(r => setTimeout(r, 1000));
+
+        if (stats.valid < minRequired) {
+          const notEnoughEmbed = new EmbedBuilder()
+            .setColor('#ef4444')
+            .setTitle('❌ Invite Threshold Not Met')
+            .setDescription(`You have **${stats.valid}** valid invite(s).\n\n**Minimum requirement:** **${minRequired} invites**\n\nTicket will **automatically close in 30 seconds** due to insufficient refer balance.`);
+
+          await ticketChannel.send({ embeds: [notEnoughEmbed] });
+
+          const closeRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger)
+          );
+          await ticketChannel.send({ components: [closeRow] });
+
+          setTimeout(() => {
+            ticketChannel.delete().catch(() => {});
+          }, 30000);
+        } else {
+          const eligible = REWARDS.filter(r => {
+            const cost = is1Inv ? 1 : r.invites;
+            return stats.valid >= cost;
+          });
+
+          const grouped = {};
+          for (const r of eligible) {
+            const cost = is1Inv ? 1 : r.invites;
+            if (!grouped[cost]) grouped[cost] = [];
+            grouped[cost].push(r);
+          }
+
+          let rewardLines = '';
+          for (const [inv, rewards] of Object.entries(grouped).sort((a,b) => a[0]-b[0])) {
+            const lines = rewards.map(r => `**${inv} INVITE** ≫ **${r.label.toUpperCase()}** ${emojiStr(r)}`).join('\n');
+            rewardLines += lines + '\n\n';
+          }
+
+          await rest.post(`/channels/${ticketChannel.id}/messages`, {
+            body: {
+              flags: 32768,
+              components: [
+                {
+                  type: 17,
+                  components: [
+                    {
+                      type: 10,
+                      content: `<a:Event:1504576267788357742> **ELIGIBLE ACTIVE REWARDS**\n\n${rewardLines.trim()}`
+                    },
+                    { type: 14, spacing: 2 },
+                    {
+                      type: 10,
+                      content: `Select a reward from the dropdown menu. Your invite balance will be deducted upon claim.`
+                    },
+                    {
+                      type: 1,
+                      components: [
+                        {
+                          type: 3,
+                          custom_id: 'claim_reward_ticket',
+                          placeholder: '🎁 Select your premium prize...',
+                          min_values: 1,
+                          max_values: 1,
+                          options: eligible.map(r => ({
+                            label: r.label,
+                            value: r.id,
+                            description: `${is1Inv ? 1 : r.invites} invites cost`,
+                            emoji: { id: r.emojiId, name: r.emojiName, animated: r.animated }
+                          }))
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          });
+
+          const btnRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger)
+          );
+          await ticketChannel.send({ components: [btnRow] });
+        }
       } catch (err) {
         console.error('[TICKET_ERROR]', err.message || err);
         return interaction.editReply({ content: `❌ Ticket error: ${err.message}` });
@@ -2192,21 +2750,8 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.channel.send(`⚠️ *Could not send DM to you. Please make sure your Direct Messages are turned on!*`);
       }
 
-      // Revoke all invite codes created by this user
-      try {
-        const invites = await interaction.guild.invites.fetch();
-        const userInvites = invites.filter(inv => inv.inviter && inv.inviter.id === interaction.user.id);
-        let revoked = 0;
-        for (const [codeKey, invite] of userInvites) {
-          await invite.delete('Reward claimed - revoking active invite codes').catch(() => {});
-          revoked++;
-        }
-        if (revoked > 0) {
-          await interaction.channel.send(`🧹 *Cleaned up and revoked **${revoked}** active invite codes created by you.*`);
-        }
-      } catch (inviteErr) {
-        console.error('[REVOKE_INVITES_ERROR]', inviteErr.message);
-      }
+      // Note: Automatic invite revocation upon successful claim has been disabled as requested.
+      // Admins can manage invite revocations manually via the /revoke command.
 
       // Legit Feedback prompt
       await new Promise(r => setTimeout(r, 2000));
@@ -2285,21 +2830,8 @@ client.on('interactionCreate', async (interaction) => {
           await interaction.channel.send(`⚠️ *Could not send DM to you. Please make sure your Direct Messages are turned on!*`);
         }
 
-        // Revoke invites
-        try {
-          const guildInvitesList = await interaction.guild.invites.fetch();
-          const userInvites = guildInvitesList.filter(inv => inv.inviter && inv.inviter.id === interaction.user.id);
-          let revoked = 0;
-          for (const [codeKey, invite] of userInvites) {
-            await invite.delete('Reward claimed - revoking active invite codes').catch(() => {});
-            revoked++;
-          }
-          if (revoked > 0) {
-            await interaction.channel.send(`🧹 *Cleaned up and revoked **${revoked}** active invite codes created by you.*`);
-          }
-        } catch (inviteErr) {
-          console.error('[REVOKE_INVITES_ERROR]', inviteErr.message);
-        }
+        // Note: Automatic invite revocation upon successful claim has been disabled as requested.
+        // Admins can manage invite revocations manually via the /revoke command.
 
         // Legit Feedback prompt
         await new Promise(r => setTimeout(r, 2000));
@@ -2822,6 +3354,49 @@ client.on('messageCreate', async (message) => {
     content.includes('thank you');
 
   if (isPositive) {
+    // 1. Fetch last 50 messages to identify and clean up intermediate messages
+    try {
+      const messages = await message.channel.messages.fetch({ limit: 50 });
+      const sortedMsgs = Array.from(messages.values()).sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+      
+      const payoutIdx = sortedMsgs.findIndex(m => m.author.id === client.user.id && m.content.includes('REWARD CLAIMED'));
+      const vouchIdx = sortedMsgs.findIndex(m => m.id === message.id);
+      
+      if (payoutIdx !== -1 && vouchIdx !== -1 && vouchIdx > payoutIdx) {
+        const messagesToDelete = [];
+        for (let i = payoutIdx + 1; i < vouchIdx; i++) {
+          messagesToDelete.push(sortedMsgs[i]);
+        }
+        
+        if (messagesToDelete.length > 0) {
+          await message.channel.bulkDelete(messagesToDelete).catch(err => {
+            console.error('[VOUCH_CLEANUP_BULK_FAILED] Deleting individually:', err.message);
+            messagesToDelete.forEach(m => m.delete().catch(() => {}));
+          });
+        }
+      }
+    } catch (cleanupErr) {
+      console.error('[VOUCH_CLEANUP_ERROR]', cleanupErr.message);
+    }
+
+    // 2. Upload the static vouch proof.png to the payment channel
+    try {
+      const proofChannel = getPaymentChannel(message.guild);
+      if (proofChannel) {
+        const proofPath = path.join(__dirname, '..', 'data', 'proof.png');
+        if (fs.existsSync(proofPath)) {
+          await proofChannel.send({
+            content: `✨ **New Payout Vouch from @${message.author.username}!**`,
+            files: [proofPath]
+          });
+        } else {
+          console.warn(`[VOUCH_PROOF_MISSING] Staged proof file not found at ${proofPath}`);
+        }
+      }
+    } catch (uploadErr) {
+      console.error('[VOUCH_PROOF_UPLOAD_ERROR]', uploadErr.message);
+    }
+
     await message.reply(`✅ **Thank you for confirming!** We are thrilled that everything is working perfectly for you.\n\nThis ticket channel will **automatically close in 30 minutes** to keep our ticket queue clean. ⏳`);
     setTimeout(() => {
       message.channel.delete().catch(() => {});
