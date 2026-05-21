@@ -29,6 +29,49 @@ const pool = new Pool({
   }
 });
 
+// Global Map to track pending legit/vouch timeouts for ticket channels
+const pendingVouches = new Map();
+
+// Helper to schedule a warning DM if a claimant doesn't vouch in 2 minutes
+function startLegitTimeout(channelId, user, rewardLabel) {
+  if (pendingVouches.has(channelId)) {
+    clearTimeout(pendingVouches.get(channelId).timeout);
+  }
+  
+  const timeout = setTimeout(async () => {
+    if (!pendingVouches.has(channelId)) return;
+    pendingVouches.delete(channelId);
+    
+    try {
+      const warningContent = 
+`⚠️ **LEGIT VERIFICATION PENDING!** ⚠️
+
+Hello **${user.username}**, your recent claim for **${rewardLabel}** is successful, but your vouch verification is still **PENDING**! 😭
+
+👉 **Please type "legit" or "working" in your ticket channel immediately!**
+🛑 *If you do not complete this quick vouch verification within the next few minutes, your reward code/link processing will be suspended and hold locks will be applied.*
+
+Thank you for verifying your claim! 🛡️✨`;
+      await user.send({ content: warningContent });
+      console.log(`[VOUCH_WARNING] Sent pending vouch warning DM to @${user.username}`);
+    } catch (err) {
+      console.warn(`[VOUCH_WARNING_FAILED] Could not send DM to @${user.username}:`, err.message);
+    }
+  }, 120000); // 2 minutes
+  
+  pendingVouches.set(channelId, { userId: user.id, timeout });
+}
+
+// Override db.saveDB to automatically write all updates to PostgreSQL as a backup
+const originalSaveDB = db.saveDB;
+db.saveDB = (data) => {
+  originalSaveDB(data);
+  pool.query(
+    'INSERT INTO "_bot_backup" ("key", "data") VALUES (\'database\', $1) ON CONFLICT ("key") DO UPDATE SET "data" = $1',
+    [JSON.stringify(data)]
+  ).catch(err => console.error('[BACKUP] Failed to write database backup to Postgres:', err.message));
+};
+
 async function checkDirectDBHealth() {
   try {
     const client = await pool.connect();
@@ -448,6 +491,8 @@ const commands = [
     .setDescription('Pull all authenticated database users into this server (Admin only)'),
   new SlashCommandBuilder().setName('dbstatus')
     .setDescription('Check if the bot is successfully connected to the PostgreSQL database (Admin only)'),
+  new SlashCommandBuilder().setName('send1invite')
+    .setDescription('Post the premium styled 1-invite promo banner (Admin only)'),
 ].map(cmd => cmd.toJSON());
 
 // ─── BOT CLIENT ────────────────────────────────────────────────────
@@ -610,6 +655,43 @@ const onReady = async () => {
   console.log('\n══════════════════════════════════════════════════════');
   console.log(`🤖 RIWAAYAT BOT ONLINE: ${client.user.tag}`);
   console.log('══════════════════════════════════════════════════════\n');
+
+  // ─── RESTORE DATABASE BACKUP FROM POSTGRES ───
+  try {
+    const pgClient = await pool.connect();
+    try {
+      await pgClient.query(`
+        CREATE TABLE IF NOT EXISTS "_bot_backup" (
+          "key" TEXT PRIMARY KEY,
+          "data" TEXT
+        )
+      `);
+      const res = await pgClient.query('SELECT "data" FROM "_bot_backup" WHERE "key" = \'database\'');
+      if (res.rows.length > 0) {
+        const backupData = JSON.parse(res.rows[0].data);
+        const localData = db.loadDB();
+        
+        const mergedData = {
+          invites: { ...backupData.invites, ...localData.invites },
+          stock: backupData.stock || localData.stock || {},
+          tickets: backupData.tickets || localData.tickets || [],
+          redemptions: backupData.redemptions || localData.redemptions || [],
+          settings: { ...backupData.settings, ...localData.settings },
+          leftMembers: backupData.leftMembers || localData.leftMembers || [],
+          joinLogs: backupData.joinLogs || localData.joinLogs || []
+        };
+        
+        originalSaveDB(mergedData);
+        console.log(`[BACKUP] Successfully restored database state from PostgreSQL!`);
+      } else {
+        console.log('[BACKUP] No database backup found in PostgreSQL.');
+      }
+    } finally {
+      pgClient.release();
+    }
+  } catch (err) {
+    console.error('[BACKUP] Failed to restore database backup from PostgreSQL:', err.message);
+  }
   client.user.setActivity('RIWAAYAT Rewards', { type: ActivityType.Watching });
 
   for (const [guildId, guild] of client.guilds.cache) {
@@ -1704,6 +1786,27 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.editReply({ content: `❌ Failed to post vouch proof: ${err.message}` });
       }
     }
+
+    // /send1invite
+    if (commandName === 'send1invite') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
+      }
+      
+      const bannerText = 
+`-# 2 INVITES = NITRO #NEW
+## <:infoBlue:1506401248730153100> LIMITED-TIME EVENT<:infoBlue:1506401248730153100>
+<:Inviteh:1506198676375343105> **1 NEW Invites** = **\` NITRO/MCFA/50$ ROBUX/10K YT SUBS\`**<a:Pz_NITRO:1504810251545743410>
+<:Inviteh:1506198676375343105> **1 NEW Invites** = **\` NITRO/MCFA/100$ ROBUX/30K YT SUBS\`**<a:Pz_NITRO:1504810251545743410> 
+
+**Done Inviting?** <#1504803227990888598> ・ticket to claim your reward!
+<a:arrow:1504575918188794088>  Only **NEW** invites will be counted, old invites are not allowed.
+Watching <#1506004593841274920>  who is doing new invites 👀`;
+
+      await interaction.reply({ content: '✅ Promotional banner posted!', flags: MessageFlags.Ephemeral });
+      await interaction.channel.send({ content: bannerText });
+      return;
+    }
   }
 
   // ── BUTTON INTERACTIONS ──
@@ -2180,6 +2283,7 @@ client.on('interactionCreate', async (interaction) => {
           });
 
           const btnRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('show_reward_buttons').setLabel('🔘 Show Reward Buttons').setStyle(ButtonStyle.Primary),
             new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger)
           );
           await ticketChannel.send({ components: [btnRow] });
@@ -2387,6 +2491,7 @@ client.on('interactionCreate', async (interaction) => {
         });
 
         const btnRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId('show_reward_buttons').setLabel('🔘 Show Reward Buttons').setStyle(ButtonStyle.Primary),
           new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger)
         );
         await interaction.channel.send({ components: [btnRow] });
@@ -2395,8 +2500,112 @@ client.on('interactionCreate', async (interaction) => {
 
     // Close Ticket action
     if (interaction.customId === 'close_ticket') {
+      if (pendingVouches.has(interaction.channel.id)) {
+        clearTimeout(pendingVouches.get(interaction.channel.id).timeout);
+        pendingVouches.delete(interaction.channel.id);
+      }
       await interaction.reply('🔒 Closing this ticket in 5 seconds...');
       setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
+    }
+
+    // 🔘 Show Reward Buttons
+    if (interaction.customId === 'show_reward_buttons') {
+      const stats = db.getUserStats(interaction.user.id);
+      const is1Inv = db.getSetting('event1invite', false);
+      const is2Inv = db.getSetting('event2invite', false);
+      
+      const eligible = REWARDS.filter(r => {
+        const cost = is1Inv ? 1 : (is2Inv ? 2 : r.invites);
+        return stats.valid >= cost;
+      });
+
+      if (eligible.length === 0) {
+        return interaction.reply({
+          content: '❌ You do not have enough invites to claim any reward.',
+          flags: MessageFlags.Ephemeral
+        });
+      }
+
+      const rows = [];
+      let currentRow = new ActionRowBuilder();
+      
+      for (let i = 0; i < eligible.length; i++) {
+        const reward = eligible[i];
+        const cost = is1Inv ? 1 : (is2Inv ? 2 : reward.invites);
+        
+        const button = new ButtonBuilder()
+          .setCustomId(`trigger_claim_${reward.id}`)
+          .setLabel(`${reward.label} (${cost} Inv)`)
+          .setStyle(ButtonStyle.Success);
+          
+        if (reward.emojiId) {
+          button.setEmoji({ id: reward.emojiId, animated: reward.animated });
+        }
+        
+        currentRow.addComponents(button);
+        
+        if (currentRow.components.length === 5 || i === eligible.length - 1) {
+          rows.push(currentRow);
+          currentRow = new ActionRowBuilder();
+        }
+      }
+
+      return interaction.reply({
+        content: '🔘 **Select one of your eligible rewards using the buttons below:**',
+        components: rows,
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
+    // 🔘 Trigger Claim Button (from button selection fallback)
+    if (interaction.customId.startsWith('trigger_claim_')) {
+      const rewardId = interaction.customId.replace('trigger_claim_', '');
+      const reward = getRewardById(rewardId);
+      if (!reward) return interaction.reply({ content: '❌ Invalid reward.', flags: MessageFlags.Ephemeral });
+
+      const invCount = db.getInviteCount(interaction.user.id);
+      const is1Inv = db.getSetting('event1invite', false);
+      const is2Inv = db.getSetting('event2invite', false);
+      const cost = is1Inv ? 1 : (is2Inv ? 2 : reward.invites);
+
+      if (invCount < cost) {
+        const embed = new EmbedBuilder()
+          .setColor('#ef4444')
+          .setTitle('❌ Not Enough Invites')
+          .setDescription(`You need **${cost}** invites for **${reward.label}**.\nYou currently have **${invCount}** invite(s).\n\n📢 Invite **${cost - invCount}** more friend(s) to claim!`);
+        return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+      }
+
+      if (reward.category === 'MINECRAFT_ACC') {
+        const stockCount = db.getStockCount(reward.category);
+        if (stockCount <= 0) {
+          return interaction.reply({
+            content: `❌ **Out of Stock!** The reward **${reward.label}** is currently out of stock. Please ask an admin to restock.`,
+            flags: MessageFlags.Ephemeral
+          });
+        }
+      }
+
+      const confirmEmbed = new EmbedBuilder()
+        .setColor('#eab308')
+        .setTitle('⚠️ Claim Confirmation')
+        .setDescription(`You are about to claim:\n\n🎉 **Reward:** **${reward.label}** ${emojiStr(reward)}\n📉 **Cost:** **${cost}** invites\n👥 **Current Balance:** **${invCount}** invites\n\n*Click **Confirm Claim** below to deduct invites and receive your prize. Or click **Change Selection** if you made a mistake!*`);
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`confirm_claim_${reward.id}`)
+          .setLabel('Confirm Claim')
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId(`cancel_claim`)
+          .setLabel('❌ Change Selection / Cancel')
+          .setStyle(ButtonStyle.Secondary)
+      );
+
+      return interaction.reply({
+        embeds: [confirmEmbed],
+        components: [row]
+      });
     }
 
     // ❌ Cancel Claim / Change Selection Button
@@ -2514,6 +2723,9 @@ client.on('interactionCreate', async (interaction) => {
       // Legit Feedback prompt
       await new Promise(r => setTimeout(r, 2000));
       await interaction.channel.send('## ARE WE LEGIT??');
+
+      // Start 2-minute pending vouch warning DM
+      startLegitTimeout(interaction.channel.id, interaction.user, reward.label);
     }
 
     if (interaction.customId === 'p_303981356256333825' || interaction.customId === 'p_303981902858031113') {
@@ -2594,6 +2806,9 @@ client.on('interactionCreate', async (interaction) => {
         // Legit Feedback prompt
         await new Promise(r => setTimeout(r, 2000));
         await interaction.channel.send('## ARE WE LEGIT??');
+
+        // Start 2-minute pending vouch warning DM
+        startLegitTimeout(interaction.channel.id, interaction.user, giftInfo.label);
 
         // Clean up thread settings from DB
         const cleanDbData = db.loadDB();
@@ -3083,12 +3298,120 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
+// Helper to resolve the ticket opener by looking at allowed ViewChannel permission overwrites
+function getTicketCreatorId(channel) {
+  if (!channel || !channel.permissionOverwrites) return null;
+  const overwrites = channel.permissionOverwrites.cache;
+  for (const [id, overwrite] of overwrites.entries()) {
+    if (id === channel.guild.id || id === channel.client.user.id) continue;
+    if (overwrite.allow.has(PermissionFlagsBits.ViewChannel)) {
+      return id;
+    }
+  }
+  return null;
+}
+
 // ─── LEGIT & SUPPORT ESCALATION LISTENER ──────────────────────────
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
   if (!message.channel.name?.startsWith('claim-') && !message.channel.name?.startsWith('escalated-')) return;
 
+  // 1. Restrict Ticket messages/reactions ONLY to the ticket creator (ignore staff/admins)
+  const creatorId = getTicketCreatorId(message.channel);
+  if (creatorId && message.author.id !== creatorId) {
+    return;
+  }
+
+  // 2. Determine if the user has already claimed a reward in this ticket
+  let hasClaimed = false;
+  try {
+    const channelMsgs = await message.channel.messages.fetch({ limit: 20 });
+    hasClaimed = channelMsgs.some(m => m.author.id === client.user.id && m.content.includes('REWARD CLAIMED'));
+  } catch (err) {
+    console.error('[CLAIMED_CHECK_ERROR]', err.message);
+  }
+
   const content = message.content.toLowerCase();
+
+  // 3. Dropdown Selection Fallback via chat keywords/numbers (ONLY if they haven't claimed yet)
+  if (!hasClaimed) {
+    const stats = db.getUserStats(message.author.id);
+    const is1Inv = db.getSetting('event1invite', false);
+    const is2Inv = db.getSetting('event2invite', false);
+    
+    const eligible = REWARDS.filter(r => {
+      const cost = is1Inv ? 1 : (is2Inv ? 2 : r.invites);
+      return stats.valid >= cost;
+    });
+
+    if (eligible.length > 0) {
+      let matchedReward = null;
+
+      const typedIndex = parseInt(content.trim(), 10);
+      if (!isNaN(typedIndex) && typedIndex >= 1 && typedIndex <= eligible.length) {
+        matchedReward = eligible[typedIndex - 1];
+      } else {
+        const lowerText = content.trim();
+        if (lowerText.includes('minecraft') || lowerText.includes('mc')) {
+          matchedReward = eligible.find(r => r.category.includes('MINECRAFT'));
+        } else if (lowerText.includes('nitro') || lowerText.includes('boost') || lowerText.includes('basic')) {
+          matchedReward = eligible.find(r => r.category.includes('NITRO'));
+        } else if (lowerText.includes('robux') || lowerText.includes('roblox') || lowerText.includes('robox')) {
+          matchedReward = eligible.find(r => r.category.includes('ROBUX') || r.category.includes('ROBLOX'));
+        } else if (lowerText.includes('youtube') || lowerText.includes('yt')) {
+          matchedReward = eligible.find(r => r.category.includes('YT') || r.category.includes('YOUTUBE'));
+        }
+      }
+
+      if (matchedReward) {
+        const cost = is1Inv ? 1 : (is2Inv ? 2 : matchedReward.invites);
+        const invCount = stats.valid;
+
+        if (matchedReward.category === 'MINECRAFT_ACC') {
+          const stockCount = db.getStockCount(matchedReward.category);
+          if (stockCount <= 0) {
+            return message.reply({
+              content: `❌ **Out of Stock!** The reward **${matchedReward.label}** is currently out of stock. Please ask an admin to restock.`
+            });
+          }
+        }
+
+        const confirmEmbed = new EmbedBuilder()
+          .setColor('#eab308')
+          .setTitle('⚠️ Claim Confirmation')
+          .setDescription(`You are about to claim:\n\n🎉 **Reward:** **${matchedReward.label}** ${emojiStr(matchedReward)}\n📉 **Cost:** **${cost}** invites\n👥 **Current Balance:** **${invCount}** invites\n\n*Click **Confirm Claim** below to deduct invites and receive your prize. Or click **Change Selection** if you made a mistake!*`);
+
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`confirm_claim_${matchedReward.id}`)
+            .setLabel('Confirm Claim')
+            .setStyle(ButtonStyle.Success),
+          new ButtonBuilder()
+            .setCustomId(`cancel_claim`)
+            .setLabel('❌ Change Selection / Cancel')
+            .setStyle(ButtonStyle.Secondary)
+        );
+
+        return message.reply({
+          content: `🎯 **Auto-detected Reward Match!** You selected: **${matchedReward.label}**`,
+          embeds: [confirmEmbed],
+          components: [row]
+        });
+      }
+    }
+    // If they typed something else but haven't claimed, do not process feedback or escalation
+    return;
+  }
+
+  // ─── POST-CLAIM VOUCH PROCESSING (ONLY after claim successful) ───
+
+  // Clear pending warning timeout if they vouch
+  if (pendingVouches.has(message.channel.id)) {
+    const data = pendingVouches.get(message.channel.id);
+    clearTimeout(data.timeout);
+    pendingVouches.delete(message.channel.id);
+    console.log(`[VOUCH_WARNING] Cleared pending vouch warning timer for channel ${message.channel.id}`);
+  }
 
   // 1. Negative feedback / support needed (Checked first to prevent overlapping matches)
   const isNegative = 
@@ -3152,7 +3475,9 @@ client.on('messageCreate', async (message) => {
       if (payoutIdx !== -1 && vouchIdx !== -1 && vouchIdx > payoutIdx) {
         const messagesToDelete = [];
         for (let i = payoutIdx + 1; i < vouchIdx; i++) {
-          messagesToDelete.push(sortedMsgs[i]);
+          const m = sortedMsgs[i];
+          if (m.content.includes('ARE WE LEGIT')) continue; // Exclude Legit prompt from deletions!
+          messagesToDelete.push(m);
         }
         
         if (messagesToDelete.length > 0) {
