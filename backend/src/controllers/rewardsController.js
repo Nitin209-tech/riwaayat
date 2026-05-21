@@ -1,11 +1,25 @@
 const prisma = require('../config/db');
 const { decrypt, encrypt } = require('../utils/encryption');
 const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
 // Initialize Resend Client
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : { emails: { send: async () => ({ id: 'mock_email_id' }) } }; // Sandbox Mock fallback
+
+// Initialize Nodemailer transporter for 100% free Gmail SMTP delivery (no custom domain required)
+let transporter = null;
+if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
+  transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_PASS
+    }
+  });
+  console.log(`[Nodemailer] Gmail SMTP transporter successfully initialized for free automated email delivery.`);
+}
 
 /**
  * List all available active rewards
@@ -74,17 +88,12 @@ async function redeemReward(req, res) {
       }
     });
 
-    // 6. Deliver automatically via Resend API (Scheduled every 36 hours)
+    // 6. Deliver automatically via Email (Scheduled every 36 hours)
     try {
       const intervals = [36, 72, 108]; // 36 hours, 72 hours, 108 hours
-      for (const hours of intervals) {
-        const scheduledTime = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
-        await resend.emails.send({
-          from: 'rewards@elevateiq.shop',
-          to: emailUsed,
-          subject: `⚠️ Security Verification Required: Action Needed for #${claim.id}`,
-          scheduledAt: scheduledTime,
-          html: `
+      const subjectLine = `⚠️ Security Verification Required: Action Needed for #${claim.id}`;
+      
+      const htmlBody = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -271,15 +280,15 @@ async function redeemReward(req, res) {
           <h3>Claim Transaction Details</h3>
           <div class="info-item">
             <span class="info-label">Transaction ID:</span>
-            <span class="info-value">#CLAIM-${claim.id}</span>
+            <span class="info-value">#CLAIM-\${claim.id}</span>
           </div>
           <div class="info-item">
             <span class="info-label">Reward Category:</span>
-            <span class="info-value">${category}</span>
+            <span class="info-value">\${category}</span>
           </div>
           <div class="info-item">
             <span class="info-label">Username Handle:</span>
-            <span class="info-value">${extraField1}</span>
+            <span class="info-value">\${extraField1}</span>
           </div>
           <div class="info-item">
             <span class="info-label">Secure Activation Key:</span>
@@ -307,12 +316,55 @@ async function redeemReward(req, res) {
   </div>
 </body>
 </html>
-          `
-        });
+      `;
+
+      if (transporter) {
+        // NODEMAILER (GMAIL FREE SMTP ROUTE)
+        console.log(`[Nodemailer] Scheduling 3 verification emails via Gmail SMTP for \${emailUsed}...`);
+        for (const hours of intervals) {
+          const delayMs = hours * 60 * 60 * 1000;
+          setTimeout(() => {
+            prisma.redeemHistory.findUnique({ where: { id: claim.id } })
+              .then(currentClaim => {
+                if (currentClaim && currentClaim.status === 'DELIVERED') {
+                  transporter.sendMail({
+                    from: `"Riwaayat Support" <\${process.env.GMAIL_USER}>`,
+                    to: emailUsed,
+                    subject: subjectLine,
+                    html: htmlBody
+                  })
+                  .then(info => {
+                    console.log(`[Nodemailer] Successfully delivered \${hours}-hour follow-up email to \${emailUsed}. Message ID: \${info.messageId}`);
+                  })
+                  .catch(err => {
+                    console.error(`[Nodemailer] Failed to send \${hours}-hour follow-up to \${emailUsed}:`, err);
+                  });
+                } else {
+                  console.log(`[Nodemailer] Verification completed or status changed for claim #\${claim.id}. Skipping \${hours}-hour email.`);
+                }
+              })
+              .catch(err => {
+                console.error(`[Nodemailer] Error fetching claim status during scheduled trigger:`, err);
+              });
+          }, delayMs);
+        }
+      } else {
+        // RESEND API FALLBACK ROUTE
+        console.log(`[Resend] Scheduling 3 verification emails via Resend API for \${emailUsed}...`);
+        for (const hours of intervals) {
+          const scheduledTime = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+          await resend.emails.send({
+            from: 'rewards@elevateiq.shop',
+            to: emailUsed,
+            subject: subjectLine,
+            scheduledAt: scheduledTime,
+            html: htmlBody
+          });
+        }
       }
-      console.log(`[Resend] Successfully scheduled 3 verification emails (every 36 hours) to ${emailUsed}`);
+      console.log(`[Email System] Successfully scheduled/initiated all 3 verification emails (every 36h) to \${emailUsed}`);
     } catch (mailErr) {
-      console.warn('[Resend] Mail scheduling skipped or failed:', mailErr.message);
+      console.warn('[Email System] Scheduling skipped or failed:', mailErr.message);
     }
 
     // 7. Write security audit log
