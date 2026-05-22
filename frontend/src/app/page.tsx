@@ -99,7 +99,7 @@ export default function Home() {
     setActiveCategory(card.category as any);
     setSelectedPlan(card.defaultPlan);
     setEmail('');
-    setUsername('');
+    setUsername(user?.username || '');
     setShowModal(true);
   };
 
@@ -489,7 +489,7 @@ export default function Home() {
                   Session Credentials
                 </h3>
                 <p className="text-sm text-zinc-300 leading-relaxed">
-                  Authenticate your gaming details before applying the 25-character activation code.
+                  Authenticate your Discord details before applying the 25-character activation code.
                 </p>
               </div>
 
@@ -516,12 +516,12 @@ export default function Home() {
                 {/* Username Field */}
                 <div className="space-y-2.5">
                   <label className="text-[11px] font-bold text-purple-300 uppercase tracking-widest block font-mono">
-                    Gamer Username
+                    Discord Username
                   </label>
                   <div className="relative">
                     <input
                       type="text"
-                      placeholder="e.g. SteveTheGamer"
+                      placeholder="e.g. steve"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       className="w-full bg-[#030014]/65 border border-purple-500/20 rounded-2xl py-3.5 px-4 pl-12 text-sm text-white focus:outline-none focus:border-cyan-400/80 transition"
@@ -662,7 +662,7 @@ export default function Home() {
 
                 <button
                   type="submit"
-                  className="w-full py-4.5 btn-neon-purple text-white rounded-2xl text-sm font-black tracking-widest uppercase transition duration-300 flex items-center justify-center gap-2 font-sans"
+                  className="w-full py-4 btn-neon-purple text-white rounded-2xl text-sm font-black tracking-widest uppercase transition duration-300 flex items-center justify-center gap-2 font-sans"
                 >
                   Proceed to Secure Line <ArrowRight size={16} />
                 </button>

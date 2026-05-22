@@ -367,7 +367,7 @@ function VerifyRedeemContent() {
                 {/* Account Details */}
                 <div className="grid grid-cols-2 gap-4 border-b border-purple-500/10 pb-3.5">
                   <div>
-                    <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block font-mono">Bill To Gamer</span>
+                    <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block font-mono">Discord Account</span>
                     <span className="font-bold text-white mt-0.5 block">@{username}</span>
                   </div>
                   <div>
