@@ -63,6 +63,7 @@ enum Category {
   ROBLOX
   YOUTUBE
   NITRO
+  VALORANT
 }
 
 // 🔑 Encrypted Redeem Codes Stock

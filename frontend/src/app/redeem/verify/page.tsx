@@ -46,6 +46,8 @@ function VerifyRedeemContent() {
         return <Sparkles className="w-6 h-6 text-amber-400" />;
       case 'nitro':
         return <Award className="w-6 h-6 text-fuchsia-400" />;
+      case 'valorant':
+        return <Gamepad2 className="w-6 h-6 text-rose-500" />;
       default:
         return <Gamepad2 className="w-6 h-6 text-cyan-400" />;
     }
@@ -59,6 +61,8 @@ function VerifyRedeemContent() {
         return 'Roblox Giftcard';
       case 'nitro':
         return 'Discord Nitro';
+      case 'valorant':
+        return 'Valorant Gift Card';
       default:
         return 'Minecraft Premium';
     }

@@ -117,6 +117,8 @@ async function syncCodeToBackend(code, category) {
         dbCategory = 'YOUTUBE';
       } else if (botCatUpper.includes('NITRO')) {
         dbCategory = 'NITRO';
+      } else if (botCatUpper.includes('VALORANT') || botCatUpper.includes('VP')) {
+        dbCategory = 'VALORANT';
       }
 
       // Check if Reward exists
@@ -409,7 +411,9 @@ const commands = [
           { name: '📺 YT 10K Subs', value: 'YT_10K' },
           { name: '📺 YT 30K Subs', value: 'YT_30K' },
           { name: '🎮 Roblox $50', value: 'ROBUX_50' },
-          { name: '🎮 Roblox $100', value: 'ROBUX_100' }
+          { name: '🎮 Roblox $100', value: 'ROBUX_100' },
+          { name: '🔴 Valorant 2500 VP', value: 'VALORANT_2500' },
+          { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' }
         ))
       .addStringOption(opt => opt.setName('code').setDescription('The reward code/key').setRequired(true)))
     .addSubcommand(sub => sub.setName('generate')
@@ -424,7 +428,9 @@ const commands = [
           { name: '📺 YT 10K Subs', value: 'YT_10K' },
           { name: '📺 YT 30K Subs', value: 'YT_30K' },
           { name: '🎮 Roblox $50', value: 'ROBUX_50' },
-          { name: '🎮 Roblox $100', value: 'ROBUX_100' }
+          { name: '🎮 Roblox $100', value: 'ROBUX_100' },
+          { name: '🔴 Valorant 2500 VP', value: 'VALORANT_2500' },
+          { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' }
         ))
       .addIntegerOption(opt => opt.setName('count').setDescription('How many codes to generate (1-50)').setRequired(true)))
     .addSubcommand(sub => sub.setName('view').setDescription('View current stock levels')),
@@ -440,7 +446,9 @@ const commands = [
         { name: '📺 YT 10K Subs', value: 'YT_10K' },
         { name: '📺 YT 30K Subs', value: 'YT_30K' },
         { name: '🎮 Roblox $50', value: 'ROBUX_50' },
-        { name: '🎮 Roblox $100', value: 'ROBUX_100' }
+        { name: '🎮 Roblox $100', value: 'ROBUX_100' },
+        { name: '🔴 Valorant 2500 VP', value: 'VALORANT_2500' },
+        { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' }
       ))
     .addIntegerOption(opt => opt.setName('count').setDescription('How many codes to generate (1-50)').setRequired(false)),
   new SlashCommandBuilder().setName('addmc')
@@ -455,23 +463,19 @@ const commands = [
     .addUserOption(opt => opt.setName('user').setDescription('Target user').setRequired(true))
     .addIntegerOption(opt => opt.setName('amount').setDescription('Number of invites to remove').setRequired(true)),
   new SlashCommandBuilder().setName('welcomemsg')
-    .setDescription('Set custom welcome greeting message (Admin only)')
-    .addStringOption(opt => opt.setName('message').setDescription('Greeting string. Variables: {user}, {username}, {inviter}, {invites}').setRequired(true)),
+    .setDescription('Update welcome messages (Admin only)')
+    .addStringOption(opt => opt.setName('title').setDescription('Embed title').setRequired(true))
+    .addStringOption(opt => opt.setName('desc').setDescription('Embed description (supports placeholders: {member}, {inviter}, {count})').setRequired(true))
+    .addStringOption(opt => opt.setName('banner').setDescription('Optional banner image URL').setRequired(false)),
   new SlashCommandBuilder().setName('welcomechannel')
-    .setDescription('Set custom welcome greeting channel (Admin only)')
-    .addChannelOption(opt => opt.setName('channel').setDescription('Target channel').setRequired(true)),
+    .setDescription('Configure main welcome channel (Admin only)')
+    .addChannelOption(opt => opt.setName('channel').setDescription('Select channel').setRequired(true)),
   new SlashCommandBuilder().setName('greetmsg')
-    .setDescription('Set custom 5-second self-deleting greet message (Admin only)')
-    .addStringOption(opt => opt.setName('message').setDescription('Greeting template. Variables: {user}, {username}, {inviter}, {invites}').setRequired(true)),
+    .setDescription('Update direct message greet text (Admin only)')
+    .addStringOption(opt => opt.setName('msg').setDescription('DM greet text (supports placeholders)').setRequired(true)),
   new SlashCommandBuilder().setName('greetchannels')
-    .setDescription('Manage channels for 5-second self-deleting greets (Admin only)')
-    .addStringOption(opt => opt.setName('action').setDescription('Add, remove, or view channels').setRequired(true)
-      .addChoices(
-        { name: '➕ Add Channel', value: 'add' },
-        { name: '➖ Remove Channel', value: 'remove' },
-        { name: '📋 View Channels', value: 'view' }
-      ))
-    .addChannelOption(opt => opt.setName('channel').setDescription('Channel to add or remove').setRequired(false)),
+    .setDescription('Define thread channel links inside greetchannels (Comma separated IDs) (Admin only)')
+    .addStringOption(opt => opt.setName('channels').setDescription('Comma-separated channels/thread IDs').setRequired(true)),
   new SlashCommandBuilder().setName('event1invite')
     .setDescription('Toggle 1-invite event (Admin only)')
     .addBooleanOption(opt => opt.setName('enabled').setDescription('Enable or disable 1-invite event').setRequired(true)),
@@ -493,18 +497,24 @@ const commands = [
     .setDescription('Check if the bot is successfully connected to the PostgreSQL database (Admin only)'),
   new SlashCommandBuilder().setName('send1invite')
     .setDescription('Post the premium styled 1-invite promo banner (Admin only)'),
-  new SlashCommandBuilder().setName('proofmake')
-    .setDescription('Generate simulated payout proof conversation (Admin only)')
-    .addUserOption(opt => opt.setName('user').setDescription('The target user to display in proof').setRequired(true))
-    .addStringOption(opt => opt.setName('prize').setDescription('Choose the prize to payout')
-      .setRequired(false)
-      .addChoices(
-        { name: '💎 Nitro Basic', value: 'nitro_basic' },
-        { name: '🚀 Nitro Boost', value: 'nitro_boost' },
-        { name: '⛏ Minecraft Account', value: 'minecraft' },
-        { name: '🎮 Robux $50', value: 'robux_50' },
-        { name: '🎮 Robux $100', value: 'robux_100' }
-      )),
+  new SlashCommandBuilder().setName('gstart')
+    .setDescription('Start a premium giveaway (Admin only)')
+    .addStringOption(opt => opt.setName('prize').setDescription('Prize of the giveaway').setRequired(true))
+    .addIntegerOption(opt => opt.setName('winners').setDescription('Number of winners to draw').setRequired(true))
+    .addStringOption(opt => opt.setName('duration').setDescription('Giveaway duration (e.g. 30s, 5m, 1h, 1d)').setRequired(true)),
+  new SlashCommandBuilder().setName('gedit')
+    .setDescription('Edit a running giveaway (Admin only)')
+    .addStringOption(opt => opt.setName('message_id').setDescription('ID of the active giveaway message').setRequired(true))
+    .addStringOption(opt => opt.setName('add_time').setDescription('Time to add/subtract, e.g. 5m or -2m').setRequired(false))
+    .addIntegerOption(opt => opt.setName('add_entries').setDescription('Artificially inflate reaction count').setRequired(false))
+    .addStringOption(opt => opt.setName('fixed_winners').setDescription('Comma-separated User IDs (rigged winners)').setRequired(false)),
+  new SlashCommandBuilder().setName('gend')
+    .setDescription('End an active giveaway immediately (Admin only)')
+    .addStringOption(opt => opt.setName('message_id').setDescription('ID of the active giveaway message').setRequired(true)),
+  new SlashCommandBuilder().setName('greroll')
+    .setDescription('Reroll a completed giveaway (Admin only)')
+    .addStringOption(opt => opt.setName('message_id').setDescription('ID of the giveaway message').setRequired(true))
+    .addIntegerOption(opt => opt.setName('winners').setDescription('Number of winners to draw (optional)').setRequired(false)),
 ].map(cmd => cmd.toJSON());
 
 // ─── BOT CLIENT ────────────────────────────────────────────────────
@@ -651,6 +661,83 @@ async function buildBotManagerPanel(selectedClientId = null) {
 
   return { embeds: [embed], components };
 }
+
+// ─── GIVEAWAY ENGINE RESOLVER ────────────────────────────────────────
+async function resolveGiveaway(g, isReroll = false, specificWinnerCount = null) {
+  try {
+    const channel = await client.channels.fetch(g.channelId);
+    if (!channel) return;
+    const message = await channel.messages.fetch(g.id);
+    if (!message) return;
+
+    const winnersCount = specificWinnerCount !== null ? specificWinnerCount : g.winnersCount;
+    let participants = g.participants || []; // Array of user IDs
+
+    // Rigging: check if any fixed winners joined
+    let finalWinners = [];
+    const fixedWinners = g.fixedWinners || []; // Array of user IDs
+
+    // Guaranteed winners who actually participated
+    const guaranteedParticipated = fixedWinners.filter(id => participants.includes(id));
+    
+    // Add guaranteed first
+    for (const id of guaranteedParticipated) {
+      if (finalWinners.length < winnersCount && !finalWinners.includes(id)) {
+        finalWinners.push(id);
+      }
+    }
+
+    // Filter out already chosen winners from pool
+    let pool = participants.filter(id => !finalWinners.includes(id));
+
+    // Choose remaining winners randomly
+    while (finalWinners.length < winnersCount && pool.length > 0) {
+      const randIndex = Math.floor(Math.random() * pool.length);
+      const chosen = pool.splice(randIndex, 1)[0];
+      finalWinners.push(chosen);
+    }
+
+    // Generate Winner String
+    const winnerMentions = finalWinners.map(id => `<@${id}>`).join(', ');
+    const winnerDisplay = finalWinners.length > 0 ? winnerMentions : 'No winners (no participants)';
+
+    // Edit Embed
+    const oldEmbed = message.embeds[0];
+    const newEmbed = EmbedBuilder.from(oldEmbed)
+      .setColor('#3f51b5')
+      .setDescription(`🎉 **GIVEAWAY ENDED!** 🎉\n\n🎁 **Prize:** **${g.prize}**\n👑 **Winners:** ${winnerDisplay}\n📈 **Total Entries:** ${participants.length + (g.fakeEntriesCount || 0)}`)
+      .setTimestamp();
+
+    // Disable buttons
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`g_join_${g.id}`)
+        .setLabel(`🎉 ${participants.length + (g.fakeEntriesCount || 0)}`)
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(true),
+      new ButtonBuilder()
+        .setCustomId(`g_list_${g.id}`)
+        .setLabel('Participants')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(true)
+    );
+
+    await message.edit({ embeds: [newEmbed], components: [row] });
+
+    if (finalWinners.length > 0) {
+      await channel.send({
+        content: `🎉 **CONGRATULATIONS** ${winnerMentions}! You won **${g.prize}**! 🎁\n*Reroll: /greroll message_id:${g.id}*`
+      });
+    } else {
+      await channel.send({
+        content: `🎁 The giveaway for **${g.prize}** has ended, but there were no valid participants.`
+      });
+    }
+  } catch (err) {
+    console.error(`[RESOLVE_GIVEAWAY_ERROR] messageId=${g.id}:`, err);
+  }
+}
+
 // ─── REGISTER SLASH COMMANDS ───────────────────────────────────────
 async function registerCommands(guildId) {
   const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
@@ -716,6 +803,31 @@ const onReady = async () => {
       console.warn(`[INVITES] Cannot cache for: "${guild.name}"`);
     }
   }
+
+  // ─── ACTIVE GIVEAWAY CHECKER BACKGROUND LOOP ───
+  setInterval(async () => {
+    try {
+      const dbData = db.loadDB();
+      if (!dbData.giveaways) dbData.giveaways = [];
+      const now = Date.now();
+      let changed = false;
+
+      for (const g of dbData.giveaways) {
+        if (!g.ended && g.endsAt <= now) {
+          g.ended = true;
+          changed = true;
+          // Draw winners!
+          await resolveGiveaway(g);
+        }
+      }
+
+      if (changed) {
+        db.saveDB(dbData);
+      }
+    } catch (err) {
+      console.error('[GIVEAWAY_LOOP_ERROR]', err);
+    }
+  }, 30000);
 };
 
 client.once('ready', onReady);
@@ -1232,7 +1344,7 @@ client.on('interactionCreate', async (interaction) => {
                   },
                   {
                     type: 10,
-                    content: "<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Roblox 50$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Roblox 100$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **MineCraft Account** <a:Minecraft:1504810470153126042>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = ***MC Redeem Code** <a:Minecraft:1504810470153126042>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Nitro Basic GiftCode** <a:AHNitroBoosts:1506197135157231738>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Nitro Boost GiftCode** <a:AHNitroBoosts:1506197135157231738>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **YT 10k Subs** <a:RG_yt:1504591010888683600>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **YT 30k Subs** <a:RG_yt:1504591010888683600>"
+                    content: "<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Roblox 50$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Roblox 100$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **MineCraft Account** <a:Minecraft:1504810470153126042>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = ***MC Redeem Code** <a:Minecraft:1504810470153126042>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Nitro Basic GiftCode** <a:AHNitroBoosts:1506197135157231738>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Nitro Boost GiftCode** <a:AHNitroBoosts:1506197135157231738>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **YT 10k Subs** <a:RG_yt:1504591010888683600>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **YT 30k Subs** <a:RG_yt:1504591010888683600>\n\n<a:emoji_25:1504806993280503810> <@&1506193607802093598> = **2500 Valorant Points** <a:emoji2:1504576227359326268>\n<a:emoji_25:1504806993280503810> <@&1506193757681487943> = **5000 Valorant Points** <a:emoji2:1504576227359326268>"
                   },
                   {
                     type: 14,
@@ -1820,21 +1932,238 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       return;
     }
 
-    // /proofmake
-    if (commandName === 'proofmake') {
+    // /gstart
+    if (commandName === 'gstart') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
         return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
       }
 
-      const targetUser = interaction.options.getUser('user');
-      const prize = interaction.options.getString('prize') || 'nitro_basic';
+      const prize = interaction.options.getString('prize');
+      const winnersCount = interaction.options.getInteger('winners');
+      const durationStr = interaction.options.getString('duration');
 
-      if (!targetUser) {
-        return interaction.reply({ content: '❌ Please select or provide a valid target user.', flags: MessageFlags.Ephemeral });
+      // Parse duration
+      let durationMs = 0;
+      const match = durationStr.match(/^(\d+)([smhd])$/i);
+      if (!match) {
+        return interaction.reply({
+          content: '❌ Invalid duration format! Use e.g. `30s`, `5m`, `2h`, `1d`.',
+          flags: MessageFlags.Ephemeral
+        });
+      }
+      const val = parseInt(match[1]);
+      const unit = match[2].toLowerCase();
+      if (unit === 's') durationMs = val * 1000;
+      else if (unit === 'm') durationMs = val * 60 * 1000;
+      else if (unit === 'h') durationMs = val * 60 * 60 * 1000;
+      else if (unit === 'd') durationMs = val * 24 * 60 * 60 * 1000;
+
+      const endsAt = Date.now() + durationMs;
+      const endsAtTimestamp = Math.floor(endsAt / 1000);
+
+      // Create beautiful embed
+      const embed = new EmbedBuilder()
+        .setColor('#5865F2')
+        .setTitle('🎉 PREMIUM GIVEAWAY 🎉')
+        .setDescription(`🎁 **Prize:** **${prize}**\n👑 **Winners:** **${winnersCount}**\n⏳ **Ends In:** <t:${endsAtTimestamp}:R> (<t:${endsAtTimestamp}:T>)\n\nClick the 🎉 button below to participate!`)
+        .setTimestamp();
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('g_join_temp')
+          .setLabel('🎉 0')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId('g_list_temp')
+          .setLabel('Participants')
+          .setStyle(ButtonStyle.Secondary)
+      );
+
+      const reply = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
+
+      // Update button IDs with actual message ID
+      const giveawayId = reply.id;
+      const updatedRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`g_join_${giveawayId}`)
+          .setLabel('🎉 0')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId(`g_list_${giveawayId}`)
+          .setLabel('Participants')
+          .setStyle(ButtonStyle.Secondary)
+      );
+      await reply.edit({ components: [updatedRow] });
+
+      // Save to database
+      const dbData = db.loadDB();
+      if (!dbData.giveaways) dbData.giveaways = [];
+      dbData.giveaways.push({
+        id: giveawayId,
+        channelId: interaction.channel.id,
+        prize: prize,
+        winnersCount: winnersCount,
+        endsAt: endsAt,
+        participants: [],
+        ended: false,
+        fakeEntriesCount: 0,
+        fixedWinners: []
+      });
+      db.saveDB(dbData);
+      return;
+    }
+
+    // /gedit
+    if (commandName === 'gedit') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
       }
 
-      await interaction.reply({ content: '⏳ Rendering premium payout screenshot (Generating Canvas)...', flags: MessageFlags.Ephemeral });
+      const messageId = interaction.options.getString('message_id');
+      const addTimeStr = interaction.options.getString('add_time');
+      const addEntries = interaction.options.getInteger('add_entries');
+      const fixedWinnersStr = interaction.options.getString('fixed_winners');
 
+      const dbData = db.loadDB();
+      if (!dbData.giveaways) dbData.giveaways = [];
+      const giveaway = dbData.giveaways.find(g => g.id === messageId);
+      if (!giveaway) {
+        return interaction.reply({ content: '❌ Giveaway message ID not found in database.', flags: MessageFlags.Ephemeral });
+      }
+      if (giveaway.ended) {
+        return interaction.reply({ content: '❌ This giveaway has already ended and cannot be edited.', flags: MessageFlags.Ephemeral });
+      }
+
+      let changesMade = [];
+
+      // 1. Time edit
+      if (addTimeStr) {
+        const match = addTimeStr.match(/^([+-]?\d+)([smhd])$/i);
+        if (!match) {
+          return interaction.reply({
+            content: '❌ Invalid time format! Use e.g. `5m`, `-2m`, `1h`, `-30s`.',
+            flags: MessageFlags.Ephemeral
+          });
+        }
+        const val = parseInt(match[1]);
+        const unit = match[2].toLowerCase();
+        let addMs = 0;
+        if (unit === 's') addMs = val * 1000;
+        else if (unit === 'm') addMs = val * 60 * 1000;
+        else if (unit === 'h') addMs = val * 60 * 60 * 1000;
+        else if (unit === 'd') addMs = val * 24 * 60 * 60 * 1000;
+
+        giveaway.endsAt = Math.max(Date.now(), giveaway.endsAt + addMs);
+        changesMade.push(`⏳ Duration updated (Ends in <t:${Math.floor(giveaway.endsAt / 1000)}:R>)`);
+      }
+
+      // 2. Entries inflation count
+      if (addEntries !== null && addEntries !== undefined) {
+        giveaway.fakeEntriesCount = (giveaway.fakeEntriesCount || 0) + addEntries;
+        changesMade.push(`📈 Entries inflated by **${addEntries}** (Total artificial entries: ${giveaway.fakeEntriesCount})`);
+      }
+
+      // 3. Fixed winners rigging
+      if (fixedWinnersStr !== null && fixedWinnersStr !== undefined) {
+        const ids = fixedWinnersStr.split(',').map(id => id.trim()).filter(id => id.length > 0);
+        if (!giveaway.fixedWinners) giveaway.fixedWinners = [];
+        giveaway.fixedWinners = [...new Set([...giveaway.fixedWinners, ...ids])];
+        changesMade.push(`👑 Rigged Fixed Winners: ${giveaway.fixedWinners.map(id => `<@${id}>`).join(', ')}`);
+      }
+
+      if (changesMade.length === 0) {
+        return interaction.reply({ content: 'ℹ️ No edits were specified.', flags: MessageFlags.Ephemeral });
+      }
+
+      db.saveDB(dbData);
+
+      // Edit original embed with new endsAt and updated entries
+      try {
+        const channel = await client.channels.fetch(giveaway.channelId);
+        if (channel) {
+          const message = await channel.messages.fetch(giveaway.id);
+          if (message) {
+            const oldEmbed = message.embeds[0];
+            const endsAtTimestamp = Math.floor(giveaway.endsAt / 1000);
+            
+            const newEmbed = EmbedBuilder.from(oldEmbed)
+              .setDescription(`🎁 **Prize:** **${giveaway.prize}**\n👑 **Winners:** **${giveaway.winnersCount}**\n⏳ **Ends In:** <t:${endsAtTimestamp}:R> (<t:${endsAtTimestamp}:T>)\n\nClick the 🎉 button below to participate!`)
+              .setTimestamp();
+
+            const totalEntries = (giveaway.participants || []).length + (giveaway.fakeEntriesCount || 0);
+            const row = new ActionRowBuilder().addComponents(
+              new ButtonBuilder()
+                .setCustomId(`g_join_${giveaway.id}`)
+                .setLabel(`🎉 ${totalEntries}`)
+                .setStyle(ButtonStyle.Primary),
+              new ButtonBuilder()
+                .setCustomId(`g_list_${giveaway.id}`)
+                .setLabel('Participants')
+                .setStyle(ButtonStyle.Secondary)
+            );
+
+            await message.edit({ embeds: [newEmbed], components: [row] });
+          }
+        }
+      } catch (err) {
+        console.error('[GEDIT_EDIT_MESSAGE_FAILED]', err);
+      }
+
+      return interaction.reply({
+        content: `✅ **Giveaway edited successfully!**\n${changesMade.map(c => `• ${c}`).join('\n')}`,
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
+    // /gend
+    if (commandName === 'gend') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
+      }
+
+      const messageId = interaction.options.getString('message_id');
+
+      const dbData = db.loadDB();
+      if (!dbData.giveaways) dbData.giveaways = [];
+      const giveaway = dbData.giveaways.find(g => g.id === messageId);
+      if (!giveaway) {
+        return interaction.reply({ content: '❌ Giveaway message ID not found in database.', flags: MessageFlags.Ephemeral });
+      }
+      if (giveaway.ended) {
+        return interaction.reply({ content: '❌ This giveaway has already ended.', flags: MessageFlags.Ephemeral });
+      }
+
+      giveaway.ended = true;
+      db.saveDB(dbData);
+
+      await interaction.reply({ content: '⚡ **Ending giveaway immediately...**', flags: MessageFlags.Ephemeral });
+      await resolveGiveaway(giveaway);
+      return;
+    }
+
+    // /greroll
+    if (commandName === 'greroll') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
+      }
+
+      const messageId = interaction.options.getString('message_id');
+      const specificWinners = interaction.options.getInteger('winners');
+
+      const dbData = db.loadDB();
+      if (!dbData.giveaways) dbData.giveaways = [];
+      const giveaway = dbData.giveaways.find(g => g.id === messageId);
+      if (!giveaway) {
+        return interaction.reply({ content: '❌ Giveaway message ID not found in database.', flags: MessageFlags.Ephemeral });
+      }
+
+      await interaction.reply({ content: '⚡ **Re-drawing winners...**', flags: MessageFlags.Ephemeral });
+      await resolveGiveaway(giveaway, true, specificWinners);
+      return;
+    }
+
+    // /proofmake (disabled/removed)
+    if (commandName === 'proofmake_disabled') {
       try {
         const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
         const { AttachmentBuilder } = require('discord.js');
@@ -2569,6 +2898,80 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
   // ── BUTTON INTERACTIONS ──
   if (interaction.isButton()) {
+    // ── GIVEAWAY BUTTONS ──
+    if (interaction.customId.startsWith('g_join_')) {
+      const giveawayId = interaction.customId.replace('g_join_', '');
+      const dbData = db.loadDB();
+      if (!dbData.giveaways) dbData.giveaways = [];
+      const giveaway = dbData.giveaways.find(g => g.id === giveawayId);
+      if (!giveaway) {
+        return interaction.reply({ content: '❌ Giveaway not found in the database.', flags: MessageFlags.Ephemeral });
+      }
+      if (giveaway.ended) {
+        return interaction.reply({ content: '❌ This giveaway has already ended.', flags: MessageFlags.Ephemeral });
+      }
+
+      if (!giveaway.participants) giveaway.participants = [];
+      const index = giveaway.participants.indexOf(interaction.user.id);
+      let joined = false;
+      if (index > -1) {
+        // Toggle off
+        giveaway.participants.splice(index, 1);
+        joined = false;
+      } else {
+        // Toggle on
+        giveaway.participants.push(interaction.user.id);
+        joined = true;
+      }
+
+      db.saveDB(dbData);
+
+      // Update message buttons/components
+      const totalEntries = giveaway.participants.length + (giveaway.fakeEntriesCount || 0);
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`g_join_${giveaway.id}`)
+          .setLabel(`🎉 ${totalEntries}`)
+          .setStyle(joined ? ButtonStyle.Success : ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId(`g_list_${giveaway.id}`)
+          .setLabel('Participants')
+          .setStyle(ButtonStyle.Secondary)
+      );
+
+      await interaction.update({ components: [row] });
+      
+      return interaction.followUp({
+        content: joined ? '🎉 **Success!** You have successfully entered the giveaway!' : '❌ **Removed!** You have left the giveaway.',
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
+    if (interaction.customId.startsWith('g_list_')) {
+      const giveawayId = interaction.customId.replace('g_list_', '');
+      const dbData = db.loadDB();
+      if (!dbData.giveaways) dbData.giveaways = [];
+      const giveaway = dbData.giveaways.find(g => g.id === giveawayId);
+      if (!giveaway) {
+        return interaction.reply({ content: '❌ Giveaway not found in the database.', flags: MessageFlags.Ephemeral });
+      }
+
+      const participants = giveaway.participants || [];
+      if (participants.length === 0) {
+        return interaction.reply({ content: 'ℹ️ There are currently no participants in this giveaway.', flags: MessageFlags.Ephemeral });
+      }
+
+      // Mentions up to 50 active participants in an ephemeral reply
+      const limit = Math.min(participants.length, 50);
+      const listStr = participants.slice(0, limit).map(id => `<@${id}>`).join(', ');
+      const moreStr = participants.length > limit ? `\n*...and ${participants.length - limit} more.*` : '';
+      
+      return interaction.reply({
+        content: `📈 **Giveaway Participants (${participants.length} total):**\n\n${listStr}${moreStr}`,
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
     // Bot Manager: Register Bot Tokens Modal
     if (interaction.customId === 'bm_btn_add_tokens_modal') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
@@ -3334,7 +3737,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
       }
 
-      if (reward.category === 'MINECRAFT_ACC') {
+      if (['MINECRAFT_ACC', 'VALORANT_2500', 'VALORANT_5000'].includes(reward.category)) {
         const stockCount = db.getStockCount(reward.category);
         if (stockCount <= 0) {
           return interaction.reply({
@@ -3393,9 +3796,9 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         });
       }
 
-      // Check stock availability (ONLY for Minecraft Account)
-      const isMinecraft = reward.category === 'MINECRAFT_ACC';
-      if (isMinecraft) {
+      // Check stock availability (for Minecraft Account and Valorant VP rewards)
+      const isStockPayout = ['MINECRAFT_ACC', 'VALORANT_2500', 'VALORANT_5000'].includes(reward.category);
+      if (isStockPayout) {
         const stockCount = db.getStockCount(reward.category);
         if (stockCount <= 0) {
           return interaction.reply({
@@ -3413,7 +3816,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
       // Claim code/account from stock OR dynamically generate
       let code;
-      if (isMinecraft) {
+      if (isStockPayout) {
         code = db.claimFromStock(reward.category, interaction.user.id);
         if (!code) {
           // Refund invites if stock claim somehow failed last second
@@ -3453,11 +3856,13 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
       // Payout content building based on reward type
       let payoutContent;
-      if (isMinecraft) {
+      if (reward.category === 'MINECRAFT_ACC') {
         const parts = code.split(':');
         const email = parts[0] || 'N/A';
         const pass = parts[1] || 'N/A';
         payoutContent = `<a:Event:1504576267788357742> **REWARD CLAIMED — ${reward.label.toUpperCase()}** ${emojiStr(reward)}\n\n**EMAIL =** || \`${email}\` ||\n**PASS = ** || \`${pass}\` ||`;
+      } else if (['VALORANT_2500', 'VALORANT_5000'].includes(reward.category)) {
+        payoutContent = `<a:Event:1504576267788357742> **REWARD CLAIMED — ${reward.label.toUpperCase()}** ${emojiStr(reward)}\n\n**VALORANT CODE =** || \`${code}\` ||`;
       } else {
         payoutContent = `<a:Event:1504576267788357742> **REWARD CLAIMED — ${reward.label.toUpperCase()}** ${emojiStr(reward)}\n\n**REDEEM CODE =** || \`${code}\` ||\n**CLAIM WEBSITE = ** || https://riwaayat-roan.vercel.app/ ||`;
       }
@@ -3742,8 +4147,8 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
       }
 
-      // Check stock availability (ONLY for Minecraft Account)
-      if (reward.category === 'MINECRAFT_ACC') {
+      // Check stock availability (for Minecraft Account and Valorant VP rewards)
+      if (['MINECRAFT_ACC', 'VALORANT_2500', 'VALORANT_5000'].includes(reward.category)) {
         const stockCount = db.getStockCount(reward.category);
         if (stockCount <= 0) {
           return interaction.reply({
@@ -4118,6 +4523,8 @@ client.on('messageCreate', async (message) => {
           matchedReward = eligible.find(r => r.category.includes('ROBUX') || r.category.includes('ROBLOX'));
         } else if (lowerText.includes('youtube') || lowerText.includes('yt')) {
           matchedReward = eligible.find(r => r.category.includes('YT') || r.category.includes('YOUTUBE'));
+        } else if (lowerText.includes('valorant') || lowerText.includes('vp')) {
+          matchedReward = eligible.find(r => r.category.includes('VALORANT'));
         }
       }
 
@@ -4125,7 +4532,7 @@ client.on('messageCreate', async (message) => {
         const cost = is1Inv ? 1 : (is2Inv ? 2 : matchedReward.invites);
         const invCount = stats.valid;
 
-        if (matchedReward.category === 'MINECRAFT_ACC') {
+        if (['MINECRAFT_ACC', 'VALORANT_2500', 'VALORANT_5000'].includes(matchedReward.category)) {
           const stockCount = db.getStockCount(matchedReward.category);
           if (stockCount <= 0) {
             return message.reply({
