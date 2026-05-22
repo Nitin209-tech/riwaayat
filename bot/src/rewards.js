@@ -7,8 +7,8 @@ const REWARDS = [
   { id: 'robux_100',   label: '100$ Roblox Giftcard',   category: 'ROBUX_100',      invites: 2, emojiId: '1504606073502568578', emojiName: 'Robux_2019_Logo_gold', animated: false },
   { id: 'yt_10k',      label: 'YT 10k Subs',           category: 'YT_10K',         invites: 2, emojiId: '1504591010888683600', emojiName: 'RG_yt', animated: true },
   { id: 'yt_30k',      label: 'YT 30k Subs',           category: 'YT_30K',         invites: 2, emojiId: '1504591010888683600', emojiName: 'RG_yt', animated: true },
-  { id: 'valorant_2500', label: 'Valorant 2500 Points', category: 'VALORANT_2500', invites: 2, emojiId: '1506195998245130352', emojiName: 'infoBlue', animated: false },
-  { id: 'valorant_5000', label: 'Valorant 5000 Points', category: 'VALORANT_5000', invites: 2, emojiId: '1506195998245130352', emojiName: 'infoBlue', animated: false },
+  { id: 'valorant_2500', label: 'Valorant 2500 Points', category: 'VALORANT_2500', invites: 2, emojiId: '1504591139695628340', emojiName: 'nyt_zvalo', animated: true },
+  { id: 'valorant_5000', label: 'Valorant 5000 Points', category: 'VALORANT_5000', invites: 2, emojiId: '1504591139695628340', emojiName: 'nyt_zvalo', animated: true },
 ];
 
 function getRewardById(id) {
