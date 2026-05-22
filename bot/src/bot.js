@@ -332,7 +332,10 @@ async function triggerWelcomeAndGreets(member, inviterUser, inviterInvites) {
   if (welcomeChannelId) {
     const welcomeChannel = member.guild.channels.cache.get(welcomeChannelId) || await member.guild.channels.fetch(welcomeChannelId).catch(() => null);
     if (welcomeChannel) {
-      let rawMsg = db.getSetting('welcomeMessage', '<a:emoji_25:1504806993280503810> {user} **Joined;** Invited by **{inviter}** **( {invites} invites )** <a:love:1504576577839829204>');
+      let rawMsg = db.getSetting('welcomeMessage');
+      if (!rawMsg || typeof rawMsg !== 'string' || !rawMsg.trim()) {
+        rawMsg = '<a:emoji_25:1504806993280503810> {user} **Joined;** Invited by **{inviter}** **( {invites} invites )** <a:love:1504576577839829204>';
+      }
       const inviterText = inviterUser ? `@${inviterUser.username}` : 'Direct Join';
 
       const formatted = rawMsg
@@ -348,7 +351,10 @@ async function triggerWelcomeAndGreets(member, inviterUser, inviterInvites) {
   // 2. 5-Second Self-Deleting Greet Messages in Multiple Channels
   const greetChannels = db.getSetting('greetChannels', []);
   if (Array.isArray(greetChannels) && greetChannels.length > 0) {
-    const rawGreetMsg = db.getSetting('greetMessage', '⚡ Welcome {user}! You were invited by {inviter}.');
+    let rawGreetMsg = db.getSetting('greetMessage');
+    if (!rawGreetMsg || typeof rawGreetMsg !== 'string' || !rawGreetMsg.trim()) {
+      rawGreetMsg = '⚡ Welcome {user}! You were invited by {inviter}.';
+    }
     const inviterText = inviterUser ? `@${inviterUser.username}` : 'Direct Join';
 
     const formattedGreet = rawGreetMsg
