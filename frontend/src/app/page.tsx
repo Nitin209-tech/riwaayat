@@ -23,7 +23,7 @@ export default function Home() {
 
   // Modal States
   const [showModal, setShowModal] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<'minecraft' | 'youtube' | 'roblox' | 'nitro' | 'valorant'>('minecraft');
+  const [activeCategory, setActiveCategory] = useState<'minecraft' | 'youtube' | 'roblox' | 'nitro' | 'valorant' | 'fortnite'>('minecraft');
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [selectedPlan, setSelectedPlan] = useState('');
@@ -74,6 +74,14 @@ export default function Home() {
       desc: 'Claim official premium 2500 VP or 5000 VP gift card codes directly activated on Valorant billing portal.',
       price: 'Requires 25-Char Promo Code',
       defaultPlan: '2500 Points'
+    },
+    {
+      category: 'fortnite',
+      title: 'Fortnite V-Bucks',
+      ico: <Gamepad2 className="w-8 h-8 text-indigo-400" />,
+      desc: 'Claim premium 1000 V-Bucks or 2800 V-Bucks gift card codes directly activated on Fortnite billing portal.',
+      price: 'Requires 25-Char Promo Code',
+      defaultPlan: '1000 V-Bucks'
     }
   ];
 
@@ -101,6 +109,8 @@ export default function Home() {
         return 'Discord Username';
       case 'valorant':
         return 'Velo Username';
+      case 'fortnite':
+        return 'Epic Username';
       case 'youtube':
         return 'Channel Link';
       case 'minecraft':
@@ -118,6 +128,8 @@ export default function Home() {
         return 'e.g. steve';
       case 'valorant':
         return 'e.g. Steve#NA1';
+      case 'fortnite':
+        return 'e.g. SteveEpic';
       case 'youtube':
         return 'e.g. https://youtube.com/@channel';
       case 'minecraft':
@@ -693,6 +705,38 @@ export default function Home() {
                         }`}
                       >
                         🔥 5000 VP
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {activeCategory === 'fortnite' && (
+                  <div className="space-y-3">
+                    <label className="text-[11px] font-bold text-purple-300 uppercase tracking-widest block font-mono">
+                      Select V-Bucks Tier
+                    </label>
+                    <div className="grid grid-cols-2 gap-3.5">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPlan('2500 V-Bucks')}
+                        className={`py-3.5 px-4 rounded-2xl border text-xs font-bold transition duration-200 ${
+                          selectedPlan === '2500 V-Bucks' 
+                            ? 'bg-gradient-to-r from-purple-600 via-fuchsia-500 to-pink-500 text-white border-transparent shadow-[0_4px_15px_rgba(168,85,247,0.3)]' 
+                            : 'bg-[#030014]/65 border-white/10 text-zinc-300 hover:bg-[#0c082c]/85 hover:border-purple-500/30'
+                        }`}
+                      >
+                        ⚡ 2500 V-Bucks
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPlan('5000 V-Bucks')}
+                        className={`py-3.5 px-4 rounded-2xl border text-xs font-bold transition duration-200 ${
+                          selectedPlan === '5000 V-Bucks' 
+                            ? 'bg-gradient-to-r from-purple-600 via-fuchsia-500 to-pink-500 text-white border-transparent shadow-[0_4px_15px_rgba(168,85,247,0.3)]' 
+                            : 'bg-[#030014]/65 border-white/10 text-zinc-300 hover:bg-[#0c082c]/85 hover:border-purple-500/30'
+                        }`}
+                      >
+                        ⭐ 5000 V-Bucks
                       </button>
                     </div>
                   </div>

@@ -48,6 +48,8 @@ function VerifyRedeemContent() {
         return <Award className="w-6 h-6 text-fuchsia-400" />;
       case 'valorant':
         return <Gamepad2 className="w-6 h-6 text-rose-500" />;
+      case 'fortnite':
+        return <Gamepad2 className="w-6 h-6 text-indigo-400" />;
       default:
         return <Gamepad2 className="w-6 h-6 text-cyan-400" />;
     }
@@ -63,6 +65,8 @@ function VerifyRedeemContent() {
         return 'Discord Nitro';
       case 'valorant':
         return 'Valorant Gift Card';
+      case 'fortnite':
+        return 'Fortnite V-Bucks';
       default:
         return 'Minecraft Premium';
     }
@@ -74,6 +78,8 @@ function VerifyRedeemContent() {
         return 'Discord Username';
       case 'valorant':
         return 'Velo Username';
+      case 'fortnite':
+        return 'Epic Username';
       case 'youtube':
         return 'Channel Link';
       case 'minecraft':

@@ -27,3 +27,14 @@ Thumbs.db
 *.zip
 .git-rewrite/
 *.tsbuildinfo
+
+# Secrets
+.env.txt
+test-sync.js
+
+# Ignore any .env.txt files in any directory
+**/.env.txt
+
+# Secrets
+.env.txt
+test-sync.js

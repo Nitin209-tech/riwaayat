@@ -119,6 +119,8 @@ async function syncCodeToBackend(code, category) {
         dbCategory = 'NITRO';
       } else if (botCatUpper.includes('VALORANT') || botCatUpper.includes('VP')) {
         dbCategory = 'VALORANT';
+      } else if (botCatUpper.includes('FORTNITE') || botCatUpper.includes('VBUCKS')) {
+        dbCategory = 'FORTNITE';
       }
 
       // Check if Reward exists
@@ -1350,7 +1352,7 @@ client.on('interactionCreate', async (interaction) => {
                   },
                   {
                     type: 10,
-                    content: "<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Roblox 50$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Roblox 100$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **MineCraft Account** <a:Minecraft:1504810470153126042>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = ***MC Redeem Code** <a:Minecraft:1504810470153126042>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Nitro Basic GiftCode** <a:AHNitroBoosts:1506197135157231738>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Nitro Boost GiftCode** <a:AHNitroBoosts:1506197135157231738>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **YT 10k Subs** <a:RG_yt:1504591010888683600>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **YT 30k Subs** <a:RG_yt:1504591010888683600>\n\n<a:emoji_25:1504806993280503810> <@&1506193607802093598> = **2500 Valorant Points** <a:nyt_zvalo:1504591139695628340>\n<a:emoji_25:1504806993280503810> <@&1506193757681487943> = **5000 Valorant Points** <a:nyt_zvalo:1504591139695628340>"
+                    content: "<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Roblox 50$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Roblox 100$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **MineCraft Account** <a:Minecraft:1504810470153126042>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = ***MC Redeem Code** <a:Minecraft:1504810470153126042>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Nitro Basic GiftCode** <a:AHNitroBoosts:1506197135157231738>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Nitro Boost GiftCode** <a:AHNitroBoosts:1506197135157231738>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **YT 10k Subs** <a:RG_yt:1504591010888683600>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **YT 30k Subs** <a:RG_yt:1504591010888683600>\n\n<a:emoji_25:1504806993280503810> <@&1506193607802093598> = **2500 Valorant Points** <a:nyt_zvalo:1504591139695628340>\n<a:emoji_25:1504806993280503810> <@&1506193757681487943> = **5000 Valorant Points** <a:nyt_zvalo:1504591139695628340>\n\n<a:emoji_25:1504806993280503810> <@&1506193607802093598> = **2500 Fortnite V-Bucks** <a:nyt_zvalo:1504591139695628340>\n<a:emoji_25:1504806993280503810> <@&1506193757681487943> = **5000 Fortnite V-Bucks** <a:nyt_zvalo:1504591139695628340>"
                   },
                   {
                     type: 14,
@@ -3743,7 +3745,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
       }
 
-      if (['MINECRAFT_ACC', 'VALORANT_2500', 'VALORANT_5000'].includes(reward.category)) {
+      if (reward.category === 'MINECRAFT_ACC') {
         const stockCount = db.getStockCount(reward.category);
         if (stockCount <= 0) {
           return interaction.reply({
@@ -3802,8 +3804,8 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         });
       }
 
-      // Check stock availability (for Minecraft Account and Valorant VP rewards)
-      const isStockPayout = ['MINECRAFT_ACC', 'VALORANT_2500', 'VALORANT_5000'].includes(reward.category);
+      // Check stock availability (for Minecraft Account rewards)
+      const isStockPayout = reward.category === 'MINECRAFT_ACC';
       if (isStockPayout) {
         const stockCount = db.getStockCount(reward.category);
         if (stockCount <= 0) {
@@ -3867,8 +3869,6 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         const email = parts[0] || 'N/A';
         const pass = parts[1] || 'N/A';
         payoutContent = `<a:Event:1504576267788357742> **REWARD CLAIMED — ${reward.label.toUpperCase()}** ${emojiStr(reward)}\n\n**EMAIL =** || \`${email}\` ||\n**PASS = ** || \`${pass}\` ||`;
-      } else if (['VALORANT_2500', 'VALORANT_5000'].includes(reward.category)) {
-        payoutContent = `<a:Event:1504576267788357742> **REWARD CLAIMED — ${reward.label.toUpperCase()}** ${emojiStr(reward)}\n\n**VALORANT CODE =** || \`${code}\` ||`;
       } else {
         payoutContent = `<a:Event:1504576267788357742> **REWARD CLAIMED — ${reward.label.toUpperCase()}** ${emojiStr(reward)}\n\n**REDEEM CODE =** || \`${code}\` ||\n**CLAIM WEBSITE = ** || https://riwaayat-roan.vercel.app/ ||`;
       }
@@ -4153,8 +4153,8 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
       }
 
-      // Check stock availability (for Minecraft Account and Valorant VP rewards)
-      if (['MINECRAFT_ACC', 'VALORANT_2500', 'VALORANT_5000'].includes(reward.category)) {
+      // Check stock availability (for Minecraft Account rewards)
+      if (reward.category === 'MINECRAFT_ACC') {
         const stockCount = db.getStockCount(reward.category);
         if (stockCount <= 0) {
           return interaction.reply({
@@ -4520,7 +4520,7 @@ client.on('messageCreate', async (message) => {
       if (!isNaN(typedIndex) && typedIndex >= 1 && typedIndex <= eligible.length) {
         matchedReward = eligible[typedIndex - 1];
       } else {
-        const lowerText = content.trim();
+        const lowerText = content.trim().toLowerCase();
         if (lowerText.includes('minecraft') || lowerText.includes('mc')) {
           matchedReward = eligible.find(r => r.category.includes('MINECRAFT'));
         } else if (lowerText.includes('nitro') || lowerText.includes('boost') || lowerText.includes('basic')) {
@@ -4531,6 +4531,8 @@ client.on('messageCreate', async (message) => {
           matchedReward = eligible.find(r => r.category.includes('YT') || r.category.includes('YOUTUBE'));
         } else if (lowerText.includes('valorant') || lowerText.includes('vp')) {
           matchedReward = eligible.find(r => r.category.includes('VALORANT'));
+        } else if (lowerText.includes('fortnite') || lowerText.includes('vbucks') || lowerText.includes('v-bucks')) {
+          matchedReward = eligible.find(r => r.category.includes('FORTNITE'));
         }
       }
 
@@ -4538,7 +4540,7 @@ client.on('messageCreate', async (message) => {
         const cost = is1Inv ? 1 : (is2Inv ? 2 : matchedReward.invites);
         const invCount = stats.valid;
 
-        if (['MINECRAFT_ACC', 'VALORANT_2500', 'VALORANT_5000'].includes(matchedReward.category)) {
+        if (matchedReward.category === 'MINECRAFT_ACC') {
           const stockCount = db.getStockCount(matchedReward.category);
           if (stockCount <= 0) {
             return message.reply({

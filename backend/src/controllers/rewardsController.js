@@ -446,6 +446,7 @@ async function verifyPromoCode(req, res) {
         else if (catUpper.includes('ROBLOX')) dbCategory = 'ROBLOX';
         else if (catUpper.includes('YOUTUBE') || catUpper.includes('YT')) dbCategory = 'YOUTUBE';
         else if (catUpper.includes('VALORANT') || catUpper.includes('VP')) dbCategory = 'VALORANT';
+        else if (catUpper.includes('FORTNITE') || catUpper.includes('VBUCKS')) dbCategory = 'FORTNITE';
       }
 
       // 3. Create historical redemption log
@@ -519,6 +520,8 @@ async function syncBotCode(req, res) {
       dbCategory = 'NITRO';
     } else if (botCatUpper.includes('VALORANT') || botCatUpper.includes('VP')) {
       dbCategory = 'VALORANT';
+    } else if (botCatUpper.includes('FORTNITE') || botCatUpper.includes('VBUCKS')) {
+      dbCategory = 'FORTNITE';
     }
 
     // 3. Find or create a matching Reward record in DB

@@ -64,6 +64,7 @@ enum Category {
   YOUTUBE
   NITRO
   VALORANT
+  FORTNITE
 }
 
 // 🔑 Encrypted Redeem Codes Stock
