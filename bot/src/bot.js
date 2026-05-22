@@ -32,6 +32,9 @@ const pool = new Pool({
 // Global Map to track pending legit/vouch timeouts for ticket channels
 const pendingVouches = new Map();
 
+// Global Map to track pending 30-second ticket auto-close timeouts
+const ticketCloseTimeouts = new Map();
+
 // Helper to schedule a warning DM if a claimant doesn't vouch in 2 minutes
 function startLegitTimeout(channelId, user, rewardLabel) {
   if (pendingVouches.has(channelId)) {
@@ -48,7 +51,7 @@ function startLegitTimeout(channelId, user, rewardLabel) {
 
 Hello **${user.username}**, your recent claim for **${rewardLabel}** is successful, but your vouch verification is still **PENDING**! 😭
 
-👉 **Please type "legit" or "working" in your ticket channel immediately!**
+👉 **Please type "legit" or "working" in your ticket channel <#${channelId}> immediately!**
 🛑 *If you do not complete this quick vouch verification within the next few minutes, your reward code/link processing will be suspended and hold locks will be applied.*
 
 Thank you for verifying your claim! 🛡️✨`;
@@ -523,6 +526,15 @@ const commands = [
     .setDescription('Reroll a completed giveaway (Admin only)')
     .addStringOption(opt => opt.setName('message_id').setDescription('ID of the giveaway message').setRequired(true))
     .addIntegerOption(opt => opt.setName('winners').setDescription('Number of winners to draw (optional)').setRequired(false)),
+  new SlashCommandBuilder().setName('editevent')
+    .setDescription('Edit an existing premium event panel (Admin only)')
+    .addStringOption(opt => opt.setName('message_id').setDescription('The message ID of the event panel to edit').setRequired(true))
+    .addChannelOption(opt => opt.setName('channel').setDescription('The channel containing the message (optional)').setRequired(false)),
+  new SlashCommandBuilder().setName('checkinvites')
+    .setDescription('Check detailed invite statistics and logs for any user (Admin only)')
+    .addUserOption(opt => opt.setName('user').setDescription('The user to check').setRequired(true)),
+  new SlashCommandBuilder().setName('stoptimer')
+    .setDescription('Stop the 30-second automatic ticket deletion timer for this channel (Admin only)'),
 ].map(cmd => cmd.toJSON());
 
 // ─── BOT CLIENT ────────────────────────────────────────────────────
@@ -1300,6 +1312,155 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.reply({ embeds: [embed] });
     }
 
+    // /stoptimer
+    if (commandName === 'stoptimer') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
+      }
+
+      const timeout = ticketCloseTimeouts.get(interaction.channel.id);
+      if (timeout) {
+        clearTimeout(timeout);
+        ticketCloseTimeouts.delete(interaction.channel.id);
+        return interaction.reply({ content: '✅ **Ticket auto-close timer stopped by Admin!** This ticket will not be automatically deleted.' });
+      } else {
+        return interaction.reply({ content: '❌ No active auto-close timer found for this ticket.', flags: MessageFlags.Ephemeral });
+      }
+    }
+
+    // /checkinvites
+    if (commandName === 'checkinvites') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
+      }
+
+      const targetUser = interaction.options.getUser('user');
+      const stats = db.getUserStats(targetUser.id);
+      const logs = db.getJoinLogs(targetUser.id);
+
+      const logLines = logs.length === 0 ? 'No join logs recorded for this user.' :
+        logs.map(l => {
+          let emoji = '✅';
+          if (l.status === 'LEFT') emoji = '❌';
+          if (l.status === 'FAKE') emoji = '⚠️';
+          return `${emoji} **@${l.inviteeUsername}** (${l.inviteeId}) - Status: \`${l.status}\` - Code: \`${l.code}\``;
+        }).join('\n');
+
+      const embed = new EmbedBuilder()
+        .setColor('#6366f1')
+        .setTitle(`📊 Referral Telemetry for @${targetUser.username}`)
+        .setDescription(`User ID: \`${targetUser.id}\``)
+        .addFields(
+          { name: '🎟️ Valid Balance', value: `**${stats.valid}** invites`, inline: true },
+          { name: '👥 Total Registered', value: `**${stats.total}** joins`, inline: true },
+          { name: '❌ Left/Fake/Rejoin', value: `Left: **${stats.left}** | Fake: **${stats.fake}** | Rejoin: **${stats.rejoin}**`, inline: true },
+          { name: '📝 Join Logs (All Time)', value: logLines.slice(0, 1024) }
+        )
+        .setTimestamp()
+        .setFooter({ text: 'RIWAAYAT Audit Logs' });
+
+      return interaction.reply({ embeds: [embed] });
+    }
+
+    // /editevent
+    if (commandName === 'editevent') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      const messageId = interaction.options.getString('message_id');
+      const targetChannel = interaction.options.getChannel('channel') || interaction.channel;
+
+      try {
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        await rest.patch(`/channels/${targetChannel.id}/messages/${messageId}`, {
+          body: {
+            components: [
+              {
+                type: 17,
+                components: [
+                  {
+                    type: 12,
+                    items: [
+                      {
+                        media: {
+                          url: "https://cdn.discordapp.com/attachments/1343602374991806476/1506194924268425256/file_00000000f5a87207a97920ef212fa323.png?ex=6a0d60d5&is=6a0c0f55&hm=52ce26cf5212dc7c511446162d9218f7405d89b6771aae51b8bc9dbd29f598a8"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 10,
+                    content: "# INVITE EVENT 2026\n<:infoBlue:1506195998245130352> This is a **LIMITED-TIME** event until <t:1780222800:R>. "
+                  },
+                  {
+                    type: 14
+                  },
+                  {
+                    type: 10,
+                    content: "<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Roblox 50$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Roblox 100$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **MineCraft Account** <a:Minecraft:1504810470153126042>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = ***MC Redeem Code** <a:Minecraft:1504810470153126042>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Nitro Basic GiftCode** <a:AHNitroBoosts:1506197135157231738>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Nitro Boost GiftCode** <a:AHNitroBoosts:1506197135157231738>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **YT 10k Subs** <a:RG_yt:1504591010888683600>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **YT 30k Subs** <a:RG_yt:1504591010888683600>\n\n<a:emoji_25:1504806993280503810> <@&1506193607802093598> = **2500 Valorant Points** <a:nyt_zvalo:1504591139695628340>\n<a:emoji_25:1504806993280503810> <@&1506193757681487943> = **5000 Valorant Points** <a:nyt_zvalo:1504591139695628340>\n\n<a:emoji_25:1504806993280503810> <@&1506193607802093598> = **2500 Fortnite V-Bucks** <a:emoji_97:1507487645889204388>\n<a:emoji_25:1504806993280503810> <@&1506193757681487943> = **5000 Fortnite V-Bucks** <a:emoji_97:1507487645889204388>"
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 10,
+                    content: "# NOTICE \n<:Inviteh:1506198676375343105> **DONE INVITING?** Create <#1504803227990888598> to claim your reward!"
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 1,
+                    components: [
+                      {
+                        type: 2,
+                        style: 5,
+                        label: "Are We Legit? Check here",
+                        emoji: {
+                          id: "1506199235052175400",
+                          name: "gift",
+                          animated: false
+                        },
+                        url: "https://discord.com/channels/1485628774178623568/1485628774665158760"
+                      },
+                      {
+                        style: 1,
+                        type: 2,
+                        label: "Check Invites",
+                        emoji: {
+                          id: "1506199270188122242",
+                          name: "verification",
+                          animated: false
+                        },
+                        flow: {
+                          actions: []
+                        },
+                        custom_id: "p_303796426524069889"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        });
+
+        return interaction.editReply({ content: '✅ Event panel updated successfully!' });
+      } catch (err) {
+        console.error('[EDITEVENT_ERROR]', err.message || err);
+        return interaction.editReply({ content: `❌ Failed to update event panel: ${err.message}` });
+      }
+    }
+
     // /panel
     if (commandName === 'panel') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
@@ -1352,7 +1513,7 @@ client.on('interactionCreate', async (interaction) => {
                   },
                   {
                     type: 10,
-                    content: "<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Roblox 50$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Roblox 100$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **MineCraft Account** <a:Minecraft:1504810470153126042>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = ***MC Redeem Code** <a:Minecraft:1504810470153126042>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Nitro Basic GiftCode** <a:AHNitroBoosts:1506197135157231738>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Nitro Boost GiftCode** <a:AHNitroBoosts:1506197135157231738>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **YT 10k Subs** <a:RG_yt:1504591010888683600>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **YT 30k Subs** <a:RG_yt:1504591010888683600>\n\n<a:emoji_25:1504806993280503810> <@&1506193607802093598> = **2500 Valorant Points** <a:nyt_zvalo:1504591139695628340>\n<a:emoji_25:1504806993280503810> <@&1506193757681487943> = **5000 Valorant Points** <a:nyt_zvalo:1504591139695628340>\n\n<a:emoji_25:1504806993280503810> <@&1506193607802093598> = **2500 Fortnite V-Bucks** <a:nyt_zvalo:1504591139695628340>\n<a:emoji_25:1504806993280503810> <@&1506193757681487943> = **5000 Fortnite V-Bucks** <a:nyt_zvalo:1504591139695628340>"
+                    content: "<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Roblox 50$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Roblox 100$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **MineCraft Account** <a:Minecraft:1504810470153126042>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = ***MC Redeem Code** <a:Minecraft:1504810470153126042>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Nitro Basic GiftCode** <a:AHNitroBoosts:1506197135157231738>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Nitro Boost GiftCode** <a:AHNitroBoosts:1506197135157231738>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **YT 10k Subs** <a:RG_yt:1504591010888683600>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **YT 30k Subs** <a:RG_yt:1504591010888683600>\n\n<a:emoji_25:1504806993280503810> <@&1506193607802093598> = **2500 Valorant Points** <a:nyt_zvalo:1504591139695628340>\n<a:emoji_25:1504806993280503810> <@&1506193757681487943> = **5000 Valorant Points** <a:nyt_zvalo:1504591139695628340>\n\n<a:emoji_25:1504806993280503810> <@&1506193607802093598> = **2500 Fortnite V-Bucks** <a:emoji_97:1507487645889204388>\n<a:emoji_25:1504806993280503810> <@&1506193757681487943> = **5000 Fortnite V-Bucks** <a:emoji_97:1507487645889204388>"
                   },
                   {
                     type: 14,
@@ -3385,13 +3546,16 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           await ticketChannel.send({ embeds: [notEnoughEmbed] });
 
           const closeRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger)
+            new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger),
+            new ButtonBuilder().setCustomId('stop_ticket_close').setLabel('🛑 Stop Close (Admins)').setStyle(ButtonStyle.Secondary)
           );
           await ticketChannel.send({ components: [closeRow] });
 
-          setTimeout(() => {
+          const timeoutId = setTimeout(() => {
             ticketChannel.delete().catch(() => {});
+            ticketCloseTimeouts.delete(ticketChannel.id);
           }, 30000);
+          ticketCloseTimeouts.set(ticketChannel.id, timeoutId);
         } else {
           const eligible = REWARDS.filter(r => {
             const cost = is1Inv ? 1 : r.invites;
@@ -3593,13 +3757,16 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         await interaction.channel.send({ embeds: [notEnoughEmbed] });
 
         const closeRow = new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger)
+          new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger),
+          new ButtonBuilder().setCustomId('stop_ticket_close').setLabel('🛑 Stop Close (Admins)').setStyle(ButtonStyle.Secondary)
         );
         await interaction.channel.send({ components: [closeRow] });
 
-        setTimeout(() => {
+        const timeoutId = setTimeout(() => {
           interaction.channel.delete().catch(() => {});
+          ticketCloseTimeouts.delete(interaction.channel.id);
         }, 30000);
+        ticketCloseTimeouts.set(interaction.channel.id, timeoutId);
       } else {
         const eligible = REWARDS.filter(r => {
           const cost = is1Inv ? 1 : r.invites;
@@ -3675,6 +3842,21 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       }
       await interaction.reply('🔒 Closing this ticket in 5 seconds...');
       setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
+    }
+
+    // Stop ticket auto-close (Admins only)
+    if (interaction.customId === 'stop_ticket_close') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Only admins can stop the ticket closing timer.', flags: MessageFlags.Ephemeral });
+      }
+      const timeout = ticketCloseTimeouts.get(interaction.channel.id);
+      if (timeout) {
+        clearTimeout(timeout);
+        ticketCloseTimeouts.delete(interaction.channel.id);
+        return interaction.reply({ content: '✅ **Ticket auto-close timer stopped by Admin!** This ticket will not be automatically deleted.' });
+      } else {
+        return interaction.reply({ content: '❌ No active auto-close timer found for this ticket.', flags: MessageFlags.Ephemeral });
+      }
     }
 
     // 🔘 Show Reward Buttons
@@ -4035,10 +4217,15 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         });
 
         // Set a timer to delete thread in 30 seconds
-        await interaction.channel.send('⚠️ **Thread will be automatically deleted in 30 seconds** due to insufficient invites.');
-        setTimeout(() => {
+        const closeRow3 = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId('stop_ticket_close').setLabel('🛑 Stop Close (Admins)').setStyle(ButtonStyle.Secondary)
+        );
+        await interaction.channel.send({ content: '⚠️ **Thread will be automatically deleted in 30 seconds** due to insufficient invites.', components: [closeRow3] });
+        const timeoutId3 = setTimeout(() => {
           interaction.channel.delete().catch(() => {});
+          ticketCloseTimeouts.delete(interaction.channel.id);
         }, 30000);
+        ticketCloseTimeouts.set(interaction.channel.id, timeoutId3);
 
         return interaction.editReply({ content: '❌ Threshold not met. Thread will be deleted in 30 seconds.' });
       }
