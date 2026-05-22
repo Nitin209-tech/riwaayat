@@ -95,11 +95,49 @@ export default function Home() {
     }
   ];
 
+  const getUsernameLabel = () => {
+    switch (activeCategory) {
+      case 'nitro':
+        return 'Discord Username';
+      case 'valorant':
+        return 'Velo Username';
+      case 'youtube':
+        return 'Channel Link';
+      case 'minecraft':
+        return 'Gamer Username';
+      case 'roblox':
+        return 'Roblox Username';
+      default:
+        return 'Gamer Username';
+    }
+  };
+
+  const getUsernamePlaceholder = () => {
+    switch (activeCategory) {
+      case 'nitro':
+        return 'e.g. steve';
+      case 'valorant':
+        return 'e.g. Steve#NA1';
+      case 'youtube':
+        return 'e.g. https://youtube.com/@channel';
+      case 'minecraft':
+        return 'e.g. Steve';
+      case 'roblox':
+        return 'e.g. SteveRoblox';
+      default:
+        return 'e.g. steve';
+    }
+  };
+
   const handleOpenRedeem = (card: typeof redeemCards[0]) => {
     setActiveCategory(card.category as any);
     setSelectedPlan(card.defaultPlan);
     setEmail('');
-    setUsername(user?.username || '');
+    if (card.category === 'nitro') {
+      setUsername(user?.username || '');
+    } else {
+      setUsername('');
+    }
     setShowModal(true);
   };
 
@@ -516,12 +554,12 @@ export default function Home() {
                 {/* Username Field */}
                 <div className="space-y-2.5">
                   <label className="text-[11px] font-bold text-purple-300 uppercase tracking-widest block font-mono">
-                    Discord Username
+                    {getUsernameLabel()}
                   </label>
                   <div className="relative">
                     <input
                       type="text"
-                      placeholder="e.g. steve"
+                      placeholder={getUsernamePlaceholder()}
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       className="w-full bg-[#030014]/65 border border-purple-500/20 rounded-2xl py-3.5 px-4 pl-12 text-sm text-white focus:outline-none focus:border-cyan-400/80 transition"

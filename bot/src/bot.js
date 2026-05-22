@@ -330,9 +330,9 @@ async function triggerWelcomeAndGreets(member, inviterUser, inviterInvites) {
   // 1. Permanent Welcome Message
   const welcomeChannelId = db.getSetting('welcomeChannel');
   if (welcomeChannelId) {
-    const welcomeChannel = member.guild.channels.cache.get(welcomeChannelId);
+    const welcomeChannel = member.guild.channels.cache.get(welcomeChannelId) || await member.guild.channels.fetch(welcomeChannelId).catch(() => null);
     if (welcomeChannel) {
-      let rawMsg = db.getSetting('welcomeMessage', 'Welcome {user} to RIWAAYAT! You were invited by {inviter} (who now has {invites} invites).');
+      let rawMsg = db.getSetting('welcomeMessage', '<a:emoji_25:1504806993280503810> {user} **Joined;** Invited by **{inviter}** **( {invites} invites )** <a:love:1504576577839829204>');
       const inviterText = inviterUser ? `@${inviterUser.username}` : 'Direct Join';
 
       const formatted = rawMsg
@@ -358,7 +358,7 @@ async function triggerWelcomeAndGreets(member, inviterUser, inviterInvites) {
       .replace(/{invites}/g, inviterInvites.toString());
 
     for (const channelId of greetChannels) {
-      const greetChannel = member.guild.channels.cache.get(channelId);
+      const greetChannel = member.guild.channels.cache.get(channelId) || await member.guild.channels.fetch(channelId).catch(() => null);
       if (greetChannel) {
         greetChannel.send({ content: formattedGreet })
           .then(msg => {
@@ -1344,7 +1344,7 @@ client.on('interactionCreate', async (interaction) => {
                   },
                   {
                     type: 10,
-                    content: "<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Roblox 50$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Roblox 100$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **MineCraft Account** <a:Minecraft:1504810470153126042>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = ***MC Redeem Code** <a:Minecraft:1504810470153126042>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Nitro Basic GiftCode** <a:AHNitroBoosts:1506197135157231738>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Nitro Boost GiftCode** <a:AHNitroBoosts:1506197135157231738>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **YT 10k Subs** <a:RG_yt:1504591010888683600>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **YT 30k Subs** <a:RG_yt:1504591010888683600>\n\n<a:emoji_25:1504806993280503810> <@&1506193607802093598> = **2500 Valorant Points** <a:emoji2:1504576227359326268>\n<a:emoji_25:1504806993280503810> <@&1506193757681487943> = **5000 Valorant Points** <a:emoji2:1504576227359326268>"
+                    content: "<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Roblox 50$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Roblox 100$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **MineCraft Account** <a:Minecraft:1504810470153126042>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = ***MC Redeem Code** <a:Minecraft:1504810470153126042>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Nitro Basic GiftCode** <a:AHNitroBoosts:1506197135157231738>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Nitro Boost GiftCode** <a:AHNitroBoosts:1506197135157231738>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **YT 10k Subs** <a:RG_yt:1504591010888683600>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **YT 30k Subs** <a:RG_yt:1504591010888683600>\n\n<a:emoji_25:1504806993280503810> <@&1506193607802093598> = **2500 Valorant Points** <a:nyt_zvalo:1504591139695628340>\n<a:emoji_25:1504806993280503810> <@&1506193757681487943> = **5000 Valorant Points** <a:nyt_zvalo:1504591139695628340>"
                   },
                   {
                     type: 14,

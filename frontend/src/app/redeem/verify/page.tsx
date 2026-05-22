@@ -68,6 +68,30 @@ function VerifyRedeemContent() {
     }
   };
 
+  const getUsernameLabel = () => {
+    switch (category) {
+      case 'nitro':
+        return 'Discord Username';
+      case 'valorant':
+        return 'Velo Username';
+      case 'youtube':
+        return 'Channel Link';
+      case 'minecraft':
+        return 'Gamer Username';
+      case 'roblox':
+        return 'Roblox Username';
+      default:
+        return 'Gamer Username';
+    }
+  };
+
+  const formatUsername = (name: string) => {
+    if (category === 'nitro') {
+      return name.startsWith('@') ? name : `@${name}`;
+    }
+    return name;
+  };
+
   const handleDownloadPDF = () => {
     // Dynamically import jsPDF to work nicely with SSR Next.js
     import('jspdf').then((module) => {
@@ -110,7 +134,7 @@ function VerifyRedeemContent() {
       doc.setFont('Helvetica', 'normal');
       doc.setTextColor(209, 213, 219);
       doc.text(`${getCategoryLabel()} Bundle`, 20, 102);
-      doc.text(`User: @${username}`, 90, 102);
+      doc.text(`${getUsernameLabel()}: ${formatUsername(username)}`, 90, 102);
       
       // Masked or formatted key
       doc.text(code, 150, 102);
@@ -237,9 +261,9 @@ function VerifyRedeemContent() {
           </span>
           <div className="grid grid-cols-2 gap-4 text-xs">
             <div>
-              <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block font-mono">Gamer Handle</span>
+              <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block font-mono">{getUsernameLabel()}</span>
               <span className="font-bold text-white flex items-center gap-1.5 mt-0.5">
-                <User size={13} className="text-purple-400" /> {username}
+                <User size={13} className="text-purple-400" /> {formatUsername(username)}
               </span>
             </div>
             <div>
@@ -367,8 +391,8 @@ function VerifyRedeemContent() {
                 {/* Account Details */}
                 <div className="grid grid-cols-2 gap-4 border-b border-purple-500/10 pb-3.5">
                   <div>
-                    <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block font-mono">Discord Account</span>
-                    <span className="font-bold text-white mt-0.5 block">@{username}</span>
+                    <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block font-mono">{getUsernameLabel()}</span>
+                    <span className="font-bold text-white mt-0.5 block">{formatUsername(username)}</span>
                   </div>
                   <div>
                     <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block font-mono">Outlook Email ID</span>
