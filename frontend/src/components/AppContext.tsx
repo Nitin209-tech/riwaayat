@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-let API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://riwaayat-production.up.railway.app';
+let API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://riwaayat.onrender.com';
 if (API_BASE && !API_BASE.startsWith('http://') && !API_BASE.startsWith('https://')) {
   API_BASE = `https://${API_BASE}`;
 }

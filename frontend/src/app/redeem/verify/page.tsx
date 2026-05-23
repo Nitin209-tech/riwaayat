@@ -188,7 +188,7 @@ function VerifyRedeemContent() {
     setLoading(true);
 
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://riwaayat-production.up.railway.app';
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://riwaayat.onrender.com';
       const cleanApiBase = apiBase.replace(/\/$/, "");
       const res = await fetch(`${cleanApiBase}/api/rewards/verify-code`, {
         method: 'POST',
