@@ -5,10 +5,10 @@ import Navbar from './Navbar';
 import Link from 'next/link';
 
 function ConsoleLayout({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
   useEffect(() => {
-    const saved = localStorage.getItem('riwaayat_theme') || 'light';
+    const saved = localStorage.getItem('riwaayat_theme') || 'dark';
     setTheme(saved as 'light' | 'dark');
     document.documentElement.setAttribute('data-theme', saved);
   }, []);

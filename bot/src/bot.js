@@ -424,7 +424,9 @@ const commands = [
           { name: '🎮 Roblox $50', value: 'ROBUX_50' },
           { name: '🎮 Roblox $100', value: 'ROBUX_100' },
           { name: '🔴 Valorant 2500 VP', value: 'VALORANT_2500' },
-          { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' }
+          { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' },
+          { name: '🔥 Fortnite 2500 V-Bucks', value: 'FORTNITE_2500' },
+          { name: '🔥 Fortnite 5000 V-Bucks', value: 'FORTNITE_5000' }
         ))
       .addStringOption(opt => opt.setName('code').setDescription('The reward code/key').setRequired(true)))
     .addSubcommand(sub => sub.setName('generate')
@@ -441,7 +443,9 @@ const commands = [
           { name: '🎮 Roblox $50', value: 'ROBUX_50' },
           { name: '🎮 Roblox $100', value: 'ROBUX_100' },
           { name: '🔴 Valorant 2500 VP', value: 'VALORANT_2500' },
-          { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' }
+          { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' },
+          { name: '🔥 Fortnite 2500 V-Bucks', value: 'FORTNITE_2500' },
+          { name: '🔥 Fortnite 5000 V-Bucks', value: 'FORTNITE_5000' }
         ))
       .addIntegerOption(opt => opt.setName('count').setDescription('How many codes to generate (1-50)').setRequired(true)))
     .addSubcommand(sub => sub.setName('view').setDescription('View current stock levels')),
@@ -459,7 +463,9 @@ const commands = [
         { name: '🎮 Roblox $50', value: 'ROBUX_50' },
         { name: '🎮 Roblox $100', value: 'ROBUX_100' },
         { name: '🔴 Valorant 2500 VP', value: 'VALORANT_2500' },
-        { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' }
+        { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' },
+        { name: '🔥 Fortnite 2500 V-Bucks', value: 'FORTNITE_2500' },
+        { name: '🔥 Fortnite 5000 V-Bucks', value: 'FORTNITE_5000' }
       ))
     .addIntegerOption(opt => opt.setName('count').setDescription('How many codes to generate (1-50)').setRequired(false)),
   new SlashCommandBuilder().setName('addmc')
@@ -485,8 +491,17 @@ const commands = [
     .setDescription('Update direct message greet text (Admin only)')
     .addStringOption(opt => opt.setName('msg').setDescription('DM greet text (supports placeholders)').setRequired(true)),
   new SlashCommandBuilder().setName('greetchannels')
-    .setDescription('Define thread channel links inside greetchannels (Comma separated IDs) (Admin only)')
-    .addStringOption(opt => opt.setName('channels').setDescription('Comma-separated channels/thread IDs').setRequired(true)),
+    .setDescription('Manage 5-second greet channels (Admin only)')
+    .addStringOption(opt => opt.setName('action')
+      .setDescription('Action to perform')
+      .setRequired(true)
+      .addChoices(
+        { name: 'Add', value: 'add' },
+        { name: 'Remove', value: 'remove' },
+        { name: 'View', value: 'view' }
+      )
+    )
+    .addChannelOption(opt => opt.setName('channel').setDescription('Channel to add/remove').setRequired(false)),
   new SlashCommandBuilder().setName('event1invite')
     .setDescription('Toggle 1-invite event (Admin only)')
     .addBooleanOption(opt => opt.setName('enabled').setDescription('Enable or disable 1-invite event').setRequired(true)),
@@ -535,6 +550,11 @@ const commands = [
     .addUserOption(opt => opt.setName('user').setDescription('The user to check').setRequired(true)),
   new SlashCommandBuilder().setName('stoptimer')
     .setDescription('Stop the 30-second automatic ticket deletion timer for this channel (Admin only)'),
+  new SlashCommandBuilder().setName('editmessage')
+    .setDescription('Edit any text message sent by the bot (Admin only)')
+    .addStringOption(opt => opt.setName('message_id').setDescription('ID of the message').setRequired(true))
+    .addStringOption(opt => opt.setName('content').setDescription('New text content').setRequired(true))
+    .addChannelOption(opt => opt.setName('channel').setDescription('Channel containing the message (optional)').setRequired(false)),
 ].map(cmd => cmd.toJSON());
 
 // ─── BOT CLIENT ────────────────────────────────────────────────────
@@ -1360,6 +1380,26 @@ client.on('interactionCreate', async (interaction) => {
         .setFooter({ text: 'RIWAAYAT Audit Logs' });
 
       return interaction.reply({ embeds: [embed] });
+    }
+
+    // /editmessage
+    if (commandName === 'editmessage') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      
+      const messageId = interaction.options.getString('message_id');
+      const newContent = interaction.options.getString('content');
+      const targetChannel = interaction.options.getChannel('channel') || interaction.channel;
+      
+      try {
+        const msg = await targetChannel.messages.fetch(messageId);
+        if (!msg) throw new Error('Message not found');
+        await msg.edit({ content: newContent });
+        return interaction.reply({ content: '✅ Message updated successfully!', flags: MessageFlags.Ephemeral });
+      } catch (err) {
+        return interaction.reply({ content: `❌ Failed to edit message: ${err.message}`, flags: MessageFlags.Ephemeral });
+      }
     }
 
     // /editevent
