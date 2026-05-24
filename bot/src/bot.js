@@ -3668,8 +3668,14 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           }
         }
 
+        // Sequential ticket numbering
+        const ticketCounterKey = `ticketCounter_${interaction.guild.id}`;
+        const currentCount = db.getSetting(ticketCounterKey, 0);
+        const ticketNumber = currentCount + 1;
+        db.setSetting(ticketCounterKey, ticketNumber);
+
         const ticketChannel = await interaction.guild.channels.create({
-          name: `claim-${interaction.user.username.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+          name: `claim-${ticketNumber}`,
           type: ChannelType.GuildText,
           parent: parentId,
           permissionOverwrites: [
@@ -3827,7 +3833,16 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           }, 30000);
           ticketCloseTimeouts.set(ticketChannel.id, timeoutId);
         } else {
-          const eligible = REWARDS.filter(r => {
+          // Guild-specific reward filtering
+          const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'fortnite_2500', 'fortnite_5000', 'robux_50', 'robux_100'];
+          const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'fortnite_2500': 3, 'fortnite_5000': 6, 'robux_50': 3, 'robux_100': 6 };
+          const isNewServer = interaction.guild.id === '1236706368904233082';
+
+          const allRewards = isNewServer
+            ? REWARDS.filter(r => NEW_SERVER_REWARD_IDS.includes(r.id)).map(r => ({ ...r, invites: NEW_SERVER_INVITE_MAP[r.id] }))
+            : REWARDS;
+
+          const eligible = allRewards.filter(r => {
             const cost = is1Inv ? 1 : r.invites;
             return stats.valid >= cost;
           });
@@ -4092,7 +4107,16 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         }, 30000);
         ticketCloseTimeouts.set(interaction.channel.id, timeoutId);
       } else {
-        const eligible = REWARDS.filter(r => {
+        // Guild-specific reward filtering
+        const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'fortnite_2500', 'fortnite_5000', 'robux_50', 'robux_100'];
+        const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'fortnite_2500': 3, 'fortnite_5000': 6, 'robux_50': 3, 'robux_100': 6 };
+        const isNewServer = interaction.guild.id === '1236706368904233082';
+
+        const allRewards = isNewServer
+          ? REWARDS.filter(r => NEW_SERVER_REWARD_IDS.includes(r.id)).map(r => ({ ...r, invites: NEW_SERVER_INVITE_MAP[r.id] }))
+          : REWARDS;
+
+        const eligible = allRewards.filter(r => {
           const cost = is1Inv ? 1 : r.invites;
           return stats.valid >= cost;
         });
@@ -5086,7 +5110,15 @@ client.on('messageCreate', async (message) => {
     const is1Inv = db.getSetting('event1invite', false, message.guild.id);
     const is2Inv = db.getSetting('event2invite', false, message.guild.id);
     
-    const eligible = REWARDS.filter(r => {
+    // Guild-specific reward filtering
+    const NS_IDS = ['nitro_basic', 'nitro_boost', 'fortnite_2500', 'fortnite_5000', 'robux_50', 'robux_100'];
+    const NS_INV = { 'nitro_basic': 3, 'nitro_boost': 6, 'fortnite_2500': 3, 'fortnite_5000': 6, 'robux_50': 3, 'robux_100': 6 };
+    const isNS = message.guild.id === '1236706368904233082';
+    const msgAllRewards = isNS
+      ? REWARDS.filter(r => NS_IDS.includes(r.id)).map(r => ({ ...r, invites: NS_INV[r.id] }))
+      : REWARDS;
+
+    const eligible = msgAllRewards.filter(r => {
       const cost = is1Inv ? 1 : (is2Inv ? 2 : r.invites);
       return stats.valid >= cost;
     });
