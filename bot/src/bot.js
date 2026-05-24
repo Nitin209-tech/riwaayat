@@ -1280,15 +1280,24 @@ client.on('interactionCreate', async (interaction) => {
       const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
       const is2Inv = db.getSetting('event2invite', false, interaction.guild.id);
       const eventStatus = is1Inv ? ' [⚡ 1-INVITE EVENT ACTIVE]' : (is2Inv ? ' [⚡ 2-INVITE EVENT ACTIVE]' : '');
+
+      const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'fortnite_2500', 'fortnite_5000', 'robux_50', 'robux_100'];
+      const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'fortnite_2500': 3, 'fortnite_5000': 6, 'robux_50': 3, 'robux_100': 6 };
+      const isNewServer = interaction.guild?.id === '1236706368904233082';
+
+      const allRewards = isNewServer
+        ? REWARDS.filter(r => NEW_SERVER_REWARD_IDS.includes(r.id)).map(r => ({ ...r, invites: NEW_SERVER_INVITE_MAP[r.id] }))
+        : REWARDS;
+
       const embed = new EmbedBuilder()
         .setColor('#1d4ed8')
         .setTitle('📊 Your Invite Balance')
         .setDescription(`**@${interaction.user.username}**\n\n🎟️ Available Invites: **${count}**`)
         .addFields({ 
           name: 'Reward Costs' + eventStatus, 
-          value: REWARDS.map(r => {
+          value: allRewards.map(r => {
             const cost = is1Inv ? 1 : (is2Inv ? 2 : r.invites);
-            return `${r.emoji} ${r.label.split(' ').slice(1).join(' ')} — **${cost} invites**`;
+            return `${emojiStr(r)} ${r.label.split(' ').slice(1).join(' ')} — **${cost} invites**`;
           }).join('\n') 
         })
         .setFooter({ text: 'Invite friends to earn more!' });
@@ -1300,7 +1309,16 @@ client.on('interactionCreate', async (interaction) => {
       const count = db.getInviteCount(interaction.user.id, interaction.guild.id);
       const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
       const is2Inv = db.getSetting('event2invite', false, interaction.guild.id);
-      const options = REWARDS.map(r => {
+
+      const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'fortnite_2500', 'fortnite_5000', 'robux_50', 'robux_100'];
+      const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'fortnite_2500': 3, 'fortnite_5000': 6, 'robux_50': 3, 'robux_100': 6 };
+      const isNewServer = interaction.guild?.id === '1236706368904233082';
+
+      const allRewards = isNewServer
+        ? REWARDS.filter(r => NEW_SERVER_REWARD_IDS.includes(r.id)).map(r => ({ ...r, invites: NEW_SERVER_INVITE_MAP[r.id] }))
+        : REWARDS;
+
+      const options = allRewards.map(r => {
         const cost = is1Inv ? 1 : (is2Inv ? 2 : r.invites);
         return {
           label: r.label,
@@ -3688,12 +3706,26 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         // Inform user that their ticket is created
         await interaction.editReply({ content: `✅ Ticket created: ${ticketChannel}` });
 
-        // Step 1: Send a clean Welcome message using V2 components
+        // Step 1: Send a super premium welcome dashboard using V2 components
         const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        const stats = db.getUserStats(interaction.user.id, interaction.guild.id);
+        const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
+        const minRequired = is1Inv ? 1 : (interaction.guild.id === '1236706368904233082' ? 3 : 2);
+
+        const statusEmoji = stats.valid >= minRequired ? '🟢' : '🔴';
+        const statusText = stats.valid >= minRequired 
+          ? `**Eligible to Claim!** (Required: ${minRequired} invites)` 
+          : `**Insufficient Balance** (Required: ${minRequired} invites)`;
+
+        const welcomeImage = getComponentImage(
+          interaction.guild?.id, 
+          "https://cdn.discordapp.com/attachments/1343602374991806476/1506201739630481498/file_0000000032e47208b64a8a8e8825a619.png?ex=6a0d672e&is=6a0c15ae&hm=4ae404a77e3532c51935664ee482b5813e4cb8ce6b2b927095899e5724b6beea"
+        );
+
         try {
           await rest.post(`/channels/${ticketChannel.id}/messages`, {
             body: {
-              content: `👋 Hey ${interaction.user}! Welcome to your claim ticket channel.`,
+              content: `👋 Welcome to your ticket channel, ${interaction.user}!`,
               flags: 32768, // IS_COMPONENTS_V2
               components: [
                 {
@@ -3701,12 +3733,27 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                   components: [
                     {
                       type: 10,
-                      content: "# <a:Event:1504576267788357742> RIWAAYAT — Welcome!"
+                      content: "# 🎟️ RIWAAYAT CLAIM SYSTEM"
                     },
                     { type: 14, spacing: 2 },
                     {
-                      type: 10,
-                      content: `<a:nyt_zwelcome:1504591019436544010> Hey **${interaction.user.username}**!\nWe are glad you are here.\n\n*Your invite balance is being verified automatically. Please select an option below if you wish to view detailed logs.*`
+                      type: 9,
+                      components: [
+                        {
+                          type: 10,
+                          content: `### 👤 Claimer Info\n` +
+                                   `> **User:** **${interaction.user.username}** (<@${interaction.user.id}>)\n` +
+                                   `> **Valid Invites:** \`${stats.valid}\`\n` +
+                                   `> **Status:** ${statusEmoji} ${statusText}\n\n` +
+                                   `*Please make sure you have invited enough real members. Keep inviting and click **Refresh Invites** below to update your stats!*`
+                        }
+                      ],
+                      accessory: {
+                        type: 11,
+                        media: {
+                          url: welcomeImage
+                        }
+                      }
                     },
                     { type: 14, spacing: 2 },
                     {
@@ -3715,8 +3762,14 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                         {
                           type: 2,
                           style: 2, // Secondary
+                          custom_id: 'recheck_invites_ticket',
+                          label: '🔄 Refresh Invites',
+                        },
+                        {
+                          type: 2,
+                          style: 2, // Secondary
                           custom_id: 'expand_invites',
-                          label: 'Expand Logs'
+                          label: '📊 Detailed Logs'
                         }
                       ]
                     }
@@ -3727,56 +3780,6 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           });
         } catch (welcomeErr) {
           console.error('[WELCOME_V2_SEND_FAILED]', welcomeErr.message);
-        }
-
-        // Step 2: Automate check invites, V2 invites widget, and rewards selection/countdown
-        const stats = db.getUserStats(interaction.user.id, interaction.guild.id);
-        const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
-        const minRequired = is1Inv ? 1 : 2;
-
-        // Post the custom V2 invite count component directly in the channel
-        try {
-          await rest.post(`/channels/${ticketChannel.id}/messages`, {
-            body: {
-              flags: 32768, // IS_COMPONENTS_V2
-              components: [
-                {
-                  type: 17,
-                  components: [
-                    {
-                      type: 10,
-                      content: "# <:verification:1506199270188122242> CHECK INVITES <:verification:1506199270188122242>"
-                    },
-                    {
-                      type: 14,
-                      spacing: 2
-                    },
-                    {
-                      type: 9,
-                      components: [
-                        {
-                          type: 10,
-                          content: `<a:nt_cyandot:1506201246225268828> \`INVITES COUNT :\` **${stats.valid}**  `
-                        }
-                      ],
-                      accessory: {
-                        type: 11,
-                        media: {
-                          url: getComponentImage(interaction.guild?.id, "https://cdn.discordapp.com/attachments/1343602374991806476/1506201739630481498/file_0000000032e47208b64a8a8e8825a619.png?ex=6a0d672e&is=6a0c15ae&hm=4ae404a77e3532c51935664ee482b5813e4cb8ce6b2b927095899e5724b6beea")
-                        }
-                      }
-                    },
-                    {
-                      type: 14,
-                      spacing: 2
-                    }
-                  ]
-                }
-              ]
-            }
-          });
-        } catch (err) {
-          console.error('[TICKET_TELEMETRY_SEND_FAILED]', err.message);
         }
 
         // Small delay for smooth transition
@@ -3793,12 +3796,14 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                     components: [
                       {
                         type: 10,
-                        content: "# ❌ Invite Threshold Not Met"
+                        content: "# ⚠️ INSUFFICIENT REFERRALS"
                       },
                       { type: 14, spacing: 2 },
                       {
                         type: 10,
-                        content: `You have **${stats.valid}** valid invite(s).\n\n**Minimum requirement:** **${minRequired} invites**\n\nTicket will **automatically close in 30 seconds** due to insufficient refer balance.`
+                        content: `You currently have **${stats.valid}** valid invite(s) but you need at least **${minRequired}** invites to redeem a reward.\n\n` +
+                                 `⏱️ This ticket will **automatically close in 60 seconds** due to insufficient invites.\n` +
+                                 `👉 *Invite more friends right now, then click **Refresh Invites** above to unlock your rewards!*`
                       },
                       { type: 14, spacing: 2 },
                       {
@@ -3830,7 +3835,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           const timeoutId = setTimeout(() => {
             ticketChannel.delete().catch(() => {});
             ticketCloseTimeouts.delete(ticketChannel.id);
-          }, 30000);
+          }, 60000);
           ticketCloseTimeouts.set(ticketChannel.id, timeoutId);
         } else {
           // Guild-specific reward filtering
@@ -3860,45 +3865,49 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
             rewardLines += lines + '\n\n';
           }
 
-          await rest.post(`/channels/${ticketChannel.id}/messages`, {
-            body: {
-              flags: 32768,
-              components: [
-                {
-                  type: 17,
-                  components: [
-                    {
-                      type: 10,
-                      content: `<a:Event:1504576267788357742> **ELIGIBLE ACTIVE REWARDS**\n\n${rewardLines.trim()}`
-                    },
-                    { type: 14, spacing: 2 },
-                    {
-                      type: 10,
-                      content: `Select a reward from the dropdown menu. Your invite balance will be deducted upon claim.`
-                    },
-                    {
-                      type: 1,
-                      components: [
-                        {
-                          type: 3,
-                          custom_id: 'claim_reward_ticket',
-                          placeholder: '🎁 Select your premium prize...',
-                          min_values: 1,
-                          max_values: 1,
-                          options: eligible.map(r => ({
-                            label: r.label,
-                            value: r.id,
-                            description: `${is1Inv ? 1 : r.invites} invites cost`,
-                            emoji: { id: r.emojiId, name: r.emojiName, animated: r.animated }
-                          }))
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-          });
+          try {
+            await rest.post(`/channels/${ticketChannel.id}/messages`, {
+              body: {
+                flags: 32768,
+                components: [
+                  {
+                    type: 17,
+                    components: [
+                      {
+                        type: 10,
+                        content: `<a:Event:1504576267788357742> **ELIGIBLE ACTIVE REWARDS**\n\n${rewardLines.trim()}`
+                      },
+                      { type: 14, spacing: 2 },
+                      {
+                        type: 10,
+                        content: `Select your premium reward from the select menu below. Your invite balance will be deducted immediately.`
+                      },
+                      {
+                        type: 1,
+                        components: [
+                          {
+                            type: 3,
+                            custom_id: 'claim_reward_ticket',
+                            placeholder: '🎁 Select your premium prize...',
+                            min_values: 1,
+                            max_values: 1,
+                            options: eligible.map(r => ({
+                              label: r.label,
+                              value: r.id,
+                              description: `${is1Inv ? 1 : r.invites} invites cost`,
+                              emoji: { id: r.emojiId, name: r.emojiName, animated: r.animated }
+                            }))
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            });
+          } catch (rewardErr) {
+            console.error('[REWARDS_V2_SEND_FAILED]', rewardErr.message);
+          }
 
           const btnRow = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger)
@@ -4181,6 +4190,186 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       }
     }
 
+    // 🔄 Refresh Invites Button (Ticket Channel)
+    if (interaction.customId === 'recheck_invites_ticket') {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      const stats = db.getUserStats(interaction.user.id, interaction.guild.id);
+      const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
+      const minRequired = is1Inv ? 1 : (interaction.guild.id === '1236706368904233082' ? 3 : 2);
+
+      const statusEmoji = stats.valid >= minRequired ? '🟢' : '🔴';
+      const statusText = stats.valid >= minRequired 
+        ? `**Eligible to Claim!** (Required: ${minRequired} invites)` 
+        : `**Insufficient Balance** (Required: ${minRequired} invites)`;
+
+      const welcomeImage = getComponentImage(
+        interaction.guild?.id, 
+        "https://cdn.discordapp.com/attachments/1343602374991806476/1506201739630481498/file_0000000032e47208b64a8a8e8825a619.png?ex=6a0d672e&is=6a0c15ae&hm=4ae404a77e3532c51935664ee482b5813e4cb8ce6b2b927095899e5724b6beea"
+      );
+
+      // Edit the original Welcome message to reflect updated invites count
+      try {
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        await rest.patch(`/channels/${interaction.channel.id}/messages/${interaction.message.id}`, {
+          body: {
+            content: `👋 Welcome to your ticket channel, ${interaction.user}!`,
+            flags: 32768, // IS_COMPONENTS_V2
+            components: [
+              {
+                type: 17,
+                components: [
+                  {
+                    type: 10,
+                    content: "# 🎟️ RIWAAYAT CLAIM SYSTEM"
+                  },
+                  { type: 14, spacing: 2 },
+                  {
+                    type: 9,
+                    components: [
+                      {
+                        type: 10,
+                        content: `### 👤 Claimer Info\n` +
+                                 `> **User:** **${interaction.user.username}** (<@${interaction.user.id}>)\n` +
+                                 `> **Valid Invites:** \`${stats.valid}\`\n` +
+                                 `> **Status:** ${statusEmoji} ${statusText}\n\n` +
+                                 `*Please make sure you have invited enough real members. Keep inviting and click **Refresh Invites** below to update your stats!*`
+                      }
+                    ],
+                    accessory: {
+                      type: 11,
+                      media: {
+                        url: welcomeImage
+                      }
+                    }
+                  },
+                  { type: 14, spacing: 2 },
+                  {
+                    type: 1,
+                    components: [
+                      {
+                        type: 2,
+                        style: 2, // Secondary
+                        custom_id: 'recheck_invites_ticket',
+                        label: '🔄 Refresh Invites',
+                      },
+                      {
+                        type: 2,
+                        style: 2, // Secondary
+                        custom_id: 'expand_invites',
+                        label: '📊 Detailed Logs'
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        });
+      } catch (patchErr) {
+        console.error('[REFRESH_DASHBOARD_PATCH_FAILED]', patchErr.message);
+      }
+
+      if (stats.valid >= minRequired) {
+        // Cancel the auto-close timer if it exists
+        const closeTimer = ticketCloseTimeouts.get(interaction.channel.id);
+        if (closeTimer) {
+          clearTimeout(closeTimer);
+          ticketCloseTimeouts.delete(interaction.channel.id);
+        }
+
+        const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'fortnite_2500', 'fortnite_5000', 'robux_50', 'robux_100'];
+        const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'fortnite_2500': 3, 'fortnite_5000': 6, 'robux_50': 3, 'robux_100': 6 };
+        const isNewServer = interaction.guild.id === '1236706368904233082';
+
+        const allRewards = isNewServer
+          ? REWARDS.filter(r => NEW_SERVER_REWARD_IDS.includes(r.id)).map(r => ({ ...r, invites: NEW_SERVER_INVITE_MAP[r.id] }))
+          : REWARDS;
+
+        const eligible = allRewards.filter(r => {
+          const cost = is1Inv ? 1 : r.invites;
+          return stats.valid >= cost;
+        });
+
+        const grouped = {};
+        for (const r of eligible) {
+          const cost = is1Inv ? 1 : r.invites;
+          if (!grouped[cost]) grouped[cost] = [];
+          grouped[cost].push(r);
+        }
+
+        let rewardLines = '';
+        for (const [inv, rewards] of Object.entries(grouped).sort((a,b) => a[0]-b[0])) {
+          const lines = rewards.map(r => `**${inv} INVITE** ≫ **${r.label.toUpperCase()}** ${emojiStr(r)}`).join('\n');
+          rewardLines += lines + '\n\n';
+        }
+
+        try {
+          const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+          await rest.post(`/channels/${interaction.channel.id}/messages`, {
+            body: {
+              content: `🎉 **Congratulations! You unlocked the rewards!**`,
+              flags: 32768,
+              components: [
+                {
+                  type: 17,
+                  components: [
+                    {
+                      type: 10,
+                      content: `<a:Event:1504576267788357742> **ELIGIBLE ACTIVE REWARDS**\n\n${rewardLines.trim()}`
+                    },
+                    { type: 14, spacing: 2 },
+                    {
+                      type: 10,
+                      content: `Select your premium reward from the select menu below. Your invite balance will be deducted immediately.`
+                    },
+                    {
+                      type: 1,
+                      components: [
+                        {
+                          type: 3,
+                          custom_id: 'claim_reward_ticket',
+                          placeholder: '🎁 Select your premium prize...',
+                          min_values: 1,
+                          max_values: 1,
+                          options: eligible.map(r => ({
+                            label: r.label,
+                            value: r.id,
+                            description: `${is1Inv ? 1 : r.invites} invites cost`,
+                            emoji: { id: r.emojiId, name: r.emojiName, animated: r.animated }
+                          }))
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          });
+
+          await interaction.editReply({ content: `✅ **Success!** Your invites are updated to **${stats.valid}**. You are now eligible to claim, and the ticket auto-close has been cancelled!` });
+        } catch (rewardErr) {
+          console.error('[RECHECK_REWARDS_SEND_FAILED]', rewardErr.message);
+          await interaction.editReply({ content: `✅ Invites updated to **${stats.valid}**, but failed to post reward panel: ${rewardErr.message}` });
+        }
+      } else {
+        // If they still don't have enough invites, reset the 60-second close timer to give them a fresh window
+        const closeTimer = ticketCloseTimeouts.get(interaction.channel.id);
+        if (closeTimer) {
+          clearTimeout(closeTimer);
+        }
+
+        const newTimeoutId = setTimeout(() => {
+          interaction.channel.delete().catch(() => {});
+          ticketCloseTimeouts.delete(interaction.channel.id);
+        }, 60000);
+        ticketCloseTimeouts.set(interaction.channel.id, newTimeoutId);
+
+        await interaction.editReply({ content: `❌ **Threshold not met!** You currently have **${stats.valid}** invites, but you need at least **${minRequired}** invites.\n\n⏱️ Auto-close timer has been reset to **60 seconds**.` });
+      }
+      return;
+    }
+
     // Close Ticket action
     if (interaction.customId === 'close_ticket') {
       if (pendingVouches.has(interaction.channel.id)) {
@@ -4215,7 +4404,13 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       const invCount = db.getInviteCount(interaction.user.id, interaction.guild.id);
       const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
       const is2Inv = db.getSetting('event2invite', false, interaction.guild.id);
-      const cost = is1Inv ? 1 : (is2Inv ? 2 : reward.invites);
+      let cost = is1Inv ? 1 : (is2Inv ? 2 : reward.invites);
+      if (interaction.guild?.id === '1236706368904233082') {
+        const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'fortnite_2500': 3, 'fortnite_5000': 6, 'robux_50': 3, 'robux_100': 6 };
+        if (NEW_SERVER_INVITE_MAP[reward.id] !== undefined) {
+          cost = is1Inv ? 1 : (is2Inv ? 2 : NEW_SERVER_INVITE_MAP[reward.id]);
+        }
+      }
 
       if (invCount < cost) {
         try {
@@ -4334,7 +4529,13 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       const invCount = db.getInviteCount(interaction.user.id, interaction.guild.id);
       const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
       const is2Inv = db.getSetting('event2invite', false, interaction.guild.id);
-      const cost = is1Inv ? 1 : (is2Inv ? 2 : reward.invites);
+      let cost = is1Inv ? 1 : (is2Inv ? 2 : reward.invites);
+      if (interaction.guild?.id === '1236706368904233082') {
+        const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'fortnite_2500': 3, 'fortnite_5000': 6, 'robux_50': 3, 'robux_100': 6 };
+        if (NEW_SERVER_INVITE_MAP[reward.id] !== undefined) {
+          cost = is1Inv ? 1 : (is2Inv ? 2 : NEW_SERVER_INVITE_MAP[reward.id]);
+        }
+      }
 
       if (invCount < cost) {
         return interaction.reply({
@@ -4687,7 +4888,13 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       const invCount = db.getInviteCount(interaction.user.id, interaction.guild.id);
       const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
       const is2Inv = db.getSetting('event2invite', false, interaction.guild.id);
-      const cost = is1Inv ? 1 : (is2Inv ? 2 : reward.invites);
+      let cost = is1Inv ? 1 : (is2Inv ? 2 : reward.invites);
+      if (interaction.guild?.id === '1236706368904233082') {
+        const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'fortnite_2500': 3, 'fortnite_5000': 6, 'robux_50': 3, 'robux_100': 6 };
+        if (NEW_SERVER_INVITE_MAP[reward.id] !== undefined) {
+          cost = is1Inv ? 1 : (is2Inv ? 2 : NEW_SERVER_INVITE_MAP[reward.id]);
+        }
+      }
 
       if (invCount < cost) {
         try {
