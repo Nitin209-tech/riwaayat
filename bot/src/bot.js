@@ -1753,8 +1753,7 @@ client.on('interactionCreate', async (interaction) => {
                           name: "gift",
                           animated: false
                         },
-                        url: "https://discord.com/channels/1236706368904233082/1507837879781425164",
-                        custom_id: "p_305651971883274321"
+                        url: "https://discord.com/channels/1236706368904233082/1507837879781425164"
                       },
                       {
                         style: 1,
