@@ -16,21 +16,43 @@ function saveDB(data) {
   fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
 }
 
-function getUser(db, discordId, username) {
-  if (!db.invites[discordId]) {
-    db.invites[discordId] = { username: username || 'Unknown', count: 0, totalEarned: 0, fake: 0, rejoin: 0 };
+// ─── KEY HELPERS ────────────────────────────────────────────────────
+function inviteKey(discordId, guildId) {
+  return guildId ? `${guildId}_${discordId}` : discordId;
+}
+
+function settingKey(key, guildId) {
+  return guildId ? `${guildId}_${key}` : key;
+}
+
+function leftKey(memberId, guildId) {
+  return guildId ? `${guildId}_${memberId}` : memberId;
+}
+
+// ─── USER HELPERS ────────────────────────────────────────────────────
+function getUser(db, discordId, username, guildId) {
+  const key = inviteKey(discordId, guildId);
+  if (!db.invites[key]) {
+    db.invites[key] = { username: username || 'Unknown', count: 0, totalEarned: 0, fake: 0, rejoin: 0 };
   }
-  const u = db.invites[discordId];
+  const u = db.invites[key];
   if (u.fake === undefined) u.fake = 0;
   if (u.rejoin === undefined) u.rejoin = 0;
   if (username) u.username = username;
   return u;
 }
 
-function getUserStats(discordId) {
+function getUserStats(discordId, guildId) {
   const db = loadDB();
-  const u = db.invites[discordId] || { count: 0, totalEarned: 0, fake: 0, rejoin: 0 };
-  const logs = (db.joinLogs || []).filter(l => l.inviterId === discordId);
+  const key = inviteKey(discordId, guildId);
+  const u = db.invites[key] || { count: 0, totalEarned: 0, fake: 0, rejoin: 0 };
+
+  // Filter joinLogs by guildId if provided
+  const allLogs = db.joinLogs || [];
+  const logs = allLogs.filter(l =>
+    l.inviterId === discordId &&
+    (guildId ? l.guildId === guildId : true)
+  );
   const leftCount = logs.filter(l => l.status === 'LEFT').length;
   return {
     valid: u.count,
@@ -41,50 +63,54 @@ function getUserStats(discordId) {
   };
 }
 
-function addFakeInvite(discordId, username) {
+function addFakeInvite(discordId, username, guildId) {
   const db = loadDB();
-  const user = getUser(db, discordId, username);
+  const user = getUser(db, discordId, username, guildId);
   user.fake += 1;
   saveDB(db);
 }
 
-function addRejoinInvite(discordId, username) {
+function addRejoinInvite(discordId, username, guildId) {
   const db = loadDB();
-  const user = getUser(db, discordId, username);
+  const user = getUser(db, discordId, username, guildId);
   user.rejoin += 1;
   saveDB(db);
 }
 
-function trackLeave(memberId) {
+function trackLeave(memberId, guildId) {
   const db = loadDB();
   if (!db.leftMembers) db.leftMembers = [];
-  if (!db.leftMembers.includes(memberId)) db.leftMembers.push(memberId);
+  const key = leftKey(memberId, guildId);
+  if (!db.leftMembers.includes(key)) db.leftMembers.push(key);
   saveDB(db);
 }
 
-function wasLeftMember(memberId) {
+function wasLeftMember(memberId, guildId) {
   const db = loadDB();
-  return (db.leftMembers || []).includes(memberId);
+  const key = leftKey(memberId, guildId);
+  return (db.leftMembers || []).includes(key);
 }
 
-function addInvite(discordId, username) {
+function addInvite(discordId, username, guildId) {
   const db = loadDB();
-  const user = getUser(db, discordId, username);
+  const user = getUser(db, discordId, username, guildId);
   user.count += 1;
   user.totalEarned += 1;
   saveDB(db);
   return user;
 }
 
-function getInviteCount(discordId) {
+function getInviteCount(discordId, guildId) {
   const db = loadDB();
-  return db.invites[discordId]?.count || 0;
+  const key = inviteKey(discordId, guildId);
+  return db.invites[key]?.count || 0;
 }
 
-function deductInvites(discordId, amount) {
+function deductInvites(discordId, amount, guildId) {
   const db = loadDB();
-  if (!db.invites[discordId] || db.invites[discordId].count < amount) return false;
-  db.invites[discordId].count -= amount;
+  const key = inviteKey(discordId, guildId);
+  if (!db.invites[key] || db.invites[key].count < amount) return false;
+  db.invites[key].count -= amount;
   saveDB(db);
   return true;
 }
@@ -136,15 +162,20 @@ function getAllStockCounts() {
   return counts;
 }
 
-function getLeaderboard(limit = 10) {
+function getLeaderboard(limit = 10, guildId) {
   const db = loadDB();
+  const prefix = guildId ? `${guildId}_` : null;
   return Object.entries(db.invites)
-    .map(([id, data]) => ({ discordId: id, ...data }))
+    .filter(([key]) => prefix ? key.startsWith(prefix) : !key.includes('_'))
+    .map(([key, data]) => {
+      const discordId = prefix ? key.slice(prefix.length) : key;
+      return { discordId, ...data };
+    })
     .sort((a, b) => b.totalEarned - a.totalEarned)
     .slice(0, limit);
 }
 
-function logJoin(inviterId, inviterUsername, inviteeId, inviteeUsername, code, status) {
+function logJoin(inviterId, inviterUsername, inviteeId, inviteeUsername, code, status, guildId) {
   const db = loadDB();
   if (!db.joinLogs) db.joinLogs = [];
   db.joinLogs.push({
@@ -154,22 +185,29 @@ function logJoin(inviterId, inviterUsername, inviteeId, inviteeUsername, code, s
     inviteeUsername,
     code,
     status,
+    guildId: guildId || null,
     timestamp: new Date().toISOString()
   });
   saveDB(db);
 }
 
-function handleLeaveAndGetInviter(inviteeId) {
+function handleLeaveAndGetInviter(inviteeId, guildId) {
   const db = loadDB();
+  const key = leftKey(inviteeId, guildId);
   if (!db.leftMembers) db.leftMembers = [];
-  if (!db.leftMembers.includes(inviteeId)) db.leftMembers.push(inviteeId);
+  if (!db.leftMembers.includes(key)) db.leftMembers.push(key);
 
   if (!db.joinLogs) db.joinLogs = [];
-  const log = [...db.joinLogs].reverse().find(l => l.inviteeId === inviteeId && l.status === 'VALID');
+  const log = [...db.joinLogs].reverse().find(l =>
+    l.inviteeId === inviteeId &&
+    l.status === 'VALID' &&
+    (guildId ? l.guildId === guildId : true)
+  );
   if (log) {
     log.status = 'LEFT';
-    if (db.invites[log.inviterId] && db.invites[log.inviterId].count > 0) {
-      db.invites[log.inviterId].count -= 1;
+    const invKey = inviteKey(log.inviterId, guildId);
+    if (db.invites[invKey] && db.invites[invKey].count > 0) {
+      db.invites[invKey].count -= 1;
     }
     saveDB(db);
     return log;
@@ -178,22 +216,26 @@ function handleLeaveAndGetInviter(inviteeId) {
   return null;
 }
 
-function getJoinLogs(inviterId) {
+function getJoinLogs(inviterId, guildId) {
   const db = loadDB();
-  return (db.joinLogs || []).filter(l => l.inviterId === inviterId);
+  return (db.joinLogs || []).filter(l =>
+    l.inviterId === inviterId &&
+    (guildId ? l.guildId === guildId : true)
+  );
 }
 
-function setSetting(key, val) {
+function setSetting(key, val, guildId) {
   const db = loadDB();
   if (!db.settings) db.settings = {};
-  db.settings[key] = val;
+  db.settings[settingKey(key, guildId)] = val;
   saveDB(db);
 }
 
-function getSetting(key, defaultVal) {
+function getSetting(key, defaultVal, guildId) {
   const db = loadDB();
   if (!db.settings) return defaultVal;
-  return db.settings[key] !== undefined ? db.settings[key] : defaultVal;
+  const k = settingKey(key, guildId);
+  return db.settings[k] !== undefined ? db.settings[k] : defaultVal;
 }
 
 module.exports = {

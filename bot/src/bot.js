@@ -333,11 +333,11 @@ function checkHealthFromBackend() {
 // ─── GREET & WELCOME TELEMETRY DISPATCHER ───────────────────────────
 async function triggerWelcomeAndGreets(member, inviterUser, inviterInvites) {
   // 1. Permanent Welcome Message
-  const welcomeChannelId = db.getSetting('welcomeChannel');
+  const welcomeChannelId = db.getSetting('welcomeChannel', null, member.guild.id);
   if (welcomeChannelId) {
     const welcomeChannel = member.guild.channels.cache.get(welcomeChannelId) || await member.guild.channels.fetch(welcomeChannelId).catch(() => null);
     if (welcomeChannel) {
-      let rawMsg = db.getSetting('welcomeMessage');
+      let rawMsg = db.getSetting('welcomeMessage', null, member.guild.id);
       if (!rawMsg || typeof rawMsg !== 'string' || !rawMsg.trim()) {
         rawMsg = '<a:emoji_25:1504806993280503810> {user} **Joined;** Invited by **{inviter}** **( {invites} invites )** <a:love:1504576577839829204>';
       }
@@ -354,9 +354,9 @@ async function triggerWelcomeAndGreets(member, inviterUser, inviterInvites) {
   }
 
   // 2. 5-Second Self-Deleting Greet Messages in Multiple Channels
-  const greetChannels = db.getSetting('greetChannels', []);
+  const greetChannels = db.getSetting('greetChannels', [], member.guild.id);
   if (Array.isArray(greetChannels) && greetChannels.length > 0) {
-    let rawGreetMsg = db.getSetting('greetMessage');
+    let rawGreetMsg = db.getSetting('greetMessage', null, member.guild.id);
     if (!rawGreetMsg || typeof rawGreetMsg !== 'string' || !rawGreetMsg.trim()) {
       rawGreetMsg = '⚡ Welcome {user}! You were invited by {inviter}.';
     }
@@ -382,7 +382,7 @@ async function triggerWelcomeAndGreets(member, inviterUser, inviterInvites) {
 }
 
 function getPaymentChannel(guild) {
-  const configuredId = db.getSetting('paymentChannelId');
+  const configuredId = db.getSetting('paymentChannelId', null, guild.id);
   if (configuredId) {
     const channel = guild.channels.cache.get(configuredId);
     if (channel) return channel;
@@ -555,6 +555,9 @@ const commands = [
     .addStringOption(opt => opt.setName('message_id').setDescription('ID of the message').setRequired(true))
     .addStringOption(opt => opt.setName('content').setDescription('New text content').setRequired(true))
     .addChannelOption(opt => opt.setName('channel').setDescription('Channel containing the message (optional)').setRequired(false)),
+  new SlashCommandBuilder().setName('sendeventjson')
+    .setDescription('Post a custom JSON component payload directly to this channel (Admin only)')
+    .addStringOption(opt => opt.setName('json').setDescription('Raw V2 JSON component string').setRequired(true)),
 ].map(cmd => cmd.toJSON());
 
 // ─── BOT CLIENT ────────────────────────────────────────────────────
@@ -876,7 +879,7 @@ client.once('clientReady', onReady);
 // ─── INVITE TRACKER (With logging & telemetry) ────────────────────
 client.on('guildMemberAdd', async (member) => {
   try {
-    const isRejoin = db.wasLeftMember(member.user.id);
+    const isRejoin = db.wasLeftMember(member.user.id, member.guild.id);
     const cached = guildInvites.get(member.guild.id);
     const current = await member.guild.invites.fetch();
 
@@ -896,18 +899,18 @@ client.on('guildMemberAdd', async (member) => {
 
     if (inviterUser) {
       if (inviterUser.id === member.user.id) {
-        db.addFakeInvite(inviterUser.id, inviterUser.username);
-        db.logJoin(inviterUser.id, inviterUser.username, member.user.id, member.user.username, usedInviteCode, 'FAKE');
+        db.addFakeInvite(inviterUser.id, inviterUser.username, member.guild.id);
+        db.logJoin(inviterUser.id, inviterUser.username, member.user.id, member.user.username, usedInviteCode, 'FAKE', member.guild.id);
         console.log(`[FAKE] @${inviterUser.username} self-invited (fake +1)`);
-        inviterInvites = db.getInviteCount(inviterUser.id);
+        inviterInvites = db.getInviteCount(inviterUser.id, member.guild.id);
       } else if (isRejoin) {
-        db.addRejoinInvite(inviterUser.id, inviterUser.username);
-        db.logJoin(inviterUser.id, inviterUser.username, member.user.id, member.user.username, usedInviteCode, 'REJOIN');
+        db.addRejoinInvite(inviterUser.id, inviterUser.username, member.guild.id);
+        db.logJoin(inviterUser.id, inviterUser.username, member.user.id, member.user.username, usedInviteCode, 'REJOIN', member.guild.id);
         console.log(`[REJOIN] @${member.user.username} rejoined (inviter: @${inviterUser.username})`);
-        inviterInvites = db.getInviteCount(inviterUser.id);
+        inviterInvites = db.getInviteCount(inviterUser.id, member.guild.id);
       } else {
-        const userData = db.addInvite(inviterUser.id, inviterUser.username);
-        db.logJoin(inviterUser.id, inviterUser.username, member.user.id, member.user.username, usedInviteCode, 'VALID');
+        const userData = db.addInvite(inviterUser.id, inviterUser.username, member.guild.id);
+        db.logJoin(inviterUser.id, inviterUser.username, member.user.id, member.user.username, usedInviteCode, 'VALID', member.guild.id);
         console.log(`[INVITE] @${inviterUser.username} gained +1 invite (total: ${userData.count})`);
         inviterInvites = userData.count;
       }
@@ -925,11 +928,11 @@ client.on('guildMemberAdd', async (member) => {
 // ─── MEMBER LEAVE TRACKER ──────────────────────────────────────────
 client.on('guildMemberRemove', async (member) => {
   try {
-    const leaveLog = db.handleLeaveAndGetInviter(member.user.id);
+    const leaveLog = db.handleLeaveAndGetInviter(member.user.id, member.guild.id);
     if (leaveLog) {
       console.log(`[LEAVE] @${member.user.username} left the server. Deducted 1 invite from inviter @${leaveLog.inviterUsername}`);
     } else {
-      db.trackLeave(member.user.id);
+      db.trackLeave(member.user.id, member.guild.id);
       console.log(`[LEAVE] @${member.user.username} left the server (no inviter found)`);
     }
   } catch (err) {
@@ -977,36 +980,36 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
       
-      const welcomeChannelId = db.getSetting('welcomeChannel') || interaction.channel.id;
-      let greetChannels = db.getSetting('greetChannels', []);
+      const welcomeChannelId = db.getSetting('welcomeChannel', null, interaction.guild.id) || interaction.channel.id;
+      let greetChannels = db.getSetting('greetChannels', [], interaction.guild.id);
       if (!Array.isArray(greetChannels) || greetChannels.length === 0) {
         greetChannels = [interaction.channel.id]; // fallback to current channel for testing
       }
       
-      const mockInvites = db.getInviteCount(interaction.user.id);
+      const mockInvites = db.getInviteCount(interaction.user.id, interaction.guild.id);
       await interaction.reply({ content: '🧪 **Simulating join event...** Dispatches firing now inside channels!', flags: MessageFlags.Ephemeral });
       
       // Temporary override for testing
-      const originalWelcomeId = db.getSetting('welcomeChannel');
-      const originalGreetChannels = db.getSetting('greetChannels');
+      const originalWelcomeId = db.getSetting('welcomeChannel', null, interaction.guild.id);
+      const originalGreetChannels = db.getSetting('greetChannels', null, interaction.guild.id);
       
-      db.setSetting('welcomeChannel', welcomeChannelId);
-      db.setSetting('greetChannels', greetChannels);
+      db.setSetting('welcomeChannel', welcomeChannelId, interaction.guild.id);
+      db.setSetting('greetChannels', greetChannels, interaction.guild.id);
       
       try {
         await triggerWelcomeAndGreets(interaction.member, client.user, mockInvites);
       } finally {
         // Restore original configuration immediately
-        if (originalWelcomeId) db.setSetting('welcomeChannel', originalWelcomeId);
+        if (originalWelcomeId) db.setSetting('welcomeChannel', originalWelcomeId, interaction.guild.id);
         else {
           const dbData = db.loadDB();
-          delete dbData.settings.welcomeChannel;
+          delete dbData.settings[`${interaction.guild.id}_welcomeChannel`];
           db.saveDB(dbData);
         }
-        if (originalGreetChannels) db.setSetting('greetChannels', originalGreetChannels);
+        if (originalGreetChannels) db.setSetting('greetChannels', originalGreetChannels, interaction.guild.id);
         else {
           const dbData = db.loadDB();
-          delete dbData.settings.greetChannels;
+          delete dbData.settings[`${interaction.guild.id}_greetChannels`];
           db.saveDB(dbData);
         }
       }
@@ -1165,7 +1168,7 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
       const msg = interaction.options.getString('message');
-      db.setSetting('welcomeMessage', msg);
+      db.setSetting('welcomeMessage', msg, interaction.guild.id);
       return interaction.reply({ content: `✅ Custom welcome message saved successfully:\n\`\`\`\n${msg}\n\`\`\``, flags: MessageFlags.Ephemeral });
     }
 
@@ -1175,7 +1178,7 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
       const channel = interaction.options.getChannel('channel');
-      db.setSetting('welcomeChannel', channel.id);
+      db.setSetting('welcomeChannel', channel.id, interaction.guild.id);
       return interaction.reply({ content: `✅ Welcome message target channel updated to: ${channel}!`, flags: MessageFlags.Ephemeral });
     }
 
@@ -1185,7 +1188,7 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
       const msg = interaction.options.getString('message');
-      db.setSetting('greetMessage', msg);
+      db.setSetting('greetMessage', msg, interaction.guild.id);
       return interaction.reply({ content: `✅ Custom 5-second greet message saved successfully:\n\`\`\`\n${msg}\n\`\`\``, flags: MessageFlags.Ephemeral });
     }
 
@@ -1198,7 +1201,7 @@ client.on('interactionCreate', async (interaction) => {
       const action = interaction.options.getString('action');
       const channel = interaction.options.getChannel('channel');
       
-      let list = db.getSetting('greetChannels', []);
+      let list = db.getSetting('greetChannels', [], interaction.guild.id);
       if (!Array.isArray(list)) list = [];
       
       if (action === 'add') {
@@ -1209,7 +1212,7 @@ client.on('interactionCreate', async (interaction) => {
           return interaction.reply({ content: `❌ ${channel} is already in the greet channels list.`, flags: MessageFlags.Ephemeral });
         }
         list.push(channel.id);
-        db.setSetting('greetChannels', list);
+        db.setSetting('greetChannels', list, interaction.guild.id);
         return interaction.reply({ content: `✅ Added ${channel} to greet channels list! Total channels: **${list.length}**`, flags: MessageFlags.Ephemeral });
       }
       
@@ -1221,7 +1224,7 @@ client.on('interactionCreate', async (interaction) => {
           return interaction.reply({ content: `❌ ${channel} is not in the greet channels list.`, flags: MessageFlags.Ephemeral });
         }
         list = list.filter(id => id !== channel.id);
-        db.setSetting('greetChannels', list);
+        db.setSetting('greetChannels', list, interaction.guild.id);
         return interaction.reply({ content: `✅ Removed ${channel} from greet channels list! Remaining: **${list.length}**`, flags: MessageFlags.Ephemeral });
       }
       
@@ -1244,8 +1247,8 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
       const enabled = interaction.options.getBoolean('enabled');
-      db.setSetting('event1invite', enabled);
-      if (enabled) db.setSetting('event2invite', false); // disable conflicting event
+      db.setSetting('event1invite', enabled, interaction.guild.id);
+      if (enabled) db.setSetting('event2invite', false, interaction.guild.id); // disable conflicting event
       return interaction.reply({ content: `✅ **1-Invite Special Event** has been **${enabled ? 'ENABLED ⚡ (All rewards cost 1 invite & no 30s timeouts)' : 'DISABLED ❌'}**!`, flags: MessageFlags.Ephemeral });
     }
 
@@ -1255,8 +1258,8 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
       }
       const enabled = interaction.options.getBoolean('enabled');
-      db.setSetting('event2invite', enabled);
-      if (enabled) db.setSetting('event1invite', false); // disable conflicting event
+      db.setSetting('event2invite', enabled, interaction.guild.id);
+      if (enabled) db.setSetting('event1invite', false, interaction.guild.id); // disable conflicting event
       return interaction.reply({ content: `✅ **2-Invite Special Event** has been **${enabled ? 'ENABLED ⚡ (All rewards cost 2 invites)' : 'DISABLED ❌'}**!`, flags: MessageFlags.Ephemeral });
     }
 
@@ -1264,9 +1267,9 @@ client.on('interactionCreate', async (interaction) => {
 
     // /invites
     if (commandName === 'invites') {
-      const count = db.getInviteCount(interaction.user.id);
-      const is1Inv = db.getSetting('event1invite', false);
-      const is2Inv = db.getSetting('event2invite', false);
+      const count = db.getInviteCount(interaction.user.id, interaction.guild.id);
+      const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
+      const is2Inv = db.getSetting('event2invite', false, interaction.guild.id);
       const eventStatus = is1Inv ? ' [⚡ 1-INVITE EVENT ACTIVE]' : (is2Inv ? ' [⚡ 2-INVITE EVENT ACTIVE]' : '');
       const embed = new EmbedBuilder()
         .setColor('#1d4ed8')
@@ -1285,9 +1288,9 @@ client.on('interactionCreate', async (interaction) => {
 
     // /claim
     if (commandName === 'claim') {
-      const count = db.getInviteCount(interaction.user.id);
-      const is1Inv = db.getSetting('event1invite', false);
-      const is2Inv = db.getSetting('event2invite', false);
+      const count = db.getInviteCount(interaction.user.id, interaction.guild.id);
+      const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
+      const is2Inv = db.getSetting('event2invite', false, interaction.guild.id);
       const options = REWARDS.map(r => {
         const cost = is1Inv ? 1 : (is2Inv ? 2 : r.invites);
         return {
@@ -1298,25 +1301,58 @@ client.on('interactionCreate', async (interaction) => {
         };
       });
 
-      const row = new ActionRowBuilder().addComponents(
-        new StringSelectMenuBuilder()
-          .setCustomId('claim_reward_direct')
-          .setPlaceholder('🎁 Select a reward to claim...')
-          .addOptions(options)
-      );
-
-      const embed = new EmbedBuilder()
-        .setColor('#1d4ed8')
-        .setTitle('🎁 Claim Your Reward')
-        .setDescription(`Your Invites: **${count}**\n\nSelect a reward below. Invites will be deducted on claim.`)
-        .setFooter({ text: 'RIWAAYAT Reward System' });
-
-      return interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
+      try {
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        await rest.post(
+          Routes.interactionCallback(interaction.id, interaction.token),
+          {
+            body: {
+              type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+              data: {
+                flags: 32768 | 64, // IS_COMPONENTS_V2 & EPHEMERAL
+                components: [
+                  {
+                    type: 17,
+                    components: [
+                      {
+                        type: 10,
+                        content: "# 🎁 CLAIM YOUR REWARD"
+                      },
+                      { type: 14, spacing: 2 },
+                      {
+                        type: 10,
+                        content: `Your Invites: **${count}**\n\nSelect a reward below. Invites will be deducted on claim.`
+                      },
+                      { type: 14, spacing: 2 },
+                      {
+                        type: 1,
+                        components: [
+                          {
+                            type: 3,
+                            custom_id: 'claim_reward_direct',
+                            placeholder: '🎁 Select a reward to claim...',
+                            min_values: 1,
+                            max_values: 1,
+                            options: options
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        );
+        return;
+      } catch (err) {
+        console.error('[CLAIM_V2_ERROR]', err.message);
+      }
     }
 
     // /leaderboard
     if (commandName === 'leaderboard') {
-      const top = db.getLeaderboard(10);
+      const top = db.getLeaderboard(10, interaction.guild.id);
       const desc = top.length === 0 ? 'No invites tracked yet!' :
         top.map((u, i) => {
           const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `**#${i + 1}**`;
@@ -1355,8 +1391,8 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       const targetUser = interaction.options.getUser('user');
-      const stats = db.getUserStats(targetUser.id);
-      const logs = db.getJoinLogs(targetUser.id);
+      const stats = db.getUserStats(targetUser.id, interaction.guild.id);
+      const logs = db.getJoinLogs(targetUser.id, interaction.guild.id);
 
       const logLines = logs.length === 0 ? 'No join logs recorded for this user.' :
         logs.map(l => {
@@ -1380,6 +1416,37 @@ client.on('interactionCreate', async (interaction) => {
         .setFooter({ text: 'RIWAAYAT Audit Logs' });
 
       return interaction.reply({ embeds: [embed] });
+    }
+
+    // /sendeventjson
+    if (commandName === 'sendeventjson') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
+      }
+
+      const jsonStr = interaction.options.getString('json');
+      let payload;
+      try {
+        payload = JSON.parse(jsonStr);
+      } catch (err) {
+        return interaction.reply({ content: `❌ **Invalid JSON syntax**: ${err.message}`, flags: MessageFlags.Ephemeral });
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      try {
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        if (payload.components && payload.flags === undefined) {
+          payload.flags = 32768; // IS_COMPONENTS_V2
+        }
+        await rest.post(`/channels/${interaction.channel.id}/messages`, {
+          body: payload
+        });
+        return interaction.editReply({ content: '🚀 **V2 Event JSON successfully sent to this channel!**' });
+      } catch (err) {
+        console.error('[SENDEVENTJSON_ERROR]', err.message);
+        return interaction.editReply({ content: `❌ **Failed to send event message**: ${err.message}` });
+      }
     }
 
     // /editmessage
@@ -1950,7 +2017,7 @@ client.on('interactionCreate', async (interaction) => {
       const targetUser = interaction.options.getUser('user');
       const amount = interaction.options.getInteger('amount');
       const dbData = db.loadDB();
-      const user = db.getUser(dbData, targetUser.id, targetUser.username);
+      const user = db.getUser(dbData, targetUser.id, targetUser.username, interaction.guild.id);
       user.count += amount;
       user.totalEarned += amount;
       db.saveDB(dbData);
@@ -1965,7 +2032,7 @@ client.on('interactionCreate', async (interaction) => {
       const targetUser = interaction.options.getUser('user');
       const amount = interaction.options.getInteger('amount');
       const dbData = db.loadDB();
-      const user = db.getUser(dbData, targetUser.id, targetUser.username);
+      const user = db.getUser(dbData, targetUser.id, targetUser.username, interaction.guild.id);
       if (user.count < amount) {
         return interaction.reply({ content: `❌ **@${targetUser.username}** only has **${user.count}** invites. Cannot remove **${amount}**.`, flags: MessageFlags.Ephemeral });
       }
@@ -3405,7 +3472,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
     // 🔍 Check Invites Button from Event Panel
     if (interaction.customId === 'p_303796426524069889') {
-      const count = db.getInviteCount(interaction.user.id);
+      const count = db.getInviteCount(interaction.user.id, interaction.guild.id);
       try {
         const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
         await rest.post(
@@ -3507,29 +3574,53 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         // Inform user that their ticket is created
         await interaction.editReply({ content: `✅ Ticket created: ${ticketChannel}` });
 
-        // Step 1: Send a clean Welcome message
-        const welcomeEmbed = new EmbedBuilder()
-          .setColor('#2b2d31')
-          .setTitle('<a:Event:1504576267788357742> RIWAAYAT — Welcome!')
-          .setDescription(`<a:nyt_zwelcome:1504591019436544010> Hey **${interaction.user.username}**!\nWe are glad you are here.\n\n*Your invite balance is being verified automatically. Please select an option below if you wish to view detailed logs.*`);
-
-        const actionRow = new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId('expand_invites').setLabel('Expand Logs').setStyle(ButtonStyle.Secondary)
-        );
-
-        await ticketChannel.send({
-          content: `👋 Hey ${interaction.user}! Welcome to your claim ticket channel.`,
-          embeds: [welcomeEmbed],
-          components: [actionRow]
-        });
+        // Step 1: Send a clean Welcome message using V2 components
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        try {
+          await rest.post(`/channels/${ticketChannel.id}/messages`, {
+            body: {
+              content: `👋 Hey ${interaction.user}! Welcome to your claim ticket channel.`,
+              flags: 32768, // IS_COMPONENTS_V2
+              components: [
+                {
+                  type: 17,
+                  components: [
+                    {
+                      type: 10,
+                      content: "# <a:Event:1504576267788357742> RIWAAYAT — Welcome!"
+                    },
+                    { type: 14, spacing: 2 },
+                    {
+                      type: 10,
+                      content: `<a:nyt_zwelcome:1504591019436544010> Hey **${interaction.user.username}**!\nWe are glad you are here.\n\n*Your invite balance is being verified automatically. Please select an option below if you wish to view detailed logs.*`
+                    },
+                    { type: 14, spacing: 2 },
+                    {
+                      type: 1,
+                      components: [
+                        {
+                          type: 2,
+                          style: 2, // Secondary
+                          custom_id: 'expand_invites',
+                          label: 'Expand Logs'
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          });
+        } catch (welcomeErr) {
+          console.error('[WELCOME_V2_SEND_FAILED]', welcomeErr.message);
+        }
 
         // Step 2: Automate check invites, V2 invites widget, and rewards selection/countdown
-        const stats = db.getUserStats(interaction.user.id);
-        const is1Inv = db.getSetting('event1invite', false);
+        const stats = db.getUserStats(interaction.user.id, interaction.guild.id);
+        const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
         const minRequired = is1Inv ? 1 : 2;
 
         // Post the custom V2 invite count component directly in the channel
-        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
         try {
           await rest.post(`/channels/${ticketChannel.id}/messages`, {
             body: {
@@ -3578,18 +3669,49 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         await new Promise(r => setTimeout(r, 1000));
 
         if (stats.valid < minRequired) {
-          const notEnoughEmbed = new EmbedBuilder()
-            .setColor('#ef4444')
-            .setTitle('❌ Invite Threshold Not Met')
-            .setDescription(`You have **${stats.valid}** valid invite(s).\n\n**Minimum requirement:** **${minRequired} invites**\n\nTicket will **automatically close in 30 seconds** due to insufficient refer balance.`);
-
-          await ticketChannel.send({ embeds: [notEnoughEmbed] });
-
-          const closeRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('stop_ticket_close').setLabel('🛑 Stop Close (Admins)').setStyle(ButtonStyle.Secondary)
-          );
-          await ticketChannel.send({ components: [closeRow] });
+          try {
+            await rest.post(`/channels/${ticketChannel.id}/messages`, {
+              body: {
+                flags: 32768, // IS_COMPONENTS_V2
+                components: [
+                  {
+                    type: 17,
+                    components: [
+                      {
+                        type: 10,
+                        content: "# ❌ Invite Threshold Not Met"
+                      },
+                      { type: 14, spacing: 2 },
+                      {
+                        type: 10,
+                        content: `You have **${stats.valid}** valid invite(s).\n\n**Minimum requirement:** **${minRequired} invites**\n\nTicket will **automatically close in 30 seconds** due to insufficient refer balance.`
+                      },
+                      { type: 14, spacing: 2 },
+                      {
+                        type: 1,
+                        components: [
+                          {
+                            type: 2,
+                            style: 4, // Danger
+                            custom_id: 'close_ticket',
+                            label: '🔒 Close Ticket'
+                          },
+                          {
+                            type: 2,
+                            style: 2, // Secondary
+                            custom_id: 'stop_ticket_close',
+                            label: '🛑 Stop Close (Admins)'
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            });
+          } catch (notEnoughErr) {
+            console.error('[NOT_ENOUGH_V2_SEND_FAILED]', notEnoughErr.message);
+          }
 
           const timeoutId = setTimeout(() => {
             ticketChannel.delete().catch(() => {});
@@ -3656,7 +3778,6 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           });
 
           const btnRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('show_reward_buttons').setLabel('🔘 Show Reward Buttons').setStyle(ButtonStyle.Primary),
             new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger)
           );
           await ticketChannel.send({ components: [btnRow] });
@@ -3669,43 +3790,67 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
     // 📂 Expand Logs Button
     if (interaction.customId === 'expand_invites') {
-      const logs = db.getJoinLogs(interaction.user.id);
-      const stats = db.getUserStats(interaction.user.id);
-      const is1Inv = db.getSetting('event1invite', false);
+      const logs = db.getJoinLogs(interaction.user.id, interaction.guild.id);
+      const stats = db.getUserStats(interaction.user.id, interaction.guild.id);
+      const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
 
       const validList = logs.filter(l => l.status === 'VALID').map(l => `@${l.inviteeUsername} (Link: ${l.code})`).join('\n') || 'None';
 
-      const expandEmbed = new EmbedBuilder()
-        .setColor('#2b2d31')
-        .setTitle('📂 Detailed Referral Telemetry')
-        .setDescription(`**🎟️ Valid Balance:** **${stats.valid}**` + (is1Inv ? ' [⚡ 1-INVITE EVENT ACTIVE]' : '') + `\n**👥 Total Joins:** **${stats.total}**\n**❌ Fake Joins:** **${stats.fake}**\n**🔄 Rejoins:** **${stats.rejoin}**`)
-        .addFields({
-          name: '✅ Active Referrals',
-          value: `\`\`\`\n${validList.slice(0, 1000)}\n\`\`\``
-        })
-        .setFooter({ text: 'Select a filter category below to view specific users.' });
-
-      const filterRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('filter_left').setLabel('Left Users').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('filter_rejoin').setLabel('Rejoined').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('filter_fake').setLabel('Fake Users').setStyle(ButtonStyle.Secondary)
-      );
-
-      const continueRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('continue_claim').setLabel('Continue to Payout').setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger)
-      );
-
-      return interaction.reply({
-        embeds: [expandEmbed],
-        components: [filterRow, continueRow],
-        flags: MessageFlags.Ephemeral
-      });
+      try {
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        await rest.post(
+          Routes.interactionCallback(interaction.id, interaction.token),
+          {
+            body: {
+              type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+              data: {
+                flags: 32768 | 64, // IS_COMPONENTS_V2 & EPHEMERAL
+                components: [
+                  {
+                    type: 17,
+                    components: [
+                      {
+                        type: 10,
+                        content: "# 📂 Detailed Referral Telemetry"
+                      },
+                      { type: 14, spacing: 2 },
+                      {
+                        type: 10,
+                        content: `**🎟️ Valid Balance:** **${stats.valid}**` + (is1Inv ? ' [⚡ 1-INVITE EVENT ACTIVE]' : '') + `\n**👥 Total Joins:** **${stats.total}**\n**❌ Fake Joins:** **${stats.fake}**\n**🔄 Rejoins:** **${stats.rejoin}**\n\n**✅ Active Referrals:**\n\`\`\`\n${validList.slice(0, 1000)}\n\`\`\``
+                      },
+                      { type: 14, spacing: 2 },
+                      {
+                        type: 1,
+                        components: [
+                          { type: 2, style: 2, custom_id: 'filter_left', label: 'Left Users' },
+                          { type: 2, style: 2, custom_id: 'filter_rejoin', label: 'Rejoined' },
+                          { type: 2, style: 2, custom_id: 'filter_fake', label: 'Fake Users' }
+                        ]
+                      },
+                      { type: 14, spacing: 2 },
+                      {
+                        type: 1,
+                        components: [
+                          { type: 2, style: 3, custom_id: 'continue_claim', label: 'Continue to Payout' },
+                          { type: 2, style: 4, custom_id: 'close_ticket', label: '🔒 Close Ticket' }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        );
+        return;
+      } catch (err) {
+        console.error('[EXPAND_V2_ERROR]', err.message);
+      }
     }
 
     // Filter left users
     if (interaction.customId === 'filter_left') {
-      const logs = db.getJoinLogs(interaction.user.id);
+      const logs = db.getJoinLogs(interaction.user.id, interaction.guild.id);
       const list = logs.filter(l => l.status === 'LEFT').map(l => `@${l.inviteeUsername}`).join('\n') || 'None';
       return interaction.reply({
         content: `👥 **Users who left after joining:**\n\`\`\`\n${list.slice(0, 1800)}\n\`\`\``,
@@ -3715,7 +3860,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
     // Filter rejoined users
     if (interaction.customId === 'filter_rejoin') {
-      const logs = db.getJoinLogs(interaction.user.id);
+      const logs = db.getJoinLogs(interaction.user.id, interaction.guild.id);
       const list = logs.filter(l => l.status === 'REJOIN').map(l => `@${l.inviteeUsername}`).join('\n') || 'None';
       return interaction.reply({
         content: `🔄 **Users who rejoined:**\n\`\`\`\n${list.slice(0, 1800)}\n\`\`\``,
@@ -3725,7 +3870,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
     // Filter fake users
     if (interaction.customId === 'filter_fake') {
-      const logs = db.getJoinLogs(interaction.user.id);
+      const logs = db.getJoinLogs(interaction.user.id, interaction.guild.id);
       const list = logs.filter(l => l.status === 'FAKE').map(l => `@${l.inviteeUsername}`).join('\n') || 'None';
       return interaction.reply({
         content: `❌ **Users flagged as fake/self-invites:**\n\`\`\`\n${list.slice(0, 1800)}\n\`\`\``,
@@ -3736,8 +3881,8 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
     // ⚡ Continue Claim Button
     if (interaction.customId === 'continue_claim') {
       await interaction.deferUpdate().catch(() => {});
-      const stats = db.getUserStats(interaction.user.id);
-      const is1Inv = db.getSetting('event1invite', false);
+      const stats = db.getUserStats(interaction.user.id, interaction.guild.id);
+      const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
       const minRequired = is1Inv ? 1 : 2;
 
       // 1. Post the custom V2 invite count component directly in the channel
@@ -3789,18 +3934,49 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       await new Promise(r => setTimeout(r, 1000));
 
       if (stats.valid < minRequired) {
-        const notEnoughEmbed = new EmbedBuilder()
-          .setColor('#ef4444')
-          .setTitle('❌ Invite Threshold Not Met')
-          .setDescription(`You have **${stats.valid}** valid invite(s).\n\n**Minimum requirement:** **${minRequired} invites**\n\nTicket will **automatically close in 30 seconds** due to insufficient refer balance.`);
-
-        await interaction.channel.send({ embeds: [notEnoughEmbed] });
-
-        const closeRow = new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger),
-          new ButtonBuilder().setCustomId('stop_ticket_close').setLabel('🛑 Stop Close (Admins)').setStyle(ButtonStyle.Secondary)
-        );
-        await interaction.channel.send({ components: [closeRow] });
+        try {
+          await rest.post(`/channels/${interaction.channel.id}/messages`, {
+            body: {
+              flags: 32768, // IS_COMPONENTS_V2
+              components: [
+                {
+                  type: 17,
+                  components: [
+                    {
+                      type: 10,
+                      content: "# ❌ Invite Threshold Not Met"
+                    },
+                    { type: 14, spacing: 2 },
+                    {
+                      type: 10,
+                      content: `You have **${stats.valid}** valid invite(s).\n\n**Minimum requirement:** **${minRequired} invites**\n\nTicket will **automatically close in 30 seconds** due to insufficient refer balance.`
+                    },
+                    { type: 14, spacing: 2 },
+                    {
+                      type: 1,
+                      components: [
+                        {
+                          type: 2,
+                          style: 4, // Danger
+                          custom_id: 'close_ticket',
+                          label: '🔒 Close Ticket'
+                        },
+                        {
+                          type: 2,
+                          style: 2, // Secondary
+                          custom_id: 'stop_ticket_close',
+                          label: '🛑 Stop Close (Admins)'
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          });
+        } catch (notEnoughErr) {
+          console.error('[NOT_ENOUGH_V2_SEND_FAILED]', notEnoughErr.message);
+        }
 
         const timeoutId = setTimeout(() => {
           interaction.channel.delete().catch(() => {});
@@ -3867,7 +4043,6 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         });
 
         const btnRow = new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId('show_reward_buttons').setLabel('🔘 Show Reward Buttons').setStyle(ButtonStyle.Primary),
           new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger)
         );
         await interaction.channel.send({ components: [btnRow] });
@@ -3899,72 +4074,51 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       }
     }
 
-    // 🔘 Show Reward Buttons
-    if (interaction.customId === 'show_reward_buttons') {
-      const stats = db.getUserStats(interaction.user.id);
-      const is1Inv = db.getSetting('event1invite', false);
-      const is2Inv = db.getSetting('event2invite', false);
-      
-      const eligible = REWARDS.filter(r => {
-        const cost = is1Inv ? 1 : (is2Inv ? 2 : r.invites);
-        return stats.valid >= cost;
-      });
-
-      if (eligible.length === 0) {
-        return interaction.reply({
-          content: '❌ You do not have enough invites to claim any reward.',
-          flags: MessageFlags.Ephemeral
-        });
-      }
-
-      const rows = [];
-      let currentRow = new ActionRowBuilder();
-      
-      for (let i = 0; i < eligible.length; i++) {
-        const reward = eligible[i];
-        const cost = is1Inv ? 1 : (is2Inv ? 2 : reward.invites);
-        
-        const button = new ButtonBuilder()
-          .setCustomId(`trigger_claim_${reward.id}`)
-          .setLabel(`${reward.label} (${cost} Inv)`)
-          .setStyle(ButtonStyle.Success);
-          
-        if (reward.emojiId) {
-          button.setEmoji({ id: reward.emojiId, animated: reward.animated });
-        }
-        
-        currentRow.addComponents(button);
-        
-        if (currentRow.components.length === 5 || i === eligible.length - 1) {
-          rows.push(currentRow);
-          currentRow = new ActionRowBuilder();
-        }
-      }
-
-      return interaction.reply({
-        content: '🔘 **Select one of your eligible rewards using the buttons below:**',
-        components: rows,
-        flags: MessageFlags.Ephemeral
-      });
-    }
-
     // 🔘 Trigger Claim Button (from button selection fallback)
     if (interaction.customId.startsWith('trigger_claim_')) {
       const rewardId = interaction.customId.replace('trigger_claim_', '');
       const reward = getRewardById(rewardId);
       if (!reward) return interaction.reply({ content: '❌ Invalid reward.', flags: MessageFlags.Ephemeral });
 
-      const invCount = db.getInviteCount(interaction.user.id);
-      const is1Inv = db.getSetting('event1invite', false);
-      const is2Inv = db.getSetting('event2invite', false);
+      const invCount = db.getInviteCount(interaction.user.id, interaction.guild.id);
+      const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
+      const is2Inv = db.getSetting('event2invite', false, interaction.guild.id);
       const cost = is1Inv ? 1 : (is2Inv ? 2 : reward.invites);
 
       if (invCount < cost) {
-        const embed = new EmbedBuilder()
-          .setColor('#ef4444')
-          .setTitle('❌ Not Enough Invites')
-          .setDescription(`You need **${cost}** invites for **${reward.label}**.\nYou currently have **${invCount}** invite(s).\n\n📢 Invite **${cost - invCount}** more friend(s) to claim!`);
-        return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+        try {
+          const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+          await rest.post(
+            Routes.interactionCallback(interaction.id, interaction.token),
+            {
+              body: {
+                type: 4,
+                data: {
+                  flags: 32768 | 64, // Ephemeral V2
+                  components: [
+                    {
+                      type: 17,
+                      components: [
+                        {
+                          type: 10,
+                          content: "# ❌ Not Enough Invites"
+                        },
+                        { type: 14, spacing: 2 },
+                        {
+                          type: 10,
+                          content: `You need **${cost}** invites for **${reward.label}**.\nYou currently have **${invCount}** invite(s).\n\n📢 Invite **${cost - invCount}** more friend(s) to claim!`
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          );
+          return;
+        } catch (err) {
+          console.error('[NOT_ENOUGH_INVITES_V2_ERROR]', err.message);
+        }
       }
 
       if (reward.category === 'MINECRAFT_ACC') {
@@ -3977,26 +4131,57 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         }
       }
 
-      const confirmEmbed = new EmbedBuilder()
-        .setColor('#eab308')
-        .setTitle('⚠️ Claim Confirmation')
-        .setDescription(`You are about to claim:\n\n🎉 **Reward:** **${reward.label}** ${emojiStr(reward)}\n📉 **Cost:** **${cost}** invites\n👥 **Current Balance:** **${invCount}** invites\n\n*Click **Confirm Claim** below to deduct invites and receive your prize. Or click **Change Selection** if you made a mistake!*`);
-
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`confirm_claim_${reward.id}`)
-          .setLabel('Confirm Claim')
-          .setStyle(ButtonStyle.Success),
-        new ButtonBuilder()
-          .setCustomId(`cancel_claim`)
-          .setLabel('❌ Change Selection / Cancel')
-          .setStyle(ButtonStyle.Secondary)
-      );
-
-      return interaction.reply({
-        embeds: [confirmEmbed],
-        components: [row]
-      });
+      try {
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        await rest.post(
+          Routes.interactionCallback(interaction.id, interaction.token),
+          {
+            body: {
+              type: 4,
+              data: {
+                flags: 32768 | 64, // V2 Components & Ephemeral
+                components: [
+                  {
+                    type: 17,
+                    components: [
+                      {
+                        type: 10,
+                        content: "# ⚠️ Claim Confirmation"
+                      },
+                      { type: 14, spacing: 2 },
+                      {
+                        type: 10,
+                        content: `You are about to claim:\n\n🎉 **Reward:** **${reward.label}** ${emojiStr(reward)}\n📉 **Cost:** **${cost}** invites\n👥 **Current Balance:** **${invCount}** invites\n\n*Click **Confirm Claim** below to deduct invites and receive your prize. Or click **Change Selection** if you made a mistake!*`
+                      },
+                      { type: 14, spacing: 2 },
+                      {
+                        type: 1,
+                        components: [
+                          {
+                            type: 2,
+                            style: 3, // Success
+                            custom_id: `confirm_claim_${reward.id}`,
+                            label: 'Confirm Claim'
+                          },
+                          {
+                            type: 2,
+                            style: 2, // Secondary
+                            custom_id: 'cancel_claim',
+                            label: '❌ Change Selection / Cancel'
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        );
+        return;
+      } catch (err) {
+        console.error('[CONFIRM_CLAIM_V2_ERROR]', err.message);
+      }
     }
 
     // ❌ Cancel Claim / Change Selection Button
@@ -4014,9 +4199,9 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       const reward = getRewardById(rewardId);
       if (!reward) return interaction.reply({ content: '❌ Invalid reward selection.', flags: MessageFlags.Ephemeral });
 
-      const invCount = db.getInviteCount(interaction.user.id);
-      const is1Inv = db.getSetting('event1invite', false);
-      const is2Inv = db.getSetting('event2invite', false);
+      const invCount = db.getInviteCount(interaction.user.id, interaction.guild.id);
+      const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
+      const is2Inv = db.getSetting('event2invite', false, interaction.guild.id);
       const cost = is1Inv ? 1 : (is2Inv ? 2 : reward.invites);
 
       if (invCount < cost) {
@@ -4039,7 +4224,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       }
 
       // Deduct invites
-      const deducted = db.deductInvites(interaction.user.id, cost);
+      const deducted = db.deductInvites(interaction.user.id, cost, interaction.guild.id);
       if (!deducted) {
         return interaction.reply({ content: '❌ Failed to process invite deduction. Try again.', flags: MessageFlags.Ephemeral });
       }
@@ -4051,7 +4236,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         if (!code) {
           // Refund invites if stock claim somehow failed last second
           const dbData = db.loadDB();
-          const user = db.getUser(dbData, interaction.user.id);
+          const user = db.getUser(dbData, interaction.user.id, null, interaction.guild.id);
           user.count += cost;
           db.saveDB(dbData);
           return interaction.reply({
@@ -4143,7 +4328,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       };
 
       const giftInfo = GIFT_MAPPINGS[giftVal];
-      const invites = db.getInviteCount(interaction.user.id);
+      const invites = db.getInviteCount(interaction.user.id, interaction.guild.id);
       const requiredInvites = 2;
 
       const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
@@ -4152,7 +4337,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         // ── SUCCESS FLOW ──
 
         // Deduct invites
-        const deducted = db.deductInvites(interaction.user.id, requiredInvites);
+        const deducted = db.deductInvites(interaction.user.id, requiredInvites, interaction.guild.id);
         if (!deducted) {
           return interaction.editReply({ content: '❌ Failed to process invite deduction. Please try again.' });
         }
@@ -4367,17 +4552,45 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       const reward = getRewardById(rewardId);
       if (!reward) return interaction.reply({ content: '❌ Invalid reward.', flags: MessageFlags.Ephemeral });
 
-      const invCount = db.getInviteCount(interaction.user.id);
-      const is1Inv = db.getSetting('event1invite', false);
-      const is2Inv = db.getSetting('event2invite', false);
+      const invCount = db.getInviteCount(interaction.user.id, interaction.guild.id);
+      const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
+      const is2Inv = db.getSetting('event2invite', false, interaction.guild.id);
       const cost = is1Inv ? 1 : (is2Inv ? 2 : reward.invites);
 
       if (invCount < cost) {
-        const embed = new EmbedBuilder()
-          .setColor('#ef4444')
-          .setTitle('❌ Not Enough Invites')
-          .setDescription(`You need **${cost}** invites for **${reward.label}**.\nYou currently have **${invCount}** invite(s).\n\n📢 Invite **${cost - invCount}** more friend(s) to claim!`);
-        return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+        try {
+          const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+          await rest.post(
+            Routes.interactionCallback(interaction.id, interaction.token),
+            {
+              body: {
+                type: 4,
+                data: {
+                  flags: 32768 | 64, // Ephemeral V2
+                  components: [
+                    {
+                      type: 17,
+                      components: [
+                        {
+                          type: 10,
+                          content: "# ❌ Not Enough Invites"
+                        },
+                        { type: 14, spacing: 2 },
+                        {
+                          type: 10,
+                          content: `You need **${cost}** invites for **${reward.label}**.\nYou currently have **${invCount}** invite(s).\n\n📢 Invite **${cost - invCount}** more friend(s) to claim!`
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          );
+          return;
+        } catch (err) {
+          console.error('[NOT_ENOUGH_INVITES_V2_ERROR]', err.message);
+        }
       }
 
       // Check stock availability (for Minecraft Account rewards)
@@ -4391,27 +4604,57 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         }
       }
 
-      // Send confirmation screen
-      const confirmEmbed = new EmbedBuilder()
-        .setColor('#eab308')
-        .setTitle('⚠️ Claim Confirmation')
-        .setDescription(`You are about to claim:\n\n🎉 **Reward:** **${reward.label}** ${emojiStr(reward)}\n📉 **Cost:** **${cost}** invites\n👥 **Current Balance:** **${invCount}** invites\n\n*Click **Confirm Claim** below to deduct invites and receive your prize. Or click **Change Selection** if you made a mistake!*`);
-
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`confirm_claim_${reward.id}`)
-          .setLabel('Confirm Claim')
-          .setStyle(ButtonStyle.Success),
-        new ButtonBuilder()
-          .setCustomId(`cancel_claim`)
-          .setLabel('❌ Change Selection / Cancel')
-          .setStyle(ButtonStyle.Secondary)
-      );
-
-      return interaction.reply({
-        embeds: [confirmEmbed],
-        components: [row]
-      });
+      try {
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        await rest.post(
+          Routes.interactionCallback(interaction.id, interaction.token),
+          {
+            body: {
+              type: 4,
+              data: {
+                flags: 32768 | 64, // V2 Components & Ephemeral
+                components: [
+                  {
+                    type: 17,
+                    components: [
+                      {
+                        type: 10,
+                        content: "# ⚠️ Claim Confirmation"
+                      },
+                      { type: 14, spacing: 2 },
+                      {
+                        type: 10,
+                        content: `You are about to claim:\n\n🎉 **Reward:** **${reward.label}** ${emojiStr(reward)}\n📉 **Cost:** **${cost}** invites\n👥 **Current Balance:** **${invCount}** invites\n\n*Click **Confirm Claim** below to deduct invites and receive your prize. Or click **Change Selection** if you made a mistake!*`
+                      },
+                      { type: 14, spacing: 2 },
+                      {
+                        type: 1,
+                        components: [
+                          {
+                            type: 2,
+                            style: 3, // Success
+                            custom_id: `confirm_claim_${reward.id}`,
+                            label: 'Confirm Claim'
+                          },
+                          {
+                            type: 2,
+                            style: 2, // Secondary
+                            custom_id: 'cancel_claim',
+                            label: '❌ Change Selection / Cancel'
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        );
+        return;
+      } catch (err) {
+        console.error('[CONFIRM_CLAIM_V2_ERROR]', err.message);
+      }
     }
   }
 
@@ -4731,9 +4974,9 @@ client.on('messageCreate', async (message) => {
 
   // 3. Dropdown Selection Fallback via chat keywords/numbers (ONLY if they haven't claimed yet)
   if (!hasClaimed) {
-    const stats = db.getUserStats(message.author.id);
-    const is1Inv = db.getSetting('event1invite', false);
-    const is2Inv = db.getSetting('event2invite', false);
+    const stats = db.getUserStats(message.author.id, message.guild.id);
+    const is1Inv = db.getSetting('event1invite', false, message.guild.id);
+    const is2Inv = db.getSetting('event2invite', false, message.guild.id);
     
     const eligible = REWARDS.filter(r => {
       const cost = is1Inv ? 1 : (is2Inv ? 2 : r.invites);
@@ -4776,27 +5019,52 @@ client.on('messageCreate', async (message) => {
           }
         }
 
-        const confirmEmbed = new EmbedBuilder()
-          .setColor('#eab308')
-          .setTitle('⚠️ Claim Confirmation')
-          .setDescription(`You are about to claim:\n\n🎉 **Reward:** **${matchedReward.label}** ${emojiStr(matchedReward)}\n📉 **Cost:** **${cost}** invites\n👥 **Current Balance:** **${invCount}** invites\n\n*Click **Confirm Claim** below to deduct invites and receive your prize. Or click **Change Selection** if you made a mistake!*`);
-
-        const row = new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setCustomId(`confirm_claim_${matchedReward.id}`)
-            .setLabel('Confirm Claim')
-            .setStyle(ButtonStyle.Success),
-          new ButtonBuilder()
-            .setCustomId(`cancel_claim`)
-            .setLabel('❌ Change Selection / Cancel')
-            .setStyle(ButtonStyle.Secondary)
-        );
-
-        return message.reply({
-          content: `🎯 **Auto-detected Reward Match!** You selected: **${matchedReward.label}**`,
-          embeds: [confirmEmbed],
-          components: [row]
-        });
+        try {
+          const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+          await rest.post(`/channels/${message.channel.id}/messages`, {
+            body: {
+              content: `🎯 **Auto-detected Reward Match!** You selected: **${matchedReward.label}**`,
+              flags: 32768, // IS_COMPONENTS_V2
+              components: [
+                {
+                  type: 17,
+                  components: [
+                    {
+                      type: 10,
+                      content: "# ⚠️ Claim Confirmation"
+                    },
+                    { type: 14, spacing: 2 },
+                    {
+                      type: 10,
+                      content: `You are about to claim:\n\n🎉 **Reward:** **${matchedReward.label}** ${emojiStr(matchedReward)}\n📉 **Cost:** **${cost}** invites\n👥 **Current Balance:** **${invCount}** invites\n\n*Click **Confirm Claim** below to deduct invites and receive your prize. Or click **Change Selection** if you made a mistake!*`
+                    },
+                    { type: 14, spacing: 2 },
+                    {
+                      type: 1,
+                      components: [
+                        {
+                          type: 2,
+                          style: 3, // Success
+                          custom_id: `confirm_claim_${matchedReward.id}`,
+                          label: 'Confirm Claim'
+                        },
+                        {
+                          type: 2,
+                          style: 2, // Secondary
+                          custom_id: 'cancel_claim',
+                          label: '❌ Change Selection / Cancel'
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          });
+          return;
+        } catch (err) {
+          console.error('[AUTO_DETECT_CONFIRM_V2_ERROR]', err.message);
+        }
       }
     }
     // If they typed something else but haven't claimed, do not process feedback or escalation
