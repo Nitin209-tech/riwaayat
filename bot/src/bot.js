@@ -3658,7 +3658,8 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
       try {
         // Parent category checks (Max 50 channels limit check)
-        const parentCategory = interaction.guild.channels.cache.get('1485628775277269092');
+        const catId = interaction.guild.id === '1236706368904233082' ? '1507852451129331842' : '1485628775277269092';
+        const parentCategory = interaction.guild.channels.cache.get(catId);
         let parentId = null;
         if (parentCategory && parentCategory.type === ChannelType.GuildCategory) {
           const childCount = interaction.guild.channels.cache.filter(c => c.parentId === parentCategory.id).size;
