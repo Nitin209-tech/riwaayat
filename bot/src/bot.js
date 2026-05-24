@@ -29,6 +29,13 @@ const pool = new Pool({
   }
 });
 
+function getComponentImage(guildId, defaultUrl) {
+  if (guildId === '1236706368904233082') {
+    return 'https://cdn.discordapp.com/attachments/1508016269507563531/1508057501222961213/ChatGPT_Image_May_24_2026_01_18_34_AM.png?ex=6a14277e&is=6a12d5fe&hm=218ef2222c227533503d34519c066de6e0a00b439a940fa96124d586b4ea4709';
+  }
+  return defaultUrl;
+}
+
 // Global Map to track pending legit/vouch timeouts for ticket channels
 const pendingVouches = new Map();
 
@@ -555,6 +562,8 @@ const commands = [
     .addStringOption(opt => opt.setName('message_id').setDescription('ID of the message').setRequired(true))
     .addStringOption(opt => opt.setName('content').setDescription('New text content').setRequired(true))
     .addChannelOption(opt => opt.setName('channel').setDescription('Channel containing the message (optional)').setRequired(false)),
+  new SlashCommandBuilder().setName('sendnewevent')
+    .setDescription('Post the new Nitro Invite Event layout to this channel (Admin only)'),
   new SlashCommandBuilder().setName('sendeventjson')
     .setDescription('Post a custom JSON component payload directly to this channel (Admin only)')
     .addStringOption(opt => opt.setName('json').setDescription('Raw V2 JSON component string').setRequired(true)),
@@ -1493,7 +1502,7 @@ client.on('interactionCreate', async (interaction) => {
                     items: [
                       {
                         media: {
-                          url: "https://cdn.discordapp.com/attachments/1343602374991806476/1506194924268425256/file_00000000f5a87207a97920ef212fa323.png?ex=6a0d60d5&is=6a0c0f55&hm=52ce26cf5212dc7c511446162d9218f7405d89b6771aae51b8bc9dbd29f598a8"
+                          url: getComponentImage(targetChannel.guild?.id || interaction.guild?.id, "https://cdn.discordapp.com/attachments/1343602374991806476/1506194924268425256/file_00000000f5a87207a97920ef212fa323.png?ex=6a0d60d5&is=6a0c0f55&hm=52ce26cf5212dc7c511446162d9218f7405d89b6771aae51b8bc9dbd29f598a8")
                         }
                       }
                     ]
@@ -1602,7 +1611,7 @@ client.on('interactionCreate', async (interaction) => {
                     items: [
                       {
                         media: {
-                          url: "https://cdn.discordapp.com/attachments/1343602374991806476/1506194924268425256/file_00000000f5a87207a97920ef212fa323.png?ex=6a0d60d5&is=6a0c0f55&hm=52ce26cf5212dc7c511446162d9218f7405d89b6771aae51b8bc9dbd29f598a8"
+                          url: getComponentImage(interaction.guild?.id, "https://cdn.discordapp.com/attachments/1343602374991806476/1506194924268425256/file_00000000f5a87207a97920ef212fa323.png?ex=6a0d60d5&is=6a0c0f55&hm=52ce26cf5212dc7c511446162d9218f7405d89b6771aae51b8bc9dbd29f598a8")
                         }
                       }
                     ]
@@ -1674,6 +1683,105 @@ client.on('interactionCreate', async (interaction) => {
       } catch (err) {
         console.error('[SENDEVENT_ERROR]', err.message || err);
         return interaction.editReply({ content: `❌ Failed to post event panel: ${err.message}` });
+      }
+    }
+
+    // /sendnewevent
+    if (commandName === 'sendnewevent') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      try {
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        const guildId = interaction.guild?.id;
+        const newEventImage = getComponentImage(guildId, "https://cdn.discordapp.com/attachments/1508016269507563531/1508057501222961213/ChatGPT_Image_May_24_2026_01_18_34_AM.png?ex=6a14277e&is=6a12d5fe&hm=218ef2222c227533503d34519c066de6e0a00b439a940fa96124d586b4ea4709");
+
+        await rest.post(`/channels/${interaction.channel.id}/messages`, {
+          body: {
+            flags: 32768,
+            components: [
+              {
+                type: 17,
+                components: [
+                  {
+                    type: 10,
+                    content: "# NITRO INVITE EVENT\n<:emoji_2:1507845807255191633>  This is a **LIMITED-TIME** event until in <t:1780308900:R>"
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 9,
+                    components: [
+                      {
+                        type: 10,
+                        content: "<a:emoji_1:1507842773246808064><@&1507853078840348722> = **NITRO GIFTLINK [$29.99]** <a:emoji_4:1507853367936942180>\n<a:emoji_1:1507842773246808064><@&1507852703496278210> = **NITRO GIFTLINK [$99.99]** <a:emoji_4:1507853367936942180>\n\n\n<a:emoji_1:1507842773246808064><@&1507853078840348722> = **FORTNITE V-BUCK [$22.99]** <a:emoji_5:1507853388606607480>\n<a:emoji_1:1507842773246808064><@&1507852703496278210> = **FORTNITE V-BUCK [$49.99]** <a:emoji_5:1507853388606607480>\n\n\n<a:emoji_1:1507842773246808064><@&1507853078840348722> = **ROBLOX GIFTCARD [$50.99]** <:275571robux:1507853641862611055>\n<a:emoji_1:1507842773246808064><@&1507852703496278210> = **ROBLOX GIFTCARD [$100.99]** <:275571robux:1507853641862611055>\n"
+                      }
+                    ],
+                    accessory: {
+                      type: 11,
+                      media: {
+                        url: newEventImage
+                      }
+                    }
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 10,
+                    content: "## NOTICE \n<:emoji_3:1507846011702345929> **DONE INVITING? ** Create <#1507834843126304829> to claim your reward!"
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 1,
+                    components: [
+                      {
+                        type: 2,
+                        style: 5,
+                        label: "Legit?? Check here",
+                        emoji: {
+                          id: "1506199235052175400",
+                          name: "gift",
+                          animated: false
+                        },
+                        url: "https://discord.com/channels/1236706368904233082/1507837879781425164",
+                        custom_id: "p_305651971883274321"
+                      },
+                      {
+                        style: 1,
+                        type: 2,
+                        label: "Check Invites",
+                        emoji: {
+                          id: "1506199270188122242",
+                          name: "verification",
+                          animated: false
+                        },
+                        flow: {
+                          actions: []
+                        },
+                        custom_id: "p_305651991621668946"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        });
+
+        return interaction.editReply({ content: '✅ New Event panel posted successfully!' });
+      } catch (err) {
+        console.error('[SENDNEWEVENT_ERROR]', err.message || err);
+        return interaction.editReply({ content: `❌ Failed to post new event panel: ${err.message}` });
       }
     }
 
@@ -3471,7 +3579,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
     }
 
     // 🔍 Check Invites Button from Event Panel
-    if (interaction.customId === 'p_303796426524069889') {
+    if (interaction.customId === 'p_303796426524069889' || interaction.customId === 'p_305651991621668946') {
       const count = db.getInviteCount(interaction.user.id, interaction.guild.id);
       try {
         const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
@@ -3505,7 +3613,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                         accessory: {
                           type: 11,
                           media: {
-                            url: "https://cdn.discordapp.com/attachments/1343602374991806476/1506201739630481498/file_0000000032e47208b64a8a8e8825a619.png?ex=6a0d672e&is=6a0c15ae&hm=4ae404a77e3532c51935664ee482b5813e4cb8ce6b2b927095899e5724b6beea"
+                            url: getComponentImage(interaction.guild?.id, "https://cdn.discordapp.com/attachments/1343602374991806476/1506201739630481498/file_0000000032e47208b64a8a8e8825a619.png?ex=6a0d672e&is=6a0c15ae&hm=4ae404a77e3532c51935664ee482b5813e4cb8ce6b2b927095899e5724b6beea")
                           }
                         }
                       },
@@ -3648,7 +3756,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                       accessory: {
                         type: 11,
                         media: {
-                          url: "https://cdn.discordapp.com/attachments/1343602374991806476/1506201739630481498/file_0000000032e47208b64a8a8e8825a619.png?ex=6a0d672e&is=6a0c15ae&hm=4ae404a77e3532c51935664ee482b5813e4cb8ce6b2b927095899e5724b6beea"
+                          url: getComponentImage(interaction.guild?.id, "https://cdn.discordapp.com/attachments/1343602374991806476/1506201739630481498/file_0000000032e47208b64a8a8e8825a619.png?ex=6a0d672e&is=6a0c15ae&hm=4ae404a77e3532c51935664ee482b5813e4cb8ce6b2b927095899e5724b6beea")
                         }
                       }
                     },
@@ -3914,7 +4022,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                     accessory: {
                       type: 11,
                       media: {
-                        url: "https://cdn.discordapp.com/attachments/1343602374991806476/1506201739630481498/file_0000000032e47208b64a8a8e8825a619.png?ex=6a0d672e&is=6a0c15ae&hm=4ae404a77e3532c51935664ee482b5813e4cb8ce6b2b927095899e5724b6beea"
+                        url: getComponentImage(interaction.guild?.id, "https://cdn.discordapp.com/attachments/1343602374991806476/1506201739630481498/file_0000000032e47208b64a8a8e8825a619.png?ex=6a0d672e&is=6a0c15ae&hm=4ae404a77e3532c51935664ee482b5813e4cb8ce6b2b927095899e5724b6beea")
                       }
                     }
                   },
