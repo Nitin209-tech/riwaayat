@@ -475,8 +475,8 @@ const commands = [
         { name: '🔥 Fortnite 2500 V-Bucks', value: 'FORTNITE_2500' },
         { name: '🔥 Fortnite 5000 V-Bucks', value: 'FORTNITE_5000' }
       ))
-    .addIntegerOption(opt => opt.setName('count').setDescription('How many codes to generate (1-50)').setRequired(false))
-    .addStringOption(opt => opt.setName('password').setDescription('Access password').setRequired(true)),
+    .addStringOption(opt => opt.setName('password').setDescription('Access password').setRequired(true))
+    .addIntegerOption(opt => opt.setName('count').setDescription('How many codes to generate (1-50)').setRequired(false)),
   new SlashCommandBuilder().setName('addmc')
     .setDescription('Add unlimited Minecraft accounts (Format: email:pass one per line) (Admin only)')
     .addStringOption(opt => opt.setName('accounts').setDescription('Accounts list (email:pass, one per line)').setRequired(true)),
@@ -3896,9 +3896,9 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         );
 
         try {
+          await ticketChannel.send({ content: `👋 Welcome to your ticket channel, ${interaction.user}!` }).catch(() => {});
           await rest.post(`/channels/${ticketChannel.id}/messages`, {
             body: {
-              content: `👋 Welcome to your ticket channel, ${interaction.user}!`,
               flags: 32768, // IS_COMPONENTS_V2
               components: [
                 {
