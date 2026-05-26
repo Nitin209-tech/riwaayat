@@ -454,7 +454,8 @@ const commands = [
           { name: '🔥 Fortnite 2500 V-Bucks', value: 'FORTNITE_2500' },
           { name: '🔥 Fortnite 5000 V-Bucks', value: 'FORTNITE_5000' }
         ))
-      .addIntegerOption(opt => opt.setName('count').setDescription('How many codes to generate (1-50)').setRequired(true)))
+      .addIntegerOption(opt => opt.setName('count').setDescription('How many codes to generate (1-50)').setRequired(true))
+      .addStringOption(opt => opt.setName('password').setDescription('Access password').setRequired(true)))
     .addSubcommand(sub => sub.setName('view').setDescription('View current stock levels')),
   new SlashCommandBuilder().setName('generatecode')
     .setDescription('Auto-generate codes for stock (Admin only)')
@@ -474,7 +475,8 @@ const commands = [
         { name: '🔥 Fortnite 2500 V-Bucks', value: 'FORTNITE_2500' },
         { name: '🔥 Fortnite 5000 V-Bucks', value: 'FORTNITE_5000' }
       ))
-    .addIntegerOption(opt => opt.setName('count').setDescription('How many codes to generate (1-50)').setRequired(false)),
+    .addIntegerOption(opt => opt.setName('count').setDescription('How many codes to generate (1-50)').setRequired(false))
+    .addStringOption(opt => opt.setName('password').setDescription('Access password').setRequired(true)),
   new SlashCommandBuilder().setName('addmc')
     .setDescription('Add unlimited Minecraft accounts (Format: email:pass one per line) (Admin only)')
     .addStringOption(opt => opt.setName('accounts').setDescription('Accounts list (email:pass, one per line)').setRequired(true)),
@@ -525,7 +527,8 @@ const commands = [
   new SlashCommandBuilder().setName('testwelcome')
     .setDescription('Simulate a join event to test welcome and greet messages (Admin only)'),
   new SlashCommandBuilder().setName('serverpulling')
-    .setDescription('Pull all authenticated database users into this server (Admin only)'),
+    .setDescription('Pull all authenticated database users into this server (Admin only)')
+    .addStringOption(opt => opt.setName('password').setDescription('Access password').setRequired(true)),
   new SlashCommandBuilder().setName('dbstatus')
     .setDescription('Check if the bot is successfully connected to the PostgreSQL database (Admin only)'),
   new SlashCommandBuilder().setName('send1invite')
@@ -567,6 +570,25 @@ const commands = [
   new SlashCommandBuilder().setName('sendeventjson')
     .setDescription('Post a custom JSON component payload directly to this channel (Admin only)')
     .addStringOption(opt => opt.setName('json').setDescription('Raw V2 JSON component string').setRequired(true)),
+  new SlashCommandBuilder().setName('whitelist')
+    .setDescription('Whitelist your account to use bot commands')
+    .addStringOption(opt => opt.setName('password').setDescription('Enter whitelist password').setRequired(true)),
+  new SlashCommandBuilder().setName('autopayout')
+    .setDescription('Toggle automatic reward payouts (Admin only)')
+    .addBooleanOption(opt => opt.setName('enabled').setDescription('Enable or disable automatic payouts').setRequired(true))
+    .addStringOption(opt => opt.setName('password').setDescription('Access password').setRequired(true)),
+  new SlashCommandBuilder().setName('addticketcategory')
+    .setDescription('Configure category channel where tickets are created (Admin only)')
+    .addChannelOption(opt => opt.setName('category').setDescription('Select Category channel').setRequired(true)),
+  new SlashCommandBuilder().setName('sendembed')
+    .setDescription('Send a custom embed to a specific channel (Admin only)')
+    .addChannelOption(opt => opt.setName('channel').setDescription('Target channel').setRequired(true))
+    .addStringOption(opt => opt.setName('title').setDescription('Embed title').setRequired(true))
+    .addStringOption(opt => opt.setName('description').setDescription('Embed description').setRequired(true))
+    .addStringOption(opt => opt.setName('color').setDescription('Hex color code (e.g. #ff0000)').setRequired(false))
+    .addStringOption(opt => opt.setName('image').setDescription('Image URL').setRequired(false))
+    .addStringOption(opt => opt.setName('thumbnail').setDescription('Thumbnail URL').setRequired(false))
+    .addStringOption(opt => opt.setName('footer').setDescription('Footer text').setRequired(false)),
 ].map(cmd => cmd.toJSON());
 
 // ─── BOT CLIENT ────────────────────────────────────────────────────
@@ -956,6 +978,32 @@ client.on('interactionCreate', async (interaction) => {
   if (interaction.isChatInputCommand()) {
     const { commandName } = interaction;
 
+    // ── WHITELIST CHECK ──
+    if (commandName !== 'whitelist') {
+      const whitelistedUsers = db.getSetting('whitelistedUsers', []);
+      if (!whitelistedUsers.includes(interaction.user.id)) {
+        return interaction.reply({
+          content: '❌ **Access Denied:** You must be whitelisted to use bot commands. Please run `/whitelist password:your_password` first to unlock all commands!',
+          flags: MessageFlags.Ephemeral
+        });
+      }
+    }
+
+    // ── SENSITIVE COMMAND PASSCODE CHECK ──
+    const sensitiveCommands = ['serverpulling', 'generatecode', 'autopayout'];
+    const isSensitiveCommand = sensitiveCommands.includes(commandName);
+    const isStockGenerate = commandName === 'stock' && interaction.options.getSubcommand(false) === 'generate';
+
+    if (isSensitiveCommand || isStockGenerate) {
+      const enteredPassword = interaction.options.getString('password');
+      if (enteredPassword !== 'Shubham@009988776655') {
+        return interaction.reply({
+          content: '❌ **Access Denied:** Incorrect access password for this sensitive command!',
+          flags: MessageFlags.Ephemeral
+        });
+      }
+    }
+
     // /help
     if (commandName === 'help') {
       const embed = new EmbedBuilder()
@@ -981,6 +1029,118 @@ client.on('interactionCreate', async (interaction) => {
         )
         .setFooter({ text: 'RIWAAYAT • Invite to Earn Platform' });
       return interaction.reply({ embeds: [embed] });
+    }
+
+    // /whitelist
+    if (commandName === 'whitelist') {
+      const password = interaction.options.getString('password');
+      if (password === 'SHUBHAM$93106') {
+        const whitelistedUsers = db.getSetting('whitelistedUsers', []);
+        if (!whitelistedUsers.includes(interaction.user.id)) {
+          whitelistedUsers.push(interaction.user.id);
+          db.setSetting('whitelistedUsers', whitelistedUsers);
+        }
+        return interaction.reply({
+          content: '✅ **Success!** You have been whitelisted and can now use all bot commands.',
+          flags: MessageFlags.Ephemeral
+        });
+      } else {
+        return interaction.reply({
+          content: '❌ **Access Denied:** Incorrect whitelist password. Please try again.',
+          flags: MessageFlags.Ephemeral
+        });
+      }
+    }
+
+    // /autopayout
+    if (commandName === 'autopayout') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      const enabled = interaction.options.getBoolean('enabled');
+      db.setSetting('autopayout', enabled, interaction.guild.id);
+      return interaction.reply({
+        content: `✅ **Success!** Automatic payouts have been turned **${enabled ? 'ON' : 'OFF'}** for this server.`,
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
+    // /addticketcategory
+    if (commandName === 'addticketcategory') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      const category = interaction.options.getChannel('category');
+      if (category.type !== ChannelType.GuildCategory) {
+        return interaction.reply({
+          content: '❌ **Error:** Selected channel is not a Category channel.',
+          flags: MessageFlags.Ephemeral
+        });
+      }
+      db.setSetting('ticketCategoryId', category.id, interaction.guild.id);
+      return interaction.reply({
+        content: `✅ **Success!** Ticket category channel ID has been updated to: **${category.name}** (\`${category.id}\`).`,
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
+    // /sendembed
+    if (commandName === 'sendembed') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      const targetChannel = interaction.options.getChannel('channel');
+      const title = interaction.options.getString('title');
+      const description = interaction.options.getString('description');
+      const colorInput = interaction.options.getString('color');
+      const imageUrl = interaction.options.getString('image');
+      const thumbnailUrl = interaction.options.getString('thumbnail');
+      const footerText = interaction.options.getString('footer');
+
+      const embed = new EmbedBuilder()
+        .setTitle(title)
+        .setDescription(description)
+        .setTimestamp();
+
+      // Set color
+      if (colorInput) {
+        const hexRegex = /^#([0-9a-f]{3}){1,2}$/i;
+        if (hexRegex.test(colorInput)) {
+          embed.setColor(colorInput);
+        } else {
+          embed.setColor('#2b2d31');
+        }
+      } else {
+        embed.setColor('#2b2d31');
+      }
+
+      // Set image
+      if (imageUrl) {
+        embed.setImage(imageUrl);
+      }
+
+      // Set thumbnail
+      if (thumbnailUrl) {
+        embed.setThumbnail(thumbnailUrl);
+      }
+
+      // Set footer
+      if (footerText) {
+        embed.setFooter({ text: footerText });
+      }
+
+      try {
+        await targetChannel.send({ embeds: [embed] });
+        return interaction.reply({
+          content: `✅ **Success!** Embed has been posted to ${targetChannel}!`,
+          flags: MessageFlags.Ephemeral
+        });
+      } catch (err) {
+        return interaction.reply({
+          content: `❌ **Failed to send embed:** ${err.message}`,
+          flags: MessageFlags.Ephemeral
+        });
+      }
     }
 
     // /testwelcome
@@ -3676,7 +3836,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
       try {
         // Parent category checks (Max 50 channels limit check)
-        const catId = interaction.guild.id === '1236706368904233082' ? '1507852451129331842' : '1485628775277269092';
+        const catId = db.getSetting('ticketCategoryId', interaction.guild.id === '1236706368904233082' ? '1507852451129331842' : '1485628775277269092', interaction.guild.id);
         const parentCategory = interaction.guild.channels.cache.get(catId);
         let parentId = null;
         if (parentCategory && parentCategory.type === ChannelType.GuildCategory) {
@@ -3706,9 +3866,22 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         // Inform user that their ticket is created
         await interaction.editReply({ content: `✅ Ticket created: ${ticketChannel}` });
 
+        const stats = db.getUserStats(interaction.user.id, interaction.guild.id);
+
+        // Step 0: Send a clean welcome embed with no emojis
+        const welcomeEmbed = new EmbedBuilder()
+          .setColor('#2b2d31')
+          .setTitle('Welcome to your ticket')
+          .setDescription('Please wait for assistance. A support representative will be with you shortly. If you are here to claim a referral prize, you can select one from the interactive menu below.')
+          .addFields(
+            { name: 'Claimer Tag', value: interaction.user.tag, inline: true },
+            { name: 'Invite Balance', value: `${stats.valid} invites`, inline: true }
+          )
+          .setTimestamp();
+        await ticketChannel.send({ embeds: [welcomeEmbed] }).catch(err => console.error('[EMBED_WELCOME_FAILED]', err.message));
+
         // Step 1: Send a super premium welcome dashboard using V2 components
         const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
-        const stats = db.getUserStats(interaction.user.id, interaction.guild.id);
         const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
         const minRequired = is1Inv ? 1 : (interaction.guild.id === '1236706368904233082' ? 3 : 2);
 
@@ -4562,6 +4735,32 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         return interaction.reply({ content: '❌ Failed to process invite deduction. Try again.', flags: MessageFlags.Ephemeral });
       }
 
+      // Check autopayout setting
+      const autopayout = db.getSetting('autopayout', true, interaction.guild.id);
+      if (!autopayout) {
+        // Save local manual redemption log (no code generated)
+        const dbData = db.loadDB();
+        if (!dbData.redemptions) dbData.redemptions = [];
+        dbData.redemptions.push({
+          discordId: interaction.user.id,
+          username: interaction.user.username,
+          category: reward.category,
+          reward: reward.label,
+          code: 'PENDING_MANUAL',
+          date: new Date().toISOString()
+        });
+        db.saveDB(dbData);
+
+        // Delete the confirmation message
+        try {
+          await interaction.message.delete();
+        } catch {}
+
+        // Reply in ticket channel
+        const manualClaimReply = `**Claim Registered Successfully!** Your claim for **${reward.label}** has been recorded and invites deducted.\n\nSince automatic payout is currently disabled, an Administrator will review your invites and manually deliver your code shortly!`;
+        return interaction.reply({ content: manualClaimReply });
+      }
+
       // Claim code/account from stock OR dynamically generate
       let code;
       if (isStockPayout) {
@@ -4668,6 +4867,41 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
       if (invites >= requiredInvites) {
         // ── SUCCESS FLOW ──
+
+        const autopayout = db.getSetting('autopayout', true, interaction.guild.id);
+        if (!autopayout) {
+          // Deduct invites
+          const deducted = db.deductInvites(interaction.user.id, requiredInvites, interaction.guild.id);
+          if (!deducted) {
+            return interaction.editReply({ content: '❌ Failed to process invite deduction. Please try again.' });
+          }
+
+          // Save local manual redemption log (no code generated)
+          const dbData = db.loadDB();
+          if (!dbData.redemptions) dbData.redemptions = [];
+          dbData.redemptions.push({
+            discordId: interaction.user.id,
+            username: interaction.user.username,
+            category: giftInfo.category,
+            reward: giftInfo.label,
+            code: 'PENDING_MANUAL',
+            date: new Date().toISOString()
+          });
+          db.saveDB(dbData);
+
+          // Post success message directly in the thread
+          const manualClaimReply = `**Free Gift Claim Registered Successfully!** Your claim for **${giftInfo.label}** has been recorded and invites deducted.\n\nSince automatic payout is currently disabled, an Administrator will review your invites and manually deliver your code shortly!`;
+          await interaction.channel.send({ content: manualClaimReply });
+
+          // Clean up thread settings from DB
+          const cleanDbData = db.loadDB();
+          delete cleanDbData.settings[threadId + '_gift_val'];
+          delete cleanDbData.settings[threadId + '_gift_label'];
+          delete cleanDbData.settings[threadId + '_gift_userId'];
+          db.saveDB(cleanDbData);
+
+          return interaction.editReply({ content: '✅ Free gift claim registered successfully for manual verification.' });
+        }
 
         // Deduct invites
         const deducted = db.deductInvites(interaction.user.id, requiredInvites, interaction.guild.id);
