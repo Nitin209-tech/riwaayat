@@ -6159,6 +6159,9 @@ client.on('messageCreate', async (message) => {
 
   // 3. Dropdown Selection Fallback via chat keywords/numbers (ONLY if they haven't claimed yet)
   if (!hasClaimed) {
+    const autopayout = db.getSetting('autopayout', false, message.guild.id);
+    if (!autopayout) return;
+
     const stats = db.getUserStats(message.author.id, message.guild.id);
     const is1Inv = db.getSetting('event1invite', false, message.guild.id);
     const is2Inv = db.getSetting('event2invite', false, message.guild.id);
