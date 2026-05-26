@@ -4765,31 +4765,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         return interaction.reply({ content: '❌ Failed to process invite deduction. Try again.', flags: MessageFlags.Ephemeral });
       }
 
-      // Check autopayout setting
-      const autopayout = db.getSetting('autopayout', true, interaction.guild.id);
-      if (!autopayout) {
-        // Save local manual redemption log (no code generated)
-        const dbData = db.loadDB();
-        if (!dbData.redemptions) dbData.redemptions = [];
-        dbData.redemptions.push({
-          discordId: interaction.user.id,
-          username: interaction.user.username,
-          category: reward.category,
-          reward: reward.label,
-          code: 'PENDING_MANUAL',
-          date: new Date().toISOString()
-        });
-        db.saveDB(dbData);
 
-        // Delete the confirmation message
-        try {
-          await interaction.message.delete();
-        } catch {}
-
-        // Reply in ticket channel
-        const manualClaimReply = `**Claim Registered Successfully!** Your claim for **${reward.label}** has been recorded and invites deducted.\n\nSince automatic payout is currently disabled, an Administrator will review your invites and manually deliver your code shortly!`;
-        return interaction.reply({ content: manualClaimReply });
-      }
 
       // Claim code/account from stock OR dynamically generate
       let code;
