@@ -3837,13 +3837,6 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
     // 📩 Create Ticket Button
     if (interaction.customId === 'open_ticket') {
-      const autopayout = db.getSetting('autopayout', true, interaction.guild.id);
-      if (!autopayout) {
-        return interaction.reply({
-          content: '❌ **Ticket System Closed:** Reward claims and payouts are currently turned OFF by the administrator.',
-          flags: MessageFlags.Ephemeral
-        });
-      }
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       // Enforce strict 1-ticket limit per user using permission overwrites
@@ -4062,48 +4055,55 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
             rewardLines += lines + '\n\n';
           }
 
-          try {
-            await rest.post(`/channels/${ticketChannel.id}/messages`, {
-              body: {
-                flags: 32768,
-                components: [
-                  {
-                    type: 17,
-                    components: [
-                      {
-                        type: 10,
-                        content: `<a:Event:1504576267788357742> **ELIGIBLE ACTIVE REWARDS**\n\n${rewardLines.trim()}`
-                      },
-                      { type: 14, spacing: 2 },
-                      {
-                        type: 10,
-                        content: `Select your premium reward from the select menu below. Your invite balance will be deducted immediately.`
-                      },
-                      {
-                        type: 1,
-                        components: [
-                          {
-                            type: 3,
-                            custom_id: 'claim_reward_ticket',
-                            placeholder: '🎁 Select your premium prize...',
-                            min_values: 1,
-                            max_values: 1,
-                            options: eligible.map(r => ({
-                              label: r.label,
-                              value: r.id,
-                              description: `${is1Inv ? 1 : r.invites} invites cost`,
-                              emoji: { id: r.emojiId, name: r.emojiName, animated: r.animated }
-                            }))
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            });
-          } catch (rewardErr) {
-            console.error('[REWARDS_V2_SEND_FAILED]', rewardErr.message);
+          const autopayout = db.getSetting('autopayout', true, interaction.guild.id);
+          if (autopayout) {
+            try {
+              await rest.post(`/channels/${ticketChannel.id}/messages`, {
+                body: {
+                  flags: 32768,
+                  components: [
+                    {
+                      type: 17,
+                      components: [
+                        {
+                          type: 10,
+                          content: `<a:Event:1504576267788357742> **ELIGIBLE ACTIVE REWARDS**\n\n${rewardLines.trim()}`
+                        },
+                        { type: 14, spacing: 2 },
+                        {
+                          type: 10,
+                          content: `Select your premium reward from the select menu below. Your invite balance will be deducted immediately.`
+                        },
+                        {
+                          type: 1,
+                          components: [
+                            {
+                              type: 3,
+                              custom_id: 'claim_reward_ticket',
+                              placeholder: '🎁 Select your premium prize...',
+                              min_values: 1,
+                              max_values: 1,
+                              options: eligible.map(r => ({
+                                label: r.label,
+                                value: r.id,
+                                description: `${is1Inv ? 1 : r.invites} invites cost`,
+                                emoji: { id: r.emojiId, name: r.emojiName, animated: r.animated }
+                              }))
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              });
+            } catch (rewardErr) {
+              console.error('[REWARDS_V2_SEND_FAILED]', rewardErr.message);
+            }
+          } else {
+            await ticketChannel.send({
+              content: 'ℹ️ **Automatic reward payouts are currently disabled by the administrator.** A support team representative will assist you manually shortly!'
+            }).catch(() => {});
           }
 
           const btnRow = new ActionRowBuilder().addComponents(
@@ -4500,53 +4500,61 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           rewardLines += lines + '\n\n';
         }
 
-        try {
-          const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
-          await interaction.channel.send({ content: `🎉 **Congratulations! You unlocked the rewards!**` }).catch(() => {});
-          await rest.post(`/channels/${interaction.channel.id}/messages`, {
-            body: {
-              flags: 32768,
-              components: [
-                {
-                  type: 17,
-                  components: [
-                    {
-                      type: 10,
-                      content: `<a:Event:1504576267788357742> **ELIGIBLE ACTIVE REWARDS**\n\n${rewardLines.trim()}`
-                    },
-                    { type: 14, spacing: 2 },
-                    {
-                      type: 10,
-                      content: `Select your premium reward from the select menu below. Your invite balance will be deducted immediately.`
-                    },
-                    {
-                      type: 1,
-                      components: [
-                        {
-                          type: 3,
-                          custom_id: 'claim_reward_ticket',
-                          placeholder: '🎁 Select your premium prize...',
-                          min_values: 1,
-                          max_values: 1,
-                          options: eligible.map(r => ({
-                            label: r.label,
-                            value: r.id,
-                            description: `${is1Inv ? 1 : r.invites} invites cost`,
-                            emoji: { id: r.emojiId, name: r.emojiName, animated: r.animated }
-                          }))
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-          });
+        const autopayout = db.getSetting('autopayout', true, interaction.guild.id);
+        if (autopayout) {
+          try {
+            const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+            await interaction.channel.send({ content: `🎉 **Congratulations! You unlocked the rewards!**` }).catch(() => {});
+            await rest.post(`/channels/${interaction.channel.id}/messages`, {
+              body: {
+                flags: 32768,
+                components: [
+                  {
+                    type: 17,
+                    components: [
+                      {
+                        type: 10,
+                        content: `<a:Event:1504576267788357742> **ELIGIBLE ACTIVE REWARDS**\n\n${rewardLines.trim()}`
+                      },
+                      { type: 14, spacing: 2 },
+                      {
+                        type: 10,
+                        content: `Select your premium reward from the select menu below. Your invite balance will be deducted immediately.`
+                      },
+                      {
+                        type: 1,
+                        components: [
+                          {
+                            type: 3,
+                            custom_id: 'claim_reward_ticket',
+                            placeholder: '🎁 Select your premium prize...',
+                            min_values: 1,
+                            max_values: 1,
+                            options: eligible.map(r => ({
+                              label: r.label,
+                              value: r.id,
+                              description: `${is1Inv ? 1 : r.invites} invites cost`,
+                              emoji: { id: r.emojiId, name: r.emojiName, animated: r.animated }
+                            }))
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            });
 
-          await interaction.editReply({ content: `✅ **Success!** Your invites are updated to **${stats.valid}**. You are now eligible to claim, and the ticket auto-close has been cancelled!` });
-        } catch (rewardErr) {
-          console.error('[RECHECK_REWARDS_SEND_FAILED]', rewardErr.message);
-          await interaction.editReply({ content: `✅ Invites updated to **${stats.valid}**, but failed to post reward panel: ${rewardErr.message}` });
+            await interaction.editReply({ content: `✅ **Success!** Your invites are updated to **${stats.valid}**. You are now eligible to claim, and the ticket auto-close has been cancelled!` });
+          } catch (rewardErr) {
+            console.error('[RECHECK_REWARDS_SEND_FAILED]', rewardErr.message);
+            await interaction.editReply({ content: `✅ Invites updated to **${stats.valid}**, but failed to post reward panel: ${rewardErr.message}` });
+          }
+        } else {
+          await interaction.channel.send({
+            content: 'ℹ️ **Automatic reward payouts are currently disabled by the administrator.** A support team representative will assist you manually shortly!'
+          }).catch(() => {});
+          await interaction.editReply({ content: `✅ **Success!** Your invites are updated to **${stats.valid}** (Eligible). The ticket auto-close has been cancelled!` });
         }
       } else {
         // If they still don't have enough invites, reset the 60-second close timer to give them a fresh window
