@@ -2047,7 +2047,7 @@ client.on('interactionCreate', async (interaction) => {
 
     // /claim
     if (commandName === 'claim') {
-      const autopayout = db.getSetting('autopayout', true, interaction.guild.id);
+      const autopayout = db.getSetting('autopayout', false, interaction.guild.id);
       if (!autopayout) {
         return interaction.reply({
           content: '❌ **Claims are currently disabled:** The administrator has turned off payouts for this server.',
@@ -4466,26 +4466,32 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
         const stats = db.getUserStats(interaction.user.id, interaction.guild.id);
 
-        // Step 0: Send a clean welcome embed with no emojis
+        // Step 0: Send the same-to-same TicketTool welcome message
         const welcomeEmbed = new EmbedBuilder()
-          .setColor('#2b2d31')
-          .setTitle('Welcome to your ticket')
-          .setDescription('Please wait for assistance. A support representative will be with you shortly. If you are here to claim a referral prize, you can select one from the interactive menu below.')
-          .addFields(
-            { name: 'Claimer Tag', value: interaction.user.tag, inline: true },
-            { name: 'Invite Balance', value: `${stats.valid} invites`, inline: true }
-          )
-          .setTimestamp();
-        await ticketChannel.send({ embeds: [welcomeEmbed] }).catch(err => console.error('[EMBED_WELCOME_FAILED]', err.message));
+          .setColor('#2ecc71') // Green border
+          .setDescription('Support will be with you shortly.\nTo close this press the close button')
+          .setFooter({
+            text: 'TicketTool.xyz - Ticketing without clutter',
+            iconURL: 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f3ab.png'
+          });
 
-        // If autopayout is disabled, only show welcome embed + close button — nothing else
-        const autopayoutCheck = db.getSetting('autopayout', true, interaction.guild.id);
-        if (!autopayoutCheck) {
-          const btnRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger)
-          );
-          await ticketChannel.send({ components: [btnRow] });
-        } else {
+        const btnRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId('close_ticket')
+            .setLabel('Close')
+            .setEmoji('🔒')
+            .setStyle(ButtonStyle.Secondary)
+        );
+
+        await ticketChannel.send({
+          content: `<@${interaction.user.id}> Welcome`,
+          embeds: [welcomeEmbed],
+          components: [btnRow]
+        }).catch(err => console.error('[EMBED_WELCOME_FAILED]', err.message));
+
+        // If autopayout is disabled, only show welcome embed + close button (already sent above) — nothing else
+        const autopayoutCheck = db.getSetting('autopayout', false, interaction.guild.id);
+        if (autopayoutCheck) {
 
         // Step 1: Send a super premium welcome dashboard using V2 components
         const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
@@ -4638,7 +4644,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
             rewardLines += lines + '\n\n';
           }
 
-          const autopayout = db.getSetting('autopayout', true, interaction.guild.id);
+          const autopayout = db.getSetting('autopayout', false, interaction.guild.id);
           if (autopayout) {
             try {
               await rest.post(`/channels/${ticketChannel.id}/messages`, {
@@ -4688,11 +4694,6 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
               content: 'ℹ️ **Automatic reward payouts are currently disabled by the administrator.** A support team representative will assist you manually shortly!'
             }).catch(() => {});
           }
-
-          const btnRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger)
-          );
-          await ticketChannel.send({ components: [btnRow] });
         }
         } // end autopayout else
       } catch (err) {
@@ -4958,10 +4959,6 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           }
         });
 
-        const btnRow = new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger)
-        );
-        await interaction.channel.send({ components: [btnRow] });
       }
     }
 
@@ -5078,7 +5075,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           rewardLines += lines + '\n\n';
         }
 
-        const autopayout = db.getSetting('autopayout', true, interaction.guild.id);
+        const autopayout = db.getSetting('autopayout', false, interaction.guild.id);
         if (autopayout) {
           try {
             const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
@@ -5158,7 +5155,12 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         clearTimeout(pendingVouches.get(interaction.channel.id).timeout);
         pendingVouches.delete(interaction.channel.id);
       }
-      await interaction.reply('🔒 Closing this ticket in 5 seconds...');
+      const closeEmbed = new EmbedBuilder()
+        .setColor('#ff4757')
+        .setTitle('🔒 Ticket Closing')
+        .setDescription('This ticket will be deleted in 5 seconds.')
+        .setFooter({ text: 'RIWAAYAT • Ticket System' });
+      await interaction.reply({ embeds: [closeEmbed] });
       setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
     }
 
@@ -5304,7 +5306,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
     // 🎉 Confirm Claim Button
     if (interaction.customId.startsWith('confirm_claim_')) {
-      const autopayout = db.getSetting('autopayout', true, interaction.guild.id);
+      const autopayout = db.getSetting('autopayout', false, interaction.guild.id);
       if (!autopayout) {
         return interaction.reply({
           content: '❌ **Claims are currently disabled:** The administrator has turned off payouts for this server.',
@@ -5457,7 +5459,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       if (invites >= requiredInvites) {
         // ── SUCCESS FLOW ──
 
-        const autopayout = db.getSetting('autopayout', true, interaction.guild.id);
+        const autopayout = db.getSetting('autopayout', false, interaction.guild.id);
         if (!autopayout) {
           return interaction.editReply({
             content: '❌ **Claims are currently disabled:** The administrator has turned off payouts for this server.'
@@ -5670,7 +5672,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
     }
 
     if (interaction.customId === 'claim_reward_ticket' || interaction.customId === 'claim_reward_direct') {
-      const autopayout = db.getSetting('autopayout', true, interaction.guild.id);
+      const autopayout = db.getSetting('autopayout', false, interaction.guild.id);
       if (!autopayout) {
         return interaction.reply({
           content: '❌ **Claims are currently disabled:** The administrator has turned off payouts for this server.',
@@ -6114,6 +6116,29 @@ client.on('messageCreate', async (message) => {
   }
 
   if (!message.channel.name?.startsWith('claim-') && !message.channel.name?.startsWith('escalated-')) return;
+
+  // ─── PREFIX COMMANDS ───
+  if (message.content.trim().toLowerCase() === '$delete') {
+    const isCreator = message.author.id === getTicketCreatorId(message.channel);
+    const isAdminOrStaff = message.member.permissions.has(PermissionFlagsBits.ManageChannels) ||
+                           message.member.permissions.has(PermissionFlagsBits.ManageMessages) ||
+                           message.member.permissions.has(PermissionFlagsBits.Administrator);
+    
+    if (isCreator || isAdminOrStaff) {
+      if (pendingVouches.has(message.channel.id)) {
+        clearTimeout(pendingVouches.get(message.channel.id).timeout);
+        pendingVouches.delete(message.channel.id);
+      }
+      const closeEmbed = new EmbedBuilder()
+        .setColor('#ff4757')
+        .setTitle('🔒 Ticket Deleting')
+        .setDescription('This ticket will be deleted in 5 seconds.')
+        .setFooter({ text: 'RIWAAYAT • Ticket System' });
+      await message.channel.send({ embeds: [closeEmbed] });
+      setTimeout(() => message.channel.delete().catch(() => {}), 5000);
+      return;
+    }
+  }
 
   // 1. Restrict Ticket messages/reactions ONLY to the ticket creator (ignore staff/admins)
   const creatorId = getTicketCreatorId(message.channel);
