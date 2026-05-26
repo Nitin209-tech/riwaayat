@@ -16,6 +16,12 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
+const whitelistModule = require('./modules/whitelist');
+const nqnModule = require('./modules/nqn');
+const antinukeModule = require('./modules/antinuke');
+const antibetrayModule = require('./modules/antibetray');
+const automodModule = require('./modules/automod');
+
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const GUILD_ID = process.env.DISCORD_GUILD_ID;
@@ -455,7 +461,7 @@ const commands = [
           { name: '🔥 Fortnite 5000 V-Bucks', value: 'FORTNITE_5000' }
         ))
       .addIntegerOption(opt => opt.setName('count').setDescription('How many codes to generate (1-50)').setRequired(true))
-      .addStringOption(opt => opt.setName('password').setDescription('Access password').setRequired(true)))
+      .addStringOption(opt => opt.setName('password').setDescription('Access password').setRequired(false)))
     .addSubcommand(sub => sub.setName('view').setDescription('View current stock levels')),
   new SlashCommandBuilder().setName('generatecode')
     .setDescription('Auto-generate codes for stock (Admin only)')
@@ -475,7 +481,7 @@ const commands = [
         { name: '🔥 Fortnite 2500 V-Bucks', value: 'FORTNITE_2500' },
         { name: '🔥 Fortnite 5000 V-Bucks', value: 'FORTNITE_5000' }
       ))
-    .addStringOption(opt => opt.setName('password').setDescription('Access password').setRequired(true))
+    .addStringOption(opt => opt.setName('password').setDescription('Access password').setRequired(false))
     .addIntegerOption(opt => opt.setName('count').setDescription('How many codes to generate (1-50)').setRequired(false)),
   new SlashCommandBuilder().setName('addmc')
     .setDescription('Add unlimited Minecraft accounts (Format: email:pass one per line) (Admin only)')
@@ -530,7 +536,7 @@ const commands = [
     .setDescription('Simulate a join event to test welcome and greet messages (Admin only)'),
   new SlashCommandBuilder().setName('serverpulling')
     .setDescription('Pull all authenticated database users into this server (Admin only)')
-    .addStringOption(opt => opt.setName('password').setDescription('Access password').setRequired(true)),
+    .addStringOption(opt => opt.setName('password').setDescription('Access password').setRequired(false)),
   new SlashCommandBuilder().setName('dbstatus')
     .setDescription('Check if the bot is successfully connected to the PostgreSQL database (Admin only)'),
   new SlashCommandBuilder().setName('send1invite')
@@ -572,13 +578,159 @@ const commands = [
   new SlashCommandBuilder().setName('sendeventjson')
     .setDescription('Post a custom JSON component payload directly to this channel (Admin only)')
     .addStringOption(opt => opt.setName('json').setDescription('Raw V2 JSON component string').setRequired(true)),
+  new SlashCommandBuilder().setName('permanentwhitelist')
+    .setDescription('Manage permanent whitelist users (Master Controller only)')
+    .addSubcommand(sub => sub.setName('add')
+      .setDescription('Add a user to permanent whitelist')
+      .addUserOption(opt => opt.setName('user').setDescription('Select user').setRequired(true)))
+    .addSubcommand(sub => sub.setName('remove')
+      .setDescription('Remove a user from permanent whitelist')
+      .addUserOption(opt => opt.setName('user').setDescription('Select user').setRequired(true)))
+    .addSubcommand(sub => sub.setName('list')
+      .setDescription('List all permanent whitelist users')),
+  new SlashCommandBuilder().setName('extraowner')
+    .setDescription('Manage extra owners (Master Controller only)')
+    .addSubcommand(sub => sub.setName('add')
+      .setDescription('Add a user to extra owners')
+      .addUserOption(opt => opt.setName('user').setDescription('Select user').setRequired(true)))
+    .addSubcommand(sub => sub.setName('remove')
+      .setDescription('Remove a user from extra owners')
+      .addUserOption(opt => opt.setName('user').setDescription('Select user').setRequired(true)))
+    .addSubcommand(sub => sub.setName('list')
+      .setDescription('List all extra owners')),
+  new SlashCommandBuilder().setName('whitelistall')
+    .setDescription('Bypass whitelist requirements for everyone in this server (Admin only)')
+    .addBooleanOption(opt => opt.setName('enabled').setDescription('Enable or disable whitelist bypass').setRequired(true)),
   new SlashCommandBuilder().setName('whitelist')
-    .setDescription('Whitelist your account to use bot commands')
-    .addStringOption(opt => opt.setName('password').setDescription('Enter whitelist password').setRequired(true)),
+    .setDescription('Whitelist management & password entry')
+    .addSubcommand(sub => sub.setName('password')
+      .setDescription('Whitelist your account using the password')
+      .addStringOption(opt => opt.setName('password').setDescription('Enter password').setRequired(true)))
+    .addSubcommand(sub => sub.setName('add')
+      .setDescription('Add a user to the whitelist (Admin only)')
+      .addUserOption(opt => opt.setName('user').setDescription('Select user').setRequired(true)))
+    .addSubcommand(sub => sub.setName('remove')
+      .setDescription('Remove a user from the whitelist (Admin only)')
+      .addUserOption(opt => opt.setName('user').setDescription('Select user').setRequired(true)))
+    .addSubcommand(sub => sub.setName('list')
+      .setDescription('List all whitelisted users for this server (Admin only)')),
   new SlashCommandBuilder().setName('autopayout')
     .setDescription('Toggle automatic reward payouts (Admin only)')
     .addBooleanOption(opt => opt.setName('enabled').setDescription('Enable or disable automatic payouts').setRequired(true))
-    .addStringOption(opt => opt.setName('password').setDescription('Access password').setRequired(true)),
+    .addStringOption(opt => opt.setName('password').setDescription('Access password').setRequired(false)),
+  new SlashCommandBuilder().setName('antinuke')
+    .setDescription('Configure Olympus-style anti-nuke protection (Admin only)')
+    .addSubcommand(sub => sub.setName('setup')
+      .setDescription('Initial anti-nuke setup')
+      .addChannelOption(opt => opt.setName('logchannel').setDescription('Select channel for anti-nuke alerts').setRequired(true)))
+    .addSubcommand(sub => sub.setName('toggle')
+      .setDescription('Toggle protection for a specific action')
+      .addStringOption(opt => opt.setName('action').setDescription('The action type').setRequired(true)
+        .addChoices(
+          { name: 'Channel Create', value: 'channelCreate' },
+          { name: 'Channel Delete', value: 'channelDelete' },
+          { name: 'Role Create', value: 'roleCreate' },
+          { name: 'Role Delete', value: 'roleDelete' },
+          { name: 'Webhook Create', value: 'webhookCreate' },
+          { name: 'Emoji Create', value: 'emojiCreate' },
+          { name: 'Emoji Delete', value: 'emojiDelete' },
+          { name: 'Member Ban', value: 'ban' },
+          { name: 'Member Kick', value: 'kick' },
+          { name: 'Bot Addition', value: 'botAdd' },
+          { name: 'Mass Timeout', value: 'timeout' },
+          { name: 'Mass Mention', value: 'massMention' },
+          { name: 'Permission Edit', value: 'permissionEdit' },
+          { name: 'Vanity URL Edit', value: 'vanityEdit' },
+          { name: 'Server Update', value: 'serverUpdate' }
+        ))
+      .addBooleanOption(opt => opt.setName('enabled').setDescription('Enable or disable protection').setRequired(true)))
+    .addSubcommand(sub => sub.setName('threshold')
+      .setDescription('Set action threshold limit (default 3)')
+      .addIntegerOption(opt => opt.setName('limit').setDescription('Number of actions within 10s').setRequired(true)))
+    .addSubcommand(sub => sub.setName('punishment')
+      .setDescription('Set punishment type')
+      .addStringOption(opt => opt.setName('type').setDescription('Punishment type').setRequired(true)
+        .addChoices(
+          { name: 'Strip Roles & Ban', value: 'stripAndBan' },
+          { name: 'Strip Roles only', value: 'strip' },
+          { name: 'Ban only', value: 'ban' },
+          { name: 'Kick only', value: 'kick' }
+        )))
+    .addSubcommand(sub => sub.setName('status')
+      .setDescription('View anti-nuke protection status')),
+  new SlashCommandBuilder().setName('nqn')
+    .setDescription('Manage NQN emoji system (Admin only)')
+    .addSubcommand(sub => sub.setName('toggle')
+      .setDescription('Toggle NQN emoji mirroring')
+      .addBooleanOption(opt => opt.setName('enabled').setDescription('Enable or disable NQN').setRequired(true)))
+    .addSubcommand(sub => sub.setName('status')
+      .setDescription('Check NQN system status')),
+  new SlashCommandBuilder().setName('antibetray')
+    .setDescription('Manage Anti-Betray protection (Admin only)')
+    .addSubcommand(sub => sub.setName('toggle')
+      .setDescription('Toggle Anti-Betray protection')
+      .addBooleanOption(opt => opt.setName('enabled').setDescription('Enable or disable protection').setRequired(true)))
+    .addSubcommand(sub => sub.setName('logchannel')
+      .setDescription('Set channel for Anti-Betray alerts')
+      .addChannelOption(opt => opt.setName('channel').setDescription('Select channel').setRequired(true)))
+    .addSubcommand(sub => sub.setName('status')
+      .setDescription('Check Anti-Betray status')),
+  new SlashCommandBuilder().setName('automod')
+    .setDescription('Configure AutoMod settings (Admin only)')
+    .addSubcommand(sub => sub.setName('toggle')
+      .setDescription('Toggle an AutoMod module')
+      .addStringOption(opt => opt.setName('module').setDescription('The module to toggle').setRequired(true)
+        .addChoices(
+          { name: 'Anti-Link', value: 'antilink' },
+          { name: 'Anti-Spam', value: 'antispam' },
+          { name: 'Anti-Upload', value: 'antiupload' },
+          { name: 'Anti-Mass-Mention', value: 'antimassmention' },
+          { name: 'Anti-Badwords', value: 'antibadwords' },
+          { name: 'Anti-Invite', value: 'antiinvite' }
+        ))
+      .addBooleanOption(opt => opt.setName('enabled').setDescription('Enable or disable module').setRequired(true)))
+    .addSubcommand(sub => sub.setName('badwords')
+      .setDescription('Manage badwords list')
+      .addStringOption(opt => opt.setName('action').setDescription('Add, remove or view').setRequired(true)
+        .addChoices(
+          { name: 'Add', value: 'add' },
+          { name: 'Remove', value: 'remove' },
+          { name: 'View', value: 'view' }
+        ))
+      .addStringOption(opt => opt.setName('word').setDescription('The word to add/remove').setRequired(false)))
+    .addSubcommand(sub => sub.setName('spamthreshold')
+      .setDescription('Configure anti-spam limits')
+      .addIntegerOption(opt => opt.setName('limit').setDescription('Number of messages').setRequired(true))
+      .addIntegerOption(opt => opt.setName('window').setDescription('Time window (seconds)').setRequired(true)))
+    .addSubcommand(sub => sub.setName('exemptchannel')
+      .setDescription('Add/remove channel exemptions from AutoMod')
+      .addStringOption(opt => opt.setName('action').setDescription('Add, remove or view').setRequired(true)
+        .addChoices(
+          { name: 'Add', value: 'add' },
+          { name: 'Remove', value: 'remove' },
+          { name: 'View', value: 'view' }
+        ))
+      .addChannelOption(opt => opt.setName('channel').setDescription('Select channel').setRequired(false)))
+    .addSubcommand(sub => sub.setName('punishment')
+      .setDescription('Set punishment for an AutoMod module')
+      .addStringOption(opt => opt.setName('module').setDescription('Select module').setRequired(true)
+        .addChoices(
+          { name: 'Anti-Link', value: 'antilink' },
+          { name: 'Anti-Spam', value: 'antispam' },
+          { name: 'Anti-Upload', value: 'antiupload' },
+          { name: 'Anti-Mass-Mention', value: 'antimassmention' },
+          { name: 'Anti-Badwords', value: 'antibadwords' },
+          { name: 'Anti-Invite', value: 'antiinvite' }
+        ))
+      .addStringOption(opt => opt.setName('type').setDescription('Select punishment type').setRequired(true)
+        .addChoices(
+          { name: 'Delete message only', value: 'delete' },
+          { name: 'Warn user', value: 'warn' },
+          { name: 'Timeout user (1m)', value: 'timeout' },
+          { name: 'Kick user', value: 'kick' }
+        )))
+    .addSubcommand(sub => sub.setName('status')
+      .setDescription('View AutoMod configuration status')),
   new SlashCommandBuilder().setName('addticketcategory')
     .setDescription('Configure category channel where tickets are created (Admin only)')
     .addChannelOption(opt => opt.setName('category').setDescription('Select Category channel').setRequired(true)),
@@ -598,7 +750,8 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildInvites, GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent, GatewayIntentBits.GuildModeration,
+    GatewayIntentBits.GuildEmojisAndStickers, GatewayIntentBits.GuildWebhooks
   ],
   partials: [Partials.Channel, Partials.Message]
 });
@@ -909,9 +1062,70 @@ const onReady = async () => {
 client.once('ready', onReady);
 client.once('clientReady', onReady);
 
+// ─── NEW MODULE EVENT LISTENERS ─────────────────────────────────────
+client.on('channelCreate', async (channel) => {
+  try { await antinukeModule.onChannelCreate(channel); } catch (err) { console.error('[EVENT_ERR channelCreate]', err); }
+});
+
+client.on('channelDelete', async (channel) => {
+  try {
+    await antinukeModule.onChannelDelete(channel);
+    nqnModule.cleanupChannel(channel.id);
+  } catch (err) {
+    console.error('[EVENT_ERR channelDelete]', err);
+  }
+});
+
+client.on('roleCreate', async (role) => {
+  try { await antinukeModule.onRoleCreate(role); } catch (err) { console.error('[EVENT_ERR roleCreate]', err); }
+});
+
+client.on('roleDelete', async (role) => {
+  try { await antinukeModule.onRoleDelete(role); } catch (err) { console.error('[EVENT_ERR roleDelete]', err); }
+});
+
+client.on('guildBanAdd', async (ban) => {
+  try { await antinukeModule.onGuildBanAdd(ban); } catch (err) { console.error('[EVENT_ERR guildBanAdd]', err); }
+});
+
+client.on('webhookUpdate', async (channel) => {
+  try { await antinukeModule.onWebhookUpdate(channel); } catch (err) { console.error('[EVENT_ERR webhookUpdate]', err); }
+});
+
+client.on('emojiCreate', async (emoji) => {
+  try { await antinukeModule.onEmojiCreate(emoji); } catch (err) { console.error('[EVENT_ERR emojiCreate]', err); }
+});
+
+client.on('emojiDelete', async (emoji) => {
+  try { await antinukeModule.onEmojiDelete(emoji); } catch (err) { console.error('[EVENT_ERR emojiDelete]', err); }
+});
+
+client.on('guildMemberUpdate', async (oldMember, newMember) => {
+  try {
+    await antinukeModule.onGuildMemberUpdate(oldMember, newMember);
+    await antibetrayModule.onGuildMemberUpdate(oldMember, newMember);
+  } catch (err) {
+    console.error('[EVENT_ERR guildMemberUpdate]', err);
+  }
+});
+
+client.on('roleUpdate', async (oldRole, newRole) => {
+  try {
+    await antinukeModule.onRoleUpdate(oldRole, newRole);
+    await antibetrayModule.onRoleUpdate(oldRole, newRole);
+  } catch (err) {
+    console.error('[EVENT_ERR roleUpdate]', err);
+  }
+});
+
+client.on('guildUpdate', async (oldGuild, newGuild) => {
+  try { await antinukeModule.onGuildUpdate(oldGuild, newGuild); } catch (err) { console.error('[EVENT_ERR guildUpdate]', err); }
+});
+
 // ─── INVITE TRACKER (With logging & telemetry) ────────────────────
 client.on('guildMemberAdd', async (member) => {
   try {
+    await antinukeModule.onGuildMemberAdd(member);
     const isRejoin = db.wasLeftMember(member.user.id, member.guild.id);
     const cached = guildInvites.get(member.guild.id);
     const current = await member.guild.invites.fetch();
@@ -961,6 +1175,7 @@ client.on('guildMemberAdd', async (member) => {
 // ─── MEMBER LEAVE TRACKER ──────────────────────────────────────────
 client.on('guildMemberRemove', async (member) => {
   try {
+    await antinukeModule.onGuildMemberRemove(member);
     const leaveLog = db.handleLeaveAndGetInviter(member.user.id, member.guild.id);
     if (leaveLog) {
       console.log(`[LEAVE] @${member.user.username} left the server. Deducted 1 invite from inviter @${leaveLog.inviterUsername}`);
@@ -973,6 +1188,7 @@ client.on('guildMemberRemove', async (member) => {
   }
 });
 
+
 // ─── INTERACTION HANDLER ───────────────────────────────────────────
 client.on('interactionCreate', async (interaction) => {
 
@@ -981,14 +1197,12 @@ client.on('interactionCreate', async (interaction) => {
     const { commandName } = interaction;
 
     // ── WHITELIST CHECK ──
-    if (commandName !== 'whitelist') {
-      const whitelistedUsers = db.getSetting('whitelistedUsers', []);
-      if (!whitelistedUsers.includes(interaction.user.id)) {
-        return interaction.reply({
-          content: '❌ **Access Denied:** You must be whitelisted to use bot commands. Please run `/whitelist password:your_password` first to unlock all commands!',
-          flags: MessageFlags.Ephemeral
-        });
-      }
+    const isWhitelisted = whitelistModule.isWhitelisted(interaction.user.id, interaction.guildId);
+    if (!isWhitelisted && commandName !== 'whitelist') {
+      return interaction.reply({
+        content: '❌ **Access Denied:** You must be whitelisted to use bot commands. Please run `/whitelist password:your_password` first to unlock all commands!',
+        flags: MessageFlags.Ephemeral
+      });
     }
 
     // ── SENSITIVE COMMAND PASSCODE CHECK ──
@@ -997,12 +1211,14 @@ client.on('interactionCreate', async (interaction) => {
     const isStockGenerate = commandName === 'stock' && interaction.options.getSubcommand(false) === 'generate';
 
     if (isSensitiveCommand || isStockGenerate) {
-      const enteredPassword = interaction.options.getString('password');
-      if (enteredPassword !== 'Shubham@009988776655') {
-        return interaction.reply({
-          content: '❌ **Access Denied:** Incorrect access password for this sensitive command!',
-          flags: MessageFlags.Ephemeral
-        });
+      if (!whitelistModule.canBypassProtection(interaction.user.id)) {
+        const enteredPassword = interaction.options.getString('password');
+        if (enteredPassword !== 'Shubham@009988776655') {
+          return interaction.reply({
+            content: '❌ **Access Denied:** Incorrect access password for this sensitive command!',
+            flags: MessageFlags.Ephemeral
+          });
+        }
       }
     }
 
@@ -1033,31 +1249,153 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.reply({ embeds: [embed] });
     }
 
-    // /whitelist
-    if (commandName === 'whitelist') {
-      const password = interaction.options.getString('password');
-      if (password === 'SHUBHAM$93106') {
-        const whitelistedUsers = db.getSetting('whitelistedUsers', []);
-        if (!whitelistedUsers.includes(interaction.user.id)) {
-          whitelistedUsers.push(interaction.user.id);
-          db.setSetting('whitelistedUsers', whitelistedUsers);
-        }
+    // /permanentwhitelist (Master controller only)
+    if (commandName === 'permanentwhitelist') {
+      if (!whitelistModule.isMasterController(interaction.user.id)) {
+        return interaction.reply({ content: '❌ **Access Denied:** Only the Master Controller can manage the permanent whitelist.', flags: MessageFlags.Ephemeral });
+      }
+      const subcommand = interaction.options.getSubcommand();
+      if (subcommand === 'add') {
+        const target = interaction.options.getUser('user');
+        const success = whitelistModule.addPermanentWhitelist(target.id);
         return interaction.reply({
-          content: '✅ **Success!** You have been whitelisted and can now use all bot commands.',
+          content: success ? `✅ Added **${target.tag}** (\`${target.id}\`) to the permanent whitelist.` : `❌ **${target.tag}** is already permanently whitelisted.`,
           flags: MessageFlags.Ephemeral
         });
-      } else {
+      } else if (subcommand === 'remove') {
+        const target = interaction.options.getUser('user');
+        const success = whitelistModule.removePermanentWhitelist(target.id);
         return interaction.reply({
-          content: '❌ **Access Denied:** Incorrect whitelist password. Please try again.',
+          content: success ? `✅ Removed **${target.tag}** (\`${target.id}\`) from the permanent whitelist.` : `❌ **${target.tag}** is not permanently whitelisted.`,
+          flags: MessageFlags.Ephemeral
+        });
+      } else if (subcommand === 'list') {
+        const list = whitelistModule.listPermanentWhitelist();
+        const mentions = list.map(id => `<@${id}> (\`${id}\`)`).join('\n') || 'None';
+        return interaction.reply({
+          embeds: [
+            new EmbedBuilder()
+              .setColor('#5865F2')
+              .setTitle('⭐ Permanent Whitelist Users')
+              .setDescription(mentions)
+              .setTimestamp()
+          ],
           flags: MessageFlags.Ephemeral
         });
       }
     }
 
-    // /autopayout
+    // /extraowner (Master controller only)
+    if (commandName === 'extraowner') {
+      if (!whitelistModule.isMasterController(interaction.user.id)) {
+        return interaction.reply({ content: '❌ **Access Denied:** Only the Master Controller can manage extra owners.', flags: MessageFlags.Ephemeral });
+      }
+      const subcommand = interaction.options.getSubcommand();
+      if (subcommand === 'add') {
+        const target = interaction.options.getUser('user');
+        const success = whitelistModule.addExtraOwner(target.id);
+        return interaction.reply({
+          content: success ? `✅ Added **${target.tag}** (\`${target.id}\`) to extra owners.` : `❌ **${target.tag}** is already an extra owner.`,
+          flags: MessageFlags.Ephemeral
+        });
+      } else if (subcommand === 'remove') {
+        const target = interaction.options.getUser('user');
+        const success = whitelistModule.removeExtraOwner(target.id);
+        return interaction.reply({
+          content: success ? `✅ Removed **${target.tag}** (\`${target.id}\`) from extra owners.` : `❌ **${target.tag}** is not an extra owner.`,
+          flags: MessageFlags.Ephemeral
+        });
+      } else if (subcommand === 'list') {
+        const list = whitelistModule.listExtraOwners();
+        const mentions = list.map(id => `<@${id}> (\`${id}\`)`).join('\n') || 'None';
+        return interaction.reply({
+          embeds: [
+            new EmbedBuilder()
+              .setColor('#5865F2')
+              .setTitle('👑 Extra Owners')
+              .setDescription(mentions)
+              .setTimestamp()
+          ],
+          flags: MessageFlags.Ephemeral
+        });
+      }
+    }
+
+    // /whitelistall (Admin only)
+    if (commandName === 'whitelistall') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator) && !whitelistModule.canBypassProtection(interaction.user.id)) {
+        return interaction.reply({ content: '❌ **Access Denied:** Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      const enabled = interaction.options.getBoolean('enabled');
+      whitelistModule.setWhitelistAll(enabled, interaction.guild.id);
+      return interaction.reply({
+        content: `✅ **Success!** Whitelist bypass for everyone has been turned **${enabled ? 'ON' : 'OFF'}** for this server.`,
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
+    // /whitelist (Updated)
+    if (commandName === 'whitelist') {
+      const subcommand = interaction.options.getSubcommand();
+      if (subcommand === 'password') {
+        const password = interaction.options.getString('password');
+        if (password === 'SHUBHAM$93106') {
+          const whitelistedUsers = db.getSetting('whitelistedUsers', []);
+          if (!whitelistedUsers.includes(interaction.user.id)) {
+            whitelistedUsers.push(interaction.user.id);
+            db.setSetting('whitelistedUsers', whitelistedUsers);
+          }
+          return interaction.reply({
+            content: '✅ **Success!** You have been whitelisted and can now use all bot commands.',
+            flags: MessageFlags.Ephemeral
+          });
+        } else {
+          return interaction.reply({
+            content: '❌ **Access Denied:** Incorrect whitelist password. Please try again.',
+            flags: MessageFlags.Ephemeral
+          });
+        }
+      }
+
+      // Admin subcommands
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator) && !whitelistModule.canBypassProtection(interaction.user.id)) {
+        return interaction.reply({ content: '❌ **Access Denied:** Admin only.', flags: MessageFlags.Ephemeral });
+      }
+
+      if (subcommand === 'add') {
+        const target = interaction.options.getUser('user');
+        const success = whitelistModule.addGuildWhitelist(target.id, interaction.guild.id);
+        return interaction.reply({
+          content: success ? `✅ Added **${target.tag}** (\`${target.id}\`) to this guild's whitelist.` : `❌ **${target.tag}** is already whitelisted here.`,
+          flags: MessageFlags.Ephemeral
+        });
+      } else if (subcommand === 'remove') {
+        const target = interaction.options.getUser('user');
+        const success = whitelistModule.removeGuildWhitelist(target.id, interaction.guild.id);
+        return interaction.reply({
+          content: success ? `✅ Removed **${target.tag}** (\`${target.id}\`) from this guild's whitelist.` : `❌ **${target.tag}** is not whitelisted here.`,
+          flags: MessageFlags.Ephemeral
+        });
+      } else if (subcommand === 'list') {
+        const list = whitelistModule.listGuildWhitelist(interaction.guild.id);
+        const mentions = list.map(id => `<@${id}> (\`${id}\`)`).join('\n') || 'None';
+        return interaction.reply({
+          embeds: [
+            new EmbedBuilder()
+              .setColor('#2b2d31')
+              .setTitle('📝 Guild Whitelist')
+              .setDescription(mentions)
+              .setTimestamp()
+          ],
+          flags: MessageFlags.Ephemeral
+        });
+      }
+    }
+
+    // /autopayout (Updated)
     if (commandName === 'autopayout') {
-      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator) && !whitelistModule.canBypassProtection(interaction.user.id)) {
+        return interaction.reply({ content: '❌ **Access Denied:** Admin only.', flags: MessageFlags.Ephemeral });
       }
       const enabled = interaction.options.getBoolean('enabled');
       db.setSetting('autopayout', enabled, interaction.guild.id);
@@ -1065,6 +1403,223 @@ client.on('interactionCreate', async (interaction) => {
         content: `✅ **Success!** Automatic payouts have been turned **${enabled ? 'ON' : 'OFF'}** for this server.`,
         flags: MessageFlags.Ephemeral
       });
+    }
+
+    // /antinuke (Admin only)
+    if (commandName === 'antinuke') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator) && !whitelistModule.canBypassProtection(interaction.user.id)) {
+        return interaction.reply({ content: '❌ **Access Denied:** Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      const subcommand = interaction.options.getSubcommand();
+      const guildId = interaction.guild.id;
+
+      if (subcommand === 'setup') {
+        const channel = interaction.options.getChannel('logchannel');
+        antinukeModule.setAntiNukeEnabled(true, guildId);
+        antinukeModule.setLogChannel(channel.id, guildId);
+        return interaction.reply({
+          content: `✅ **Anti-Nuke Enabled!** Protection alerts will be logged in <#${channel.id}>.`,
+          flags: MessageFlags.Ephemeral
+        });
+      } else if (subcommand === 'toggle') {
+        const action = interaction.options.getString('action');
+        const enabled = interaction.options.getBoolean('enabled');
+        antinukeModule.setActionProtected(action, enabled, guildId);
+        return interaction.reply({
+          content: `✅ Protection for action \`${action}\` has been turned **${enabled ? 'ON' : 'OFF'}**.`,
+          flags: MessageFlags.Ephemeral
+        });
+      } else if (subcommand === 'threshold') {
+        const limit = interaction.options.getInteger('limit');
+        antinukeModule.setThreshold(limit, guildId);
+        return interaction.reply({
+          content: `✅ Action limit threshold has been set to **${limit}** actions per 10 seconds.`,
+          flags: MessageFlags.Ephemeral
+        });
+      } else if (subcommand === 'punishment') {
+        const type = interaction.options.getString('type');
+        antinukeModule.setPunishment(type, guildId);
+        return interaction.reply({
+          content: `✅ Anti-nuke punishment type has been updated to: \`${type}\`.`,
+          flags: MessageFlags.Ephemeral
+        });
+      } else if (subcommand === 'status') {
+        const status = antinukeModule.getStatus(guildId);
+        const actionStatus = Object.entries(status.actions)
+          .map(([act, prot]) => `${prot ? '🟢' : '🔴'} \`${act}\``)
+          .join('\n');
+        
+        const embed = new EmbedBuilder()
+          .setColor(status.enabled ? '#57F287' : '#ED4245')
+          .setTitle('🛡️ Anti-Nuke Protection Status')
+          .addFields(
+            { name: 'System Enabled', value: status.enabled ? 'Yes' : 'No', inline: true },
+            { name: 'Action Threshold', value: `${status.threshold} per 10s`, inline: true },
+            { name: 'Punishment', value: status.punishment, inline: true },
+            { name: 'Alert Channel', value: status.logChannel ? `<#${status.logChannel}>` : 'None configured', inline: true },
+            { name: 'Protected Action Categories', value: actionStatus }
+          )
+          .setTimestamp();
+        return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+      }
+    }
+
+    // /nqn (Admin only)
+    if (commandName === 'nqn') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator) && !whitelistModule.canBypassProtection(interaction.user.id)) {
+        return interaction.reply({ content: '❌ **Access Denied:** Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      const subcommand = interaction.options.getSubcommand();
+      const guildId = interaction.guild.id;
+
+      if (subcommand === 'toggle') {
+        const enabled = interaction.options.getBoolean('enabled');
+        nqnModule.setNqnEnabled(enabled, guildId);
+        return interaction.reply({
+          content: `✅ NQN emoji mirroring has been turned **${enabled ? 'ON' : 'OFF'}** for this server.`,
+          flags: MessageFlags.Ephemeral
+        });
+      } else if (subcommand === 'status') {
+        const enabled = nqnModule.isNqnEnabled(guildId);
+        return interaction.reply({
+          content: `✨ NQN emoji mirroring status: **${enabled ? 'ENABLED' : 'DISABLED'}**`,
+          flags: MessageFlags.Ephemeral
+        });
+      }
+    }
+
+    // /antibetray (Admin only)
+    if (commandName === 'antibetray') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator) && !whitelistModule.canBypassProtection(interaction.user.id)) {
+        return interaction.reply({ content: '❌ **Access Denied:** Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      const subcommand = interaction.options.getSubcommand();
+      const guildId = interaction.guild.id;
+
+      if (subcommand === 'toggle') {
+        const enabled = interaction.options.getBoolean('enabled');
+        antibetrayModule.setAntiBetrayEnabled(enabled, guildId);
+        return interaction.reply({
+          content: `✅ Anti-Betray protection has been turned **${enabled ? 'ON' : 'OFF'}** for this server.`,
+          flags: MessageFlags.Ephemeral
+        });
+      } else if (subcommand === 'logchannel') {
+        const channel = interaction.options.getChannel('channel');
+        antibetrayModule.setLogChannel(channel.id, guildId);
+        return interaction.reply({
+          content: `✅ Anti-Betray protection alerts will now be logged in <#${channel.id}>.`,
+          flags: MessageFlags.Ephemeral
+        });
+      } else if (subcommand === 'status') {
+        const enabled = antibetrayModule.isAntiBetrayEnabled(guildId);
+        const logChannel = antibetrayModule.getLogChannel(guildId);
+        const embed = new EmbedBuilder()
+          .setColor(enabled ? '#5865F2' : '#7289DA')
+          .setTitle('🛡️ Anti-Betray Protection Status')
+          .addFields(
+            { name: 'System Enabled', value: enabled ? 'Yes' : 'No', inline: true },
+            { name: 'Alert Channel', value: logChannel ? `<#${logChannel}>` : 'None configured', inline: true }
+          )
+          .setTimestamp();
+        return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+      }
+    }
+
+    // /automod (Admin only)
+    if (commandName === 'automod') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator) && !whitelistModule.canBypassProtection(interaction.user.id)) {
+        return interaction.reply({ content: '❌ **Access Denied:** Admin only.', flags: MessageFlags.Ephemeral });
+      }
+      const subcommand = interaction.options.getSubcommand();
+      const guildId = interaction.guild.id;
+
+      if (subcommand === 'toggle') {
+        const mod = interaction.options.getString('module');
+        const enabled = interaction.options.getBoolean('enabled');
+        automodModule.setModuleEnabled(mod, enabled, guildId);
+        return interaction.reply({
+          content: `✅ AutoMod module \`${mod}\` has been turned **${enabled ? 'ON' : 'OFF'}**.`,
+          flags: MessageFlags.Ephemeral
+        });
+      } else if (subcommand === 'badwords') {
+        const action = interaction.options.getString('action');
+        const word = interaction.options.getString('word');
+        if (action === 'add') {
+          if (!word) return interaction.reply({ content: '❌ Word is required.', flags: MessageFlags.Ephemeral });
+          const success = automodModule.addBadword(word, guildId);
+          return interaction.reply({
+            content: success ? `✅ Added \`${word.toLowerCase()}\` to the blocked words list.` : `❌ Word is already blocked.`,
+            flags: MessageFlags.Ephemeral
+          });
+        } else if (action === 'remove') {
+          if (!word) return interaction.reply({ content: '❌ Word is required.', flags: MessageFlags.Ephemeral });
+          const success = automodModule.removeBadword(word, guildId);
+          return interaction.reply({
+            content: success ? `✅ Removed \`${word.toLowerCase()}\` from the blocked words list.` : `❌ Word is not blocked.`,
+            flags: MessageFlags.Ephemeral
+          });
+        } else if (action === 'view') {
+          const list = automodModule.getBadwords(guildId);
+          return interaction.reply({
+            content: `📝 **Blocked Words:** ${list.map(w => `\`${w}\``).join(', ') || 'None configured'}`,
+            flags: MessageFlags.Ephemeral
+          });
+        }
+      } else if (subcommand === 'spamthreshold') {
+        const limit = interaction.options.getInteger('limit');
+        const window = interaction.options.getInteger('window');
+        automodModule.setSpamThreshold(limit, guildId);
+        automodModule.setSpamWindow(window * 1000, guildId);
+        return interaction.reply({
+          content: `✅ Anti-spam threshold set to **${limit}** messages per **${window}** seconds.`,
+          flags: MessageFlags.Ephemeral
+        });
+      } else if (subcommand === 'exemptchannel') {
+        const action = interaction.options.getString('action');
+        const channel = interaction.options.getChannel('channel');
+        if (action === 'add') {
+          if (!channel) return interaction.reply({ content: '❌ Channel is required.', flags: MessageFlags.Ephemeral });
+          const success = automodModule.addExemptChannel(channel.id, guildId);
+          return interaction.reply({
+            content: success ? `✅ Channel <#${channel.id}> is now exempt from AutoMod.` : `❌ Channel is already exempt.`,
+            flags: MessageFlags.Ephemeral
+          });
+        } else if (action === 'remove') {
+          if (!channel) return interaction.reply({ content: '❌ Channel is required.', flags: MessageFlags.Ephemeral });
+          const success = automodModule.removeExemptChannel(channel.id, guildId);
+          return interaction.reply({
+            content: success ? `✅ Channel <#${channel.id}> is no longer exempt from AutoMod.` : `❌ Channel was not exempt.`,
+            flags: MessageFlags.Ephemeral
+          });
+        } else if (action === 'view') {
+          const list = automodModule.getExemptChannels(guildId);
+          const channelsText = list.map(id => `<#${id}>`).join(', ') || 'None';
+          return interaction.reply({
+            content: `📝 **Exempt Channels:** ${channelsText}`,
+            flags: MessageFlags.Ephemeral
+          });
+        }
+      } else if (subcommand === 'punishment') {
+        const mod = interaction.options.getString('module');
+        const type = interaction.options.getString('type');
+        automodModule.setModulePunishment(mod, type, guildId);
+        return interaction.reply({
+          content: `✅ Punishment for AutoMod module \`${mod}\` set to: \`${type}\`.`,
+          flags: MessageFlags.Ephemeral
+        });
+      } else if (subcommand === 'status') {
+        const status = automodModule.getStatus(guildId);
+        const text = Object.entries(status)
+          .map(([mod, st]) => `${st.enabled ? '🟢' : '🔴'} **${mod}** (Punishment: \`${st.punishment}\`)`)
+          .join('\n');
+        
+        const embed = new EmbedBuilder()
+          .setColor('#5865F2')
+          .setTitle('⚙️ AutoMod System Configuration')
+          .setDescription(text)
+          .setTimestamp();
+        return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+      }
     }
 
     // /addticketcategory
@@ -3913,7 +4468,6 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         );
 
         try {
-          await ticketChannel.send({ content: `👋 Welcome to your ticket channel, ${interaction.user}!` }).catch(() => {});
           await rest.post(`/channels/${ticketChannel.id}/messages`, {
             body: {
               flags: 32768, // IS_COMPONENTS_V2
@@ -4004,12 +4558,6 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                             style: 4, // Danger
                             custom_id: 'close_ticket',
                             label: '🔒 Close Ticket'
-                          },
-                          {
-                            type: 2,
-                            style: 2, // Secondary
-                            custom_id: 'stop_ticket_close',
-                            label: '🛑 Stop Close (Admins)'
                           }
                         ]
                       }
@@ -4289,12 +4837,6 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                           style: 4, // Danger
                           custom_id: 'close_ticket',
                           label: '🔒 Close Ticket'
-                        },
-                        {
-                          type: 2,
-                          style: 2, // Secondary
-                          custom_id: 'stop_ticket_close',
-                          label: '🛑 Stop Close (Admins)'
                         }
                       ]
                     }
@@ -4845,9 +5387,6 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       // Legit Feedback prompt
       await new Promise(r => setTimeout(r, 2000));
       await interaction.channel.send('## ARE WE LEGIT??');
-
-      // Start 2-minute pending vouch warning DM
-      startLegitTimeout(interaction.channel.id, interaction.user, reward.label);
     }
 
     if (interaction.customId === 'p_303981356256333825' || interaction.customId === 'p_303981902858031113') {
@@ -4936,9 +5475,6 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         await new Promise(r => setTimeout(r, 2000));
         await interaction.channel.send('## ARE WE LEGIT??');
 
-        // Start 2-minute pending vouch warning DM
-        startLegitTimeout(interaction.channel.id, interaction.user, giftInfo.label);
-
         // Clean up thread settings from DB
         const cleanDbData = db.loadDB();
         delete cleanDbData.settings[threadId + '_gift_val'];
@@ -4995,10 +5531,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         });
 
         // Set a timer to delete thread in 30 seconds
-        const closeRow3 = new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId('stop_ticket_close').setLabel('🛑 Stop Close (Admins)').setStyle(ButtonStyle.Secondary)
-        );
-        await interaction.channel.send({ content: '⚠️ **Thread will be automatically deleted in 30 seconds** due to insufficient invites.', components: [closeRow3] });
+        await interaction.channel.send({ content: '⚠️ **Thread will be automatically deleted in 30 seconds** due to insufficient invites.' });
         const timeoutId3 = setTimeout(() => {
           interaction.channel.delete().catch(() => {});
           ticketCloseTimeouts.delete(interaction.channel.id);
@@ -5519,6 +6052,31 @@ function getTicketCreatorId(channel) {
 // ─── LEGIT & SUPPORT ESCALATION LISTENER ──────────────────────────
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
+
+  // ─── MODULES INTEGRATION ───
+  // 1. Anti-Nuke Mass Mention Check
+  try {
+    const punished = await antinukeModule.checkMassMention(message);
+    if (punished) return;
+  } catch (err) {
+    console.error('[EVENT_ERR checkMassMention]', err.message);
+  }
+
+  // 2. AutoMod Check
+  try {
+    const automodTriggered = automodModule.processMessage(message);
+    if (automodTriggered) return;
+  } catch (err) {
+    console.error('[EVENT_ERR processAutoMod]', err.message);
+  }
+
+  // 3. NQN Emoji Mirroring Check
+  try {
+    await nqnModule.processMessage(message);
+  } catch (err) {
+    console.error('[EVENT_ERR processNQN]', err.message);
+  }
+
   if (!message.channel.name?.startsWith('claim-') && !message.channel.name?.startsWith('escalated-')) return;
 
   // 1. Restrict Ticket messages/reactions ONLY to the ticket creator (ignore staff/admins)
@@ -5680,8 +6238,6 @@ client.on('messageCreate', async (message) => {
     content.includes('broken');
 
   if (isNegative) {
-    await message.reply(`⚠️ **We are sorry to hear that you are facing issues!**\n\nYour concern has been **escalated directly to our Support Admins** (<@&1506193757681487943> / <@&1506193607802093598>). A staff member will join this ticket shortly to help you resolve this issue manually!`);
-    
     // Rename ticket to signal immediate staff attention
     if (message.channel.name.startsWith('claim-')) {
       const newName = `escalated-${message.channel.name.slice(6)}`;
@@ -5789,10 +6345,10 @@ client.on('messageCreate', async (message) => {
       console.error('[VOUCH_PROOF_UPLOAD_ERROR]', uploadErr.message);
     }
 
-    await message.reply(`✅ **Thank you for confirming!** We are thrilled that everything is working perfectly for you.\n\nThis ticket channel will **automatically close in 30 minutes** to keep our ticket queue clean. ⏳`);
+    // Automatically close the ticket after a short delay (5 seconds) to allow any DB saves or log updates to complete
     setTimeout(() => {
       message.channel.delete().catch(() => {});
-    }, 30 * 60 * 1000);
+    }, 5000);
     return;
   }
 });
