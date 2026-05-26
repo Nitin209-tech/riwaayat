@@ -891,6 +891,30 @@ async function buildBotManagerPanel(selectedClientId = null) {
   return { embeds: [embed], components };
 }
 
+function formatFooterTime(timestampMs) {
+  const date = new Date(timestampMs);
+  const now = new Date();
+  
+  const isToday = date.toDateString() === now.toDateString();
+  
+  const tomorrow = new Date();
+  tomorrow.setDate(now.getDate() + 1);
+  const isTomorrow = date.toDateString() === tomorrow.toDateString();
+  
+  const optionsTime = { hour: 'numeric', minute: '2-digit', hour12: true };
+  const timeStr = date.toLocaleTimeString('en-US', optionsTime);
+  
+  if (isToday) {
+    return `Today at ${timeStr}`;
+  } else if (isTomorrow) {
+    return `Tomorrow at ${timeStr}`;
+  } else {
+    const optionsDate = { month: 'short', day: 'numeric', year: 'numeric' };
+    const dateStr = date.toLocaleDateString('en-US', optionsDate);
+    return `${dateStr} at ${timeStr}`;
+  }
+}
+
 // ─── GIVEAWAY ENGINE RESOLVER ────────────────────────────────────────
 async function resolveGiveaway(g, isReroll = false, specificWinnerCount = null) {
   try {
@@ -930,12 +954,12 @@ async function resolveGiveaway(g, isReroll = false, specificWinnerCount = null) 
     const winnerMentions = finalWinners.map(id => `<@${id}>`).join(', ');
     const winnerDisplay = finalWinners.length > 0 ? winnerMentions : 'No winners (no participants)';
 
-    // Edit Embed
-    const oldEmbed = message.embeds[0];
-    const newEmbed = EmbedBuilder.from(oldEmbed)
-      .setColor('#3f51b5')
-      .setDescription(`🎉 **GIVEAWAY ENDED!** 🎉\n\n🎁 **Prize:** **${g.prize}**\n👑 **Winners:** ${winnerDisplay}\n📈 **Total Entries:** ${participants.length + (g.fakeEntriesCount || 0)}`)
-      .setTimestamp();
+    // Edit Embed to be clean and premium when ended
+    const newEmbed = new EmbedBuilder()
+      .setColor('#2b2d31')
+      .setTitle(g.prize)
+      .setDescription(`🎉 **GIVEAWAY ENDED!** 🎉\n\nWinners: ${winnerDisplay}\nTotal Entries: **${participants.length + (g.fakeEntriesCount || 0)}**`)
+      .setFooter({ text: `Ended at | ${formatFooterTime(Date.now())}` });
 
     // Disable buttons
     const row = new ActionRowBuilder().addComponents(
@@ -946,7 +970,7 @@ async function resolveGiveaway(g, isReroll = false, specificWinnerCount = null) 
         .setDisabled(true),
       new ButtonBuilder()
         .setCustomId(`g_list_${g.id}`)
-        .setLabel('Participants')
+        .setLabel('👥 Participants')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(true)
     );
@@ -3093,12 +3117,12 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       const endsAt = Date.now() + durationMs;
       const endsAtTimestamp = Math.floor(endsAt / 1000);
 
-      // Create beautiful embed
+      // Create beautiful embed exactly like reference photo
       const embed = new EmbedBuilder()
         .setColor('#5865F2')
-        .setTitle('🎉 PREMIUM GIVEAWAY 🎉')
-        .setDescription(`🎁 **Prize:** **${prize}**\n👑 **Winners:** **${winnersCount}**\n⏳ **Ends In:** <t:${endsAtTimestamp}:R> (<t:${endsAtTimestamp}:T>)\n\nClick the 🎉 button below to participate!`)
-        .setTimestamp();
+        .setTitle(prize)
+        .setDescription(`Click 🎉 button to enter!\nWinners: **${winnersCount}**\nEnds: <t:${endsAtTimestamp}:R> ([Timer](https://discord.com))`)
+        .setFooter({ text: `Ends at | ${formatFooterTime(endsAt)}` });
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -3107,7 +3131,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           .setStyle(ButtonStyle.Primary),
         new ButtonBuilder()
           .setCustomId('g_list_temp')
-          .setLabel('Participants')
+          .setLabel('👥 Participants')
           .setStyle(ButtonStyle.Secondary)
       );
 
@@ -3122,7 +3146,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           .setStyle(ButtonStyle.Primary),
         new ButtonBuilder()
           .setCustomId(`g_list_${giveawayId}`)
-          .setLabel('Participants')
+          .setLabel('👥 Participants')
           .setStyle(ButtonStyle.Secondary)
       );
       await reply.edit({ components: [updatedRow] });
@@ -3218,9 +3242,11 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
             const oldEmbed = message.embeds[0];
             const endsAtTimestamp = Math.floor(giveaway.endsAt / 1000);
             
-            const newEmbed = EmbedBuilder.from(oldEmbed)
-              .setDescription(`🎁 **Prize:** **${giveaway.prize}**\n👑 **Winners:** **${giveaway.winnersCount}**\n⏳ **Ends In:** <t:${endsAtTimestamp}:R> (<t:${endsAtTimestamp}:T>)\n\nClick the 🎉 button below to participate!`)
-              .setTimestamp();
+            const newEmbed = new EmbedBuilder()
+              .setColor('#5865F2')
+              .setTitle(giveaway.prize)
+              .setDescription(`Click 🎉 button to enter!\nWinners: **${giveaway.winnersCount}**\nEnds: <t:${endsAtTimestamp}:R> ([Timer](https://discord.com))`)
+              .setFooter({ text: `Ends at | ${formatFooterTime(giveaway.endsAt)}` });
 
             const totalEntries = (giveaway.participants || []).length + (giveaway.fakeEntriesCount || 0);
             const row = new ActionRowBuilder().addComponents(
@@ -3230,7 +3256,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                 .setStyle(ButtonStyle.Primary),
               new ButtonBuilder()
                 .setCustomId(`g_list_${giveaway.id}`)
-                .setLabel('Participants')
+                .setLabel('👥 Participants')
                 .setStyle(ButtonStyle.Secondary)
             );
 
@@ -4058,7 +4084,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
       db.saveDB(dbData);
 
-      // Update message buttons/components
+      // Update message buttons/components exactly like reference photo
       const totalEntries = giveaway.participants.length + (giveaway.fakeEntriesCount || 0);
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -4067,7 +4093,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           .setStyle(joined ? ButtonStyle.Success : ButtonStyle.Primary),
         new ButtonBuilder()
           .setCustomId(`g_list_${giveaway.id}`)
-          .setLabel('Participants')
+          .setLabel('👥 Participants')
           .setStyle(ButtonStyle.Secondary)
       );
 
@@ -4452,6 +4478,15 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           .setTimestamp();
         await ticketChannel.send({ embeds: [welcomeEmbed] }).catch(err => console.error('[EMBED_WELCOME_FAILED]', err.message));
 
+        // If autopayout is disabled, only show welcome embed + close button — nothing else
+        const autopayoutCheck = db.getSetting('autopayout', true, interaction.guild.id);
+        if (!autopayoutCheck) {
+          const btnRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('close_ticket').setLabel('🔒 Close Ticket').setStyle(ButtonStyle.Danger)
+          );
+          await ticketChannel.send({ components: [btnRow] });
+        } else {
+
         // Step 1: Send a super premium welcome dashboard using V2 components
         const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
         const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
@@ -4659,6 +4694,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           );
           await ticketChannel.send({ components: [btnRow] });
         }
+        } // end autopayout else
       } catch (err) {
         console.error('[TICKET_ERROR]', err.message || err);
         return interaction.editReply({ content: `❌ Ticket error: ${err.message}` });
