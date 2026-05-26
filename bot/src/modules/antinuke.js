@@ -178,6 +178,9 @@ async function checkAction(guild, userId, action, client) {
   if (!isAntiNukeEnabled(guild.id)) return false;
   if (!isActionProtected(action, guild.id)) return false;
 
+  // Bot itself always bypasses
+  if (client && client.user && userId === client.user.id) return false;
+
   // Only permanent whitelist and extra owners bypass
   if (whitelist.canBypassProtection(userId)) return false;
 
