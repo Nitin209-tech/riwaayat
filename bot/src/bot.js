@@ -1468,6 +1468,13 @@ client.on('interactionCreate', async (interaction) => {
 
     // /claim
     if (commandName === 'claim') {
+      const autopayout = db.getSetting('autopayout', true, interaction.guild.id);
+      if (!autopayout) {
+        return interaction.reply({
+          content: '❌ **Claims are currently disabled:** The administrator has turned off payouts for this server.',
+          flags: MessageFlags.Ephemeral
+        });
+      }
       const count = db.getInviteCount(interaction.user.id, interaction.guild.id);
       const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
       const is2Inv = db.getSetting('event2invite', false, interaction.guild.id);
@@ -3830,6 +3837,13 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
     // 📩 Create Ticket Button
     if (interaction.customId === 'open_ticket') {
+      const autopayout = db.getSetting('autopayout', true, interaction.guild.id);
+      if (!autopayout) {
+        return interaction.reply({
+          content: '❌ **Ticket System Closed:** Reward claims and payouts are currently turned OFF by the administrator.',
+          flags: MessageFlags.Ephemeral
+        });
+      }
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       // Enforce strict 1-ticket limit per user using permission overwrites
@@ -4704,6 +4718,13 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
     // 🎉 Confirm Claim Button
     if (interaction.customId.startsWith('confirm_claim_')) {
+      const autopayout = db.getSetting('autopayout', true, interaction.guild.id);
+      if (!autopayout) {
+        return interaction.reply({
+          content: '❌ **Claims are currently disabled:** The administrator has turned off payouts for this server.',
+          flags: MessageFlags.Ephemeral
+        });
+      }
       const rewardId = interaction.customId.replace('confirm_claim_', '');
       const reward = getRewardById(rewardId);
       if (!reward) return interaction.reply({ content: '❌ Invalid reward selection.', flags: MessageFlags.Ephemeral });
@@ -4879,37 +4900,9 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
         const autopayout = db.getSetting('autopayout', true, interaction.guild.id);
         if (!autopayout) {
-          // Deduct invites
-          const deducted = db.deductInvites(interaction.user.id, requiredInvites, interaction.guild.id);
-          if (!deducted) {
-            return interaction.editReply({ content: '❌ Failed to process invite deduction. Please try again.' });
-          }
-
-          // Save local manual redemption log (no code generated)
-          const dbData = db.loadDB();
-          if (!dbData.redemptions) dbData.redemptions = [];
-          dbData.redemptions.push({
-            discordId: interaction.user.id,
-            username: interaction.user.username,
-            category: giftInfo.category,
-            reward: giftInfo.label,
-            code: 'PENDING_MANUAL',
-            date: new Date().toISOString()
+          return interaction.editReply({
+            content: '❌ **Claims are currently disabled:** The administrator has turned off payouts for this server.'
           });
-          db.saveDB(dbData);
-
-          // Post success message directly in the thread
-          const manualClaimReply = `**Free Gift Claim Registered Successfully!** Your claim for **${giftInfo.label}** has been recorded and invites deducted.\n\nSince automatic payout is currently disabled, an Administrator will review your invites and manually deliver your code shortly!`;
-          await interaction.channel.send({ content: manualClaimReply });
-
-          // Clean up thread settings from DB
-          const cleanDbData = db.loadDB();
-          delete cleanDbData.settings[threadId + '_gift_val'];
-          delete cleanDbData.settings[threadId + '_gift_label'];
-          delete cleanDbData.settings[threadId + '_gift_userId'];
-          db.saveDB(cleanDbData);
-
-          return interaction.editReply({ content: '✅ Free gift claim registered successfully for manual verification.' });
         }
 
         // Deduct invites
@@ -5124,6 +5117,13 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
     }
 
     if (interaction.customId === 'claim_reward_ticket' || interaction.customId === 'claim_reward_direct') {
+      const autopayout = db.getSetting('autopayout', true, interaction.guild.id);
+      if (!autopayout) {
+        return interaction.reply({
+          content: '❌ **Claims are currently disabled:** The administrator has turned off payouts for this server.',
+          flags: MessageFlags.Ephemeral
+        });
+      }
       const rewardId = interaction.values[0];
       const reward = getRewardById(rewardId);
       if (!reward) return interaction.reply({ content: '❌ Invalid reward.', flags: MessageFlags.Ephemeral });
