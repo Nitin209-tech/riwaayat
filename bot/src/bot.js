@@ -2264,20 +2264,6 @@ client.on('interactionCreate', async (interaction) => {
                 type: 17,
                 components: [
                   {
-                    type: 12,
-                    items: [
-                      {
-                        media: {
-                          url: getComponentImage(targetChannel.guild?.id || interaction.guild?.id, "https://cdn.discordapp.com/attachments/1343602374991806476/1506194924268425256/file_00000000f5a87207a97920ef212fa323.png?ex=6a0d60d5&is=6a0c0f55&hm=52ce26cf5212dc7c511446162d9218f7405d89b6771aae51b8bc9dbd29f598a8")
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    type: 14,
-                    spacing: 2
-                  },
-                  {
                     type: 10,
                     content: "# INVITE EVENT 2026\n<:infoBlue:1506195998245130352> This is a **LIMITED-TIME** event until <t:1780222800:R>. "
                   },
@@ -2286,7 +2272,7 @@ client.on('interactionCreate', async (interaction) => {
                   },
                   {
                     type: 10,
-                    content: "<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Roblox 50$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Roblox 100$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **MineCraft Account** <a:Minecraft:1504810470153126042>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = ***MC Redeem Code** <a:Minecraft:1504810470153126042>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Nitro Basic GiftCode** <a:AHNitroBoosts:1506197135157231738>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Nitro Boost GiftCode** <a:AHNitroBoosts:1506197135157231738>\n\n<a:emoji_25:1504806993280503810> <@&1506193607802093598> = **2500 Valorant Points** <a:nyt_zvalo:1504591139695628340>\n<a:emoji_25:1504806993280503810> <@&1506193757681487943> = **5000 Valorant Points** <a:nyt_zvalo:1504591139695628340>\n\n<a:emoji_25:1504806993280503810> <@&1506193607802093598> = **2500 Fortnite V-Bucks** <a:emoji_97:1507487645889204388>\n<a:emoji_25:1504806993280503810> <@&1506193757681487943> = **5000 Fortnite V-Bucks** <a:emoji_97:1507487645889204388>"
+                    content: "<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Roblox 50$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Roblox 100$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **MineCraft Account** <a:Minecraft:1504810470153126042>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = ***MC Redeem Code** <a:Minecraft:1504810470153126042>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Nitro Basic GiftCode** <a:AHNitroBoosts:1506197135157231738>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Nitro Boost GiftCode** <a:AHNitroBoosts:1506197135157231738>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **YT 10k Subs** <a:RG_yt:1504591010888683600>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **YT 30k Subs** <a:RG_yt:1504591010888683600>"
                   },
                   {
                     type: 14,
@@ -2373,20 +2359,6 @@ client.on('interactionCreate', async (interaction) => {
                 type: 17,
                 components: [
                   {
-                    type: 12,
-                    items: [
-                      {
-                        media: {
-                          url: getComponentImage(interaction.guild?.id, "https://cdn.discordapp.com/attachments/1343602374991806476/1506194924268425256/file_00000000f5a87207a97920ef212fa323.png?ex=6a0d60d5&is=6a0c0f55&hm=52ce26cf5212dc7c511446162d9218f7405d89b6771aae51b8bc9dbd29f598a8")
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    type: 14,
-                    spacing: 2
-                  },
-                  {
                     type: 10,
                     content: "# INVITE EVENT 2026\n<:infoBlue:1506195998245130352> This is a **LIMITED-TIME** event until <t:1780222800:R>. "
                   },
@@ -2395,7 +2367,7 @@ client.on('interactionCreate', async (interaction) => {
                   },
                   {
                     type: 10,
-                    content: "<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Roblox 50$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Roblox 100$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **MineCraft Account** <a:Minecraft:1504810470153126042>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = ***MC Redeem Code** <a:Minecraft:1504810470153126042>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Nitro Basic GiftCode** <a:AHNitroBoosts:1506197135157231738>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Nitro Boost GiftCode** <a:AHNitroBoosts:1506197135157231738>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **YT 10k Subs** <a:RG_yt:1504591010888683600>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **YT 30k Subs** <a:RG_yt:1504591010888683600>\n\n<a:emoji_25:1504806993280503810> <@&1506193607802093598> = **2500 Valorant Points** <a:nyt_zvalo:1504591139695628340>\n<a:emoji_25:1504806993280503810> <@&1506193757681487943> = **5000 Valorant Points** <a:nyt_zvalo:1504591139695628340>\n\n<a:emoji_25:1504806993280503810> <@&1506193607802093598> = **2500 Fortnite V-Bucks** <a:emoji_97:1507487645889204388>\n<a:emoji_25:1504806993280503810> <@&1506193757681487943> = **5000 Fortnite V-Bucks** <a:emoji_97:1507487645889204388>"
+                    content: "<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Roblox 50$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Roblox 100$ GiftCard** <:Robux_2019_Logo_gold:1504606073502568578>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **MineCraft Account** <a:Minecraft:1504810470153126042>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = ***MC Redeem Code** <a:Minecraft:1504810470153126042>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Nitro Basic GiftCode** <a:AHNitroBoosts:1506197135157231738>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Nitro Boost GiftCode** <a:AHNitroBoosts:1506197135157231738>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **YT 10k Subs** <a:RG_yt:1504591010888683600>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **YT 30k Subs** <a:RG_yt:1504591010888683600>"
                   },
                   {
                     type: 14,
