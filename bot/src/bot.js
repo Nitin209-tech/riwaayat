@@ -519,6 +519,8 @@ const commands = [
     .addBooleanOption(opt => opt.setName('enabled').setDescription('Enable or disable 2-invite event').setRequired(true)),
   new SlashCommandBuilder().setName('deletetickets')
     .setDescription('Bulk deletes all active ticket channels (Admin only)'),
+  new SlashCommandBuilder().setName('ticketdelete')
+    .setDescription('Bulk deletes all active ticket channels (Admin only)'),
   new SlashCommandBuilder().setName('revoke')
     .setDescription('Delete the oldest active invite codes (Admin only, skips Administrators)')
     .addIntegerOption(opt => opt.setName('count').setDescription('Number of oldest invites to revoke').setRequired(true)),
@@ -2326,8 +2328,8 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.reply({ content: `✅ Removed **${amount}** invites from **@${targetUser.username}**. New balance: **${user.count}**`, flags: MessageFlags.Ephemeral });
     }
 
-    // /deletetickets
-    if (commandName === 'deletetickets') {
+    // /deletetickets & /ticketdelete
+    if (commandName === 'deletetickets' || commandName === 'ticketdelete') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
         return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
       }
@@ -2335,9 +2337,14 @@ client.on('interactionCreate', async (interaction) => {
       await interaction.deferReply();
 
       try {
+        const ticketCategoryId = db.getSetting('ticketCategoryId', null, interaction.guild.id);
         const channels = interaction.guild.channels.cache.filter(c => 
-          (c.name.startsWith('claim-') || c.name.startsWith('escalated-')) && 
-          c.type === ChannelType.GuildText
+          c.type === ChannelType.GuildText && (
+            c.name.startsWith('claim-') || 
+            c.name.startsWith('escalated-') ||
+            (ticketCategoryId && c.parentId === ticketCategoryId) ||
+            (c.topic && c.topic.includes('riwaayat-ticket'))
+          )
         );
 
         let deleted = 0;
@@ -2351,6 +2358,8 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.editReply({ content: `❌ Failed to bulk delete tickets: ${err.message}` });
       }
     }
+
+
 
     // /revoke
     if (commandName === 'revoke') {
@@ -3856,6 +3865,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           name: `claim-${ticketNumber}`,
           type: ChannelType.GuildText,
           parent: parentId,
+          topic: `riwaayat-ticket-${interaction.user.id}`,
           permissionOverwrites: [
             { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
             { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
@@ -4386,7 +4396,6 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
         await rest.patch(`/channels/${interaction.channel.id}/messages/${interaction.message.id}`, {
           body: {
-            content: `👋 Welcome to your ticket channel, ${interaction.user}!`,
             flags: 32768, // IS_COMPONENTS_V2
             components: [
               {
@@ -4479,9 +4488,9 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
         try {
           const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+          await interaction.channel.send({ content: `🎉 **Congratulations! You unlocked the rewards!**` }).catch(() => {});
           await rest.post(`/channels/${interaction.channel.id}/messages`, {
             body: {
-              content: `🎉 **Congratulations! You unlocked the rewards!**`,
               flags: 32768,
               components: [
                 {
@@ -5599,12 +5608,11 @@ client.on('messageCreate', async (message) => {
             });
           }
         }
-
         try {
+          await message.channel.send({ content: `🎯 **Auto-detected Reward Match!** You selected: **${matchedReward.label}**` }).catch(() => {});
           const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
           await rest.post(`/channels/${message.channel.id}/messages`, {
             body: {
-              content: `🎯 **Auto-detected Reward Match!** You selected: **${matchedReward.label}**`,
               flags: 32768, // IS_COMPONENTS_V2
               components: [
                 {
