@@ -4449,17 +4449,37 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         const ticketNumber = currentCount + 1;
         db.setSetting(ticketCounterKey, ticketNumber);
 
-        const ticketChannel = await interaction.guild.channels.create({
-          name: `claim-${ticketNumber}`,
-          type: ChannelType.GuildText,
-          parent: parentId,
-          topic: `riwaayat-ticket-${interaction.user.id}`,
-          permissionOverwrites: [
-            { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-            { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
-            { id: client.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels] }
-          ]
-        });
+        let ticketChannel;
+        try {
+          ticketChannel = await interaction.guild.channels.create({
+            name: `claim-${ticketNumber}`,
+            type: ChannelType.GuildText,
+            parent: parentId,
+            topic: `riwaayat-ticket-${interaction.user.id}`,
+            permissionOverwrites: [
+              { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+              { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
+              { id: client.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels] }
+            ]
+          });
+        } catch (createErr) {
+          if (parentId) {
+            console.warn(`[TICKET_CREATION_WARNING] Category ${parentId} is full or errored, retrying uncategorized:`, createErr.message);
+            ticketChannel = await interaction.guild.channels.create({
+              name: `claim-${ticketNumber}`,
+              type: ChannelType.GuildText,
+              parent: null,
+              topic: `riwaayat-ticket-${interaction.user.id}`,
+              permissionOverwrites: [
+                { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+                { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
+                { id: client.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels] }
+              ]
+            });
+          } else {
+            throw createErr;
+          }
+        }
 
         // Inform user that their ticket is created
         await interaction.editReply({ content: `✅ Ticket created: ${ticketChannel}` });
