@@ -1,6 +1,6 @@
 // ─── PERMANENT WHITELIST SYSTEM ─────────────────────────────────────
 // Master controller ID — only this user can manage permanent whitelist & extra owners
-const MASTER_CONTROLLER_ID = '1490694641975164999';
+const MASTER_CONTROLLER_ID = '1504813252528439376';
 
 const db = require('../database');
 
