@@ -9,8 +9,6 @@ const REWARDS = [
   { id: 'yt_30k',      label: 'YT 30k Subs',           category: 'YT_30K',         invites: 4, emojiId: '1504591010888683600', emojiName: 'RG_yt', animated: true },
   { id: 'valorant_2500', label: 'Valorant 2500 Points', category: 'VALORANT_2500', invites: 2, emojiId: '1504591139695628340', emojiName: 'nyt_zvalo', animated: true },
   { id: 'valorant_5000', label: 'Valorant 5000 Points', category: 'VALORANT_5000', invites: 4, emojiId: '1504591139695628340', emojiName: 'nyt_zvalo', animated: true },
-  { id: 'fortnite_2500', label: 'Fortnite 2500 V-Bucks', category: 'FORTNITE_2500', invites: 2, emojiId: '1507487645889204388', emojiName: 'emoji_97', animated: true },
-  { id: 'fortnite_5000', label: 'Fortnite 5000 V-Bucks', category: 'FORTNITE_5000', invites: 4, emojiId: '1507487645889204388', emojiName: 'emoji_97', animated: true },
 ];
 
 function getRewardById(id) {

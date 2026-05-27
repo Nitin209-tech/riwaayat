@@ -415,8 +415,6 @@ const commands = [
   new SlashCommandBuilder().setName('leaderboard').setDescription('View top inviters'),
   new SlashCommandBuilder().setName('panel')
     .setDescription('Unified Control Center & Admin Panel (Admin only)'),
-  new SlashCommandBuilder().setName('sendevent')
-    .setDescription('Post the premium styled event layout to this channel (Admin only)'),
   new SlashCommandBuilder().setName('sendfreegiftevent')
     .setDescription('Post the free gift event dropdown panel (Admin only)'),
   new SlashCommandBuilder().setName('sendticketpanel')
@@ -437,9 +435,7 @@ const commands = [
           { name: '🎮 Roblox $50', value: 'ROBUX_50' },
           { name: '🎮 Roblox $100', value: 'ROBUX_100' },
           { name: '🔴 Valorant 2500 VP', value: 'VALORANT_2500' },
-          { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' },
-          { name: '🔥 Fortnite 2500 V-Bucks', value: 'FORTNITE_2500' },
-          { name: '🔥 Fortnite 5000 V-Bucks', value: 'FORTNITE_5000' }
+          { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' }
         ))
       .addStringOption(opt => opt.setName('code').setDescription('The reward code/key').setRequired(true)))
     .addSubcommand(sub => sub.setName('generate')
@@ -456,9 +452,7 @@ const commands = [
           { name: '🎮 Roblox $50', value: 'ROBUX_50' },
           { name: '🎮 Roblox $100', value: 'ROBUX_100' },
           { name: '🔴 Valorant 2500 VP', value: 'VALORANT_2500' },
-          { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' },
-          { name: '🔥 Fortnite 2500 V-Bucks', value: 'FORTNITE_2500' },
-          { name: '🔥 Fortnite 5000 V-Bucks', value: 'FORTNITE_5000' }
+          { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' }
         ))
       .addIntegerOption(opt => opt.setName('count').setDescription('How many codes to generate (1-50)').setRequired(true))
       .addStringOption(opt => opt.setName('password').setDescription('Access password').setRequired(false)))
@@ -477,9 +471,7 @@ const commands = [
         { name: '🎮 Roblox $50', value: 'ROBUX_50' },
         { name: '🎮 Roblox $100', value: 'ROBUX_100' },
         { name: '🔴 Valorant 2500 VP', value: 'VALORANT_2500' },
-        { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' },
-        { name: '🔥 Fortnite 2500 V-Bucks', value: 'FORTNITE_2500' },
-        { name: '🔥 Fortnite 5000 V-Bucks', value: 'FORTNITE_5000' }
+        { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' }
       ))
     .addStringOption(opt => opt.setName('password').setDescription('Access password').setRequired(false))
     .addIntegerOption(opt => opt.setName('count').setDescription('How many codes to generate (1-50)').setRequired(false)),
@@ -2022,8 +2014,8 @@ client.on('interactionCreate', async (interaction) => {
       const is2Inv = db.getSetting('event2invite', false, interaction.guild.id);
       const eventStatus = is1Inv ? ' [⚡ 1-INVITE EVENT ACTIVE]' : (is2Inv ? ' [⚡ 2-INVITE EVENT ACTIVE]' : '');
 
-      const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'fortnite_2500', 'fortnite_5000', 'robux_50', 'robux_100'];
-      const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'fortnite_2500': 3, 'fortnite_5000': 6, 'robux_50': 3, 'robux_100': 6 };
+      const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'mc_account', 'mc_code', 'robux_50', 'robux_100'];
+      const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
       const isNewServer = interaction.guild?.id === '1236706368904233082';
       const isTargetServer = interaction.guild?.id === '1485628774178623568';
 
@@ -2059,8 +2051,8 @@ client.on('interactionCreate', async (interaction) => {
       const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
       const is2Inv = db.getSetting('event2invite', false, interaction.guild.id);
 
-      const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'fortnite_2500', 'fortnite_5000', 'robux_50', 'robux_100'];
-      const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'fortnite_2500': 3, 'fortnite_5000': 6, 'robux_50': 3, 'robux_100': 6 };
+      const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'mc_account', 'mc_code', 'robux_50', 'robux_100'];
+      const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
       const isNewServer = interaction.guild?.id === '1236706368904233082';
       const isTargetServer = interaction.guild?.id === '1485628774178623568';
 
@@ -2343,89 +2335,6 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.editReply({ embeds: panel.embeds, components: panel.components });
     }
 
-    // /sendevent
-    if (commandName === 'sendevent') {
-      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
-      }
-
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-      try {
-        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
-        await rest.post(`/channels/${interaction.channel.id}/messages`, {
-          body: {
-            flags: 32768,
-            components: [
-              {
-                type: 17,
-                components: [
-                  {
-                    type: 10,
-                    content: "# INVITE EVENT 2026\n<:infoBlue:1506195998245130352> This is a **LIMITED-TIME** event until <t:1780222800:R>. "
-                  },
-                  {
-                    type: 14
-                  },
-                  {
-                    type: 10,
-                    content: "<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Roblox 3,999 Robux** <:Robux_2019_Logo_gold:1504606073502568578>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Roblox 6,999 Robux** <:Robux_2019_Logo_gold:1504606073502568578>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **MineCraft Account** <a:Minecraft:1504810470153126042>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = ***MC Redeem Code** <a:Minecraft:1504810470153126042>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **Nitro Basic GiftCode** <a:AHNitroBoosts:1506197135157231738>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **Nitro Boost GiftCode** <a:AHNitroBoosts:1506197135157231738>\n\n<a:emoji_25:1504806993280503810><@&1506193607802093598> = **YT 10k Subs** <a:RG_yt:1504591010888683600>\n<a:emoji_25:1504806993280503810><@&1506193757681487943> = **YT 30k Subs** <a:RG_yt:1504591010888683600>"
-                  },
-                  {
-                    type: 14,
-                    spacing: 2
-                  },
-                  {
-                    type: 10,
-                    content: "# NOTICE \n<:Inviteh:1506198676375343105> **DONE INVITING?** Create <#1504803227990888598> to claim your reward!"
-                  },
-                  {
-                    type: 14,
-                    spacing: 2
-                  },
-                  {
-                    type: 1,
-                    components: [
-                      {
-                        type: 2,
-                        style: 5,
-                        label: "Are We Legit? Check here",
-                        emoji: {
-                          id: "1506199235052175400",
-                          name: "gift",
-                          animated: false
-                        },
-                        url: "https://discord.com/channels/1485628774178623568/1485628774665158760"
-                      },
-                      {
-                        style: 1,
-                        type: 2,
-                        label: "Check Invites",
-                        emoji: {
-                          id: "1506199270188122242",
-                          name: "verification",
-                          animated: false
-                        },
-                        flow: {
-                          actions: []
-                        },
-                        custom_id: "p_303796426524069889"
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        });
-
-        return interaction.editReply({ content: '✅ Event panel posted!' });
-      } catch (err) {
-        console.error('[SENDEVENT_ERROR]', err.message || err);
-        return interaction.editReply({ content: `❌ Failed to post event panel: ${err.message}` });
-      }
-    }
-
     // /sendnewevent
     if (commandName === 'sendnewevent') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
@@ -2459,7 +2368,7 @@ client.on('interactionCreate', async (interaction) => {
                     components: [
                       {
                         type: 10,
-                        content: "<a:emoji_1:1507842773246808064><@&1507853078840348722> = **NITRO GIFTLINK [$29.99]** <a:emoji_4:1507853367936942180>\n<a:emoji_1:1507842773246808064><@&1507852703496278210> = **NITRO GIFTLINK [$99.99]** <a:emoji_4:1507853367936942180>\n\n\n<a:emoji_1:1507842773246808064><@&1507853078840348722> = **FORTNITE V-BUCK [$22.99]** <a:emoji_5:1507853388606607480>\n<a:emoji_1:1507842773246808064><@&1507852703496278210> = **FORTNITE V-BUCK [$49.99]** <a:emoji_5:1507853388606607480>\n\n\n<a:emoji_1:1507842773246808064><@&1507853078840348722> = **ROBLOX [3,999 Robux]** <:275571robux:1507853641862611055>\n<a:emoji_1:1507842773246808064><@&1507852703496278210> = **ROBLOX [6,999 Robux]** <:275571robux:1507853641862611055>\n"
+                        content: "<a:emoji_1:1507842773246808064><@&1507853078840348722> = **NITRO GIFTLINK [$29.99]** <a:emoji_4:1507853367936942180>\n<a:emoji_1:1507842773246808064><@&1507852703496278210> = **NITRO GIFTLINK [$99.99]** <a:emoji_4:1507853367936942180>\n\n\n<a:emoji_1:1507842773246808064><@&1507853078840348722> = **MINECRAFT ACCOUNT** <a:Minecraft:1509188000184012841>\n<a:emoji_1:1507842773246808064><@&1507852703496278210> = **MINECRAFT REDEEM CODE** <a:Minecraft:1509188000184012841>\n\n\n<a:emoji_1:1507842773246808064><@&1507853078840348722> = **ROBLOX [3,999 Robux]** <:275571robux:1507853641862611055>\n<a:emoji_1:1507842773246808064><@&1507852703496278210> = **ROBLOX [6,999 Robux]** <:275571robux:1507853641862611055>\n"
                       }
                     ],
                     accessory: {
@@ -4612,8 +4521,8 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           ticketCloseTimeouts.set(ticketChannel.id, timeoutId);
         } else {
           // Guild-specific reward filtering
-          const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'fortnite_2500', 'fortnite_5000', 'robux_50', 'robux_100'];
-          const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'fortnite_2500': 3, 'fortnite_5000': 6, 'robux_50': 3, 'robux_100': 6 };
+          const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'mc_account', 'mc_code', 'robux_50', 'robux_100'];
+          const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
           const isNewServer = interaction.guild.id === '1236706368904233082';
           const isTargetServer = interaction.guild.id === '1485628774178623568';
 
@@ -4888,8 +4797,8 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         ticketCloseTimeouts.set(interaction.channel.id, timeoutId);
       } else {
         // Guild-specific reward filtering
-        const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'fortnite_2500', 'fortnite_5000', 'robux_50', 'robux_100'];
-        const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'fortnite_2500': 3, 'fortnite_5000': 6, 'robux_50': 3, 'robux_100': 6 };
+        const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'mc_account', 'mc_code', 'robux_50', 'robux_100'];
+        const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
         const isNewServer = interaction.guild.id === '1236706368904233082';
         const isTargetServer = interaction.guild.id === '1485628774178623568';
 
@@ -5045,8 +4954,8 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           ticketCloseTimeouts.delete(interaction.channel.id);
         }
 
-        const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'fortnite_2500', 'fortnite_5000', 'robux_50', 'robux_100'];
-        const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'fortnite_2500': 3, 'fortnite_5000': 6, 'robux_50': 3, 'robux_100': 6 };
+        const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'mc_account', 'mc_code', 'robux_50', 'robux_100'];
+        const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
         const isNewServer = interaction.guild.id === '1236706368904233082';
         const isTargetServer = interaction.guild.id === '1485628774178623568';
 
@@ -5187,7 +5096,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       const is2Inv = db.getSetting('event2invite', false, interaction.guild.id);
       let cost = is1Inv ? 1 : (is2Inv ? 2 : reward.invites);
       if (interaction.guild?.id === '1236706368904233082') {
-        const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'fortnite_2500': 3, 'fortnite_5000': 6, 'robux_50': 3, 'robux_100': 6 };
+        const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
         if (NEW_SERVER_INVITE_MAP[reward.id] !== undefined) {
           cost = is1Inv ? 1 : (is2Inv ? 2 : NEW_SERVER_INVITE_MAP[reward.id]);
         }
@@ -5321,7 +5230,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       const is2Inv = db.getSetting('event2invite', false, interaction.guild.id);
       let cost = is1Inv ? 1 : (is2Inv ? 2 : reward.invites);
       if (interaction.guild?.id === '1236706368904233082') {
-        const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'fortnite_2500': 3, 'fortnite_5000': 6, 'robux_50': 3, 'robux_100': 6 };
+        const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
         if (NEW_SERVER_INVITE_MAP[reward.id] !== undefined) {
           cost = is1Inv ? 1 : (is2Inv ? 2 : NEW_SERVER_INVITE_MAP[reward.id]);
         }
@@ -5689,7 +5598,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       const is2Inv = db.getSetting('event2invite', false, interaction.guild.id);
       let cost = is1Inv ? 1 : (is2Inv ? 2 : reward.invites);
       if (interaction.guild?.id === '1236706368904233082') {
-        const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'fortnite_2500': 3, 'fortnite_5000': 6, 'robux_50': 3, 'robux_100': 6 };
+        const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
         if (NEW_SERVER_INVITE_MAP[reward.id] !== undefined) {
           cost = is1Inv ? 1 : (is2Inv ? 2 : NEW_SERVER_INVITE_MAP[reward.id]);
         }
@@ -6170,8 +6079,8 @@ client.on('messageCreate', async (message) => {
     const is2Inv = db.getSetting('event2invite', false, message.guild.id);
     
     // Guild-specific reward filtering
-    const NS_IDS = ['nitro_basic', 'nitro_boost', 'fortnite_2500', 'fortnite_5000', 'robux_50', 'robux_100'];
-    const NS_INV = { 'nitro_basic': 3, 'nitro_boost': 6, 'fortnite_2500': 3, 'fortnite_5000': 6, 'robux_50': 3, 'robux_100': 6 };
+    const NS_IDS = ['nitro_basic', 'nitro_boost', 'mc_account', 'mc_code', 'robux_50', 'robux_100'];
+    const NS_INV = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
     const isNS = message.guild.id === '1236706368904233082';
     const isTargetServer = message.guild.id === '1485628774178623568';
     const msgAllRewards = isNS
@@ -6201,8 +6110,6 @@ client.on('messageCreate', async (message) => {
           matchedReward = eligible.find(r => r.category.includes('YT') || r.category.includes('YOUTUBE'));
         } else if (lowerText.includes('valorant') || lowerText.includes('vp')) {
           matchedReward = eligible.find(r => r.category.includes('VALORANT'));
-        } else if (lowerText.includes('fortnite') || lowerText.includes('vbucks') || lowerText.includes('v-bucks')) {
-          matchedReward = eligible.find(r => r.category.includes('FORTNITE'));
         }
       }
 
