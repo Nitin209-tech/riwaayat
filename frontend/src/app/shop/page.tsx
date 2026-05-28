@@ -66,7 +66,7 @@ export default function Shop() {
         {/* Intro Header */}
         <div className="text-center space-y-4">
           <span className="text-[10px] font-extrabold tracking-widest uppercase text-[var(--p)] font-mono">Premium Services</span>
-          <h1 className="text-4xl md:text-5xl font-black text-[var(--t)] tracking-tight uppercase">Riwaayat Rental Store</h1>
+          <h1 className="text-4xl md:text-5xl font-black text-[var(--t)] tracking-tight uppercase">SYNQO Rental Store</h1>
           <p className="text-xs md:text-sm text-[var(--t3)] max-w-xl mx-auto leading-relaxed">
             Deploy your own state-of-the-art rewards ecosystem. Rent our high-fidelity automated Discord bot or host a complete OAuth2 web authentication panel styled with Gray-Lavender design tokens.
           </p>

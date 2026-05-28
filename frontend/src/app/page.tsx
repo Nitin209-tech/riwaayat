@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/components/AppContext';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,6 +27,15 @@ export default function Home() {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [selectedPlan, setSelectedPlan] = useState('');
+  const [showGrowthPopup, setShowGrowthPopup] = useState(false);
+  const [growthName, setGrowthName] = useState('');
+  const [growthEmail, setGrowthEmail] = useState('');
+  const [growthPlan, setGrowthPlan] = useState('Growth Booster');
+
+  useEffect(() => {
+    // Auto-open the growth popup when the page loads
+    setShowGrowthPopup(true);
+  }, []);
 
   const stats = [
     { num: '50K+', label: 'Users Joined', desc: 'Active gamer profiles linked via Discord OAuth2' },
@@ -111,19 +120,19 @@ export default function Home() {
 
   const features = [
     { 
-      ico: <Shield className="w-6 h-6 text-purple-400" />, 
+      ico: <Shield className="w-6 h-6 text-[var(--p)]" />, 
       title: 'Discord OAuth2 Authentication', 
       desc: '100% secure connection verified by official Discord API. We never see or store your private gaming passwords.' 
     },
     { 
-      ico: <CheckCircle className="w-6 h-6 text-emerald-400" />, 
+      ico: <CheckCircle className="w-6 h-6 text-[var(--p3)]" />, 
       title: '25-Character Validation', 
       desc: 'Apply secure alpha-numeric promotion keys to check inventory stock and initiate secure activation queues.' 
     },
     { 
-      ico: <CheckCircle className="w-6 h-6 text-cyan-400" />, 
+      ico: <CheckCircle className="w-6 h-6 text-[var(--p3)]" />, 
       title: 'Modern Telemetry Dashboard', 
-      desc: 'Track claim histories, active validation channels, and invite counters in an elegant glassmorphic UI.' 
+      desc: 'Track claim histories, active validation channels, and invite counters in a clean, intuitive UI.' 
     }
   ];
 
@@ -188,56 +197,53 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--t)] selection:bg-[var(--p)]/30 selection:text-white font-sans overflow-x-hidden relative">
       
-      {/* Premium Cyberpunk Background Grids & Chromatic Orb Effects */}
+      {/* Subtle background decoration */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,rgba(168,85,247,0.15),transparent_70%)] blur-[120px]" />
-        <div className="absolute top-[30%] right-[-10%] w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,rgba(6,182,212,0.12),transparent_70%)] blur-[150px]" />
-        <div className="absolute bottom-[10%] left-[10%] w-[700px] h-[700px] rounded-full bg-[radial-gradient(circle,rgba(236,72,153,0.1),transparent_70%)] blur-[180px]" />
-        
-        {/* Subtle Tech Grid overlay */}
-        <div className="absolute inset-0 bg-grid opacity-[0.15]" />
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,rgba(217,119,6,0.08),transparent_70%)] blur-[120px]" />
+        <div className="absolute top-[30%] right-[-10%] w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,rgba(15,139,124,0.06),transparent_70%)] blur-[150px]" />
+        <div className="absolute bottom-[10%] left-[10%] w-[700px] h-[700px] rounded-full bg-[radial-gradient(circle,rgba(209,105,20,0.05),transparent_70%)] blur-[180px]" />
       </div>
 
       {/* NAVBAR */}
-      <nav className="sticky top-0 z-40 w-full border-b border-white/5 bg-[var(--bg)]/80 backdrop-blur-[24px] shadow-[0_4px_30px_rgba(183,148,244,0.08)]">
+      <nav className="sticky top-0 z-40 w-full border-b border-[var(--border)] bg-[var(--bg)] shadow-[var(--s1)]">
         <div className="max-w-7xl mx-auto px-6 h-[80px] flex items-center justify-between">
           
           {/* Left Brand Brandmark */}
           <Link href="/" className="flex items-center gap-3.5 no-underline group shrink-0">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-600 via-fuchsia-500 to-cyan-400 text-white flex items-center justify-center font-black text-base shadow-[0_0_20px_rgba(168,85,247,0.4)] group-hover:scale-105 transition-transform duration-300">
+            <div className="w-11 h-11 rounded-2xl bg-[var(--p)] text-white flex items-center justify-center font-black text-base shadow-[var(--s2)] group-hover:scale-105 transition-transform duration-300">
               R
             </div>
             <div>
-              <div className="font-extrabold text-xl tracking-[0.08em] uppercase bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-fuchsia-400 to-cyan-400">
+              <div className="font-extrabold text-xl tracking-[0.08em] uppercase text-[var(--p)]">
                 RIWAAYAT
               </div>
-              <div className="text-[9px] text-purple-300 tracking-widest font-extrabold uppercase">
-                Premium Rewards Portal
+              <div className="text-[9px] text-[var(--t3)] tracking-widest font-semibold uppercase">
+                Premium Rewards
               </div>
             </div>
           </Link>
 
           {/* Center Links Tabs */}
-          <div className="hidden md:flex items-center gap-8 text-xs font-semibold text-zinc-400">
-            <a href="#rewards" className="hover:text-white transition-colors duration-200 no-underline">Rewards</a>
-            <a href="#features" className="hover:text-white transition-colors duration-200 no-underline">Shield Tech</a>
-            <a href="#dashboard" className="hover:text-white transition-colors duration-200 no-underline">Dashboard</a>
-            <Link href="/howitworks" className="hover:text-white transition-colors duration-200 no-underline">FAQ & Guide</Link>
+          <div className="hidden md:flex items-center gap-8 text-xs font-semibold text-[var(--t3)]">
+            <a href="#rewards" className="hover:text-[var(--t)] transition-colors duration-200 no-underline">Rewards</a>
+            <a href="#features" className="hover:text-[var(--t)] transition-colors duration-200 no-underline">Features</a>
+            <a href="#dashboard" className="hover:text-[var(--t)] transition-colors duration-200 no-underline">Dashboard</a>
+            <Link href="/howitworks" className="hover:text-[var(--t)] transition-colors duration-200 no-underline">FAQ & Guide</Link>
           </div>
 
           {/* Right Action buttons */}
           <div className="flex items-center gap-3 shrink-0">
             {isAuthenticated && user ? (
               <div className="flex items-center gap-3">
-                <div className="hidden sm:flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-2">
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-purple-600 via-fuchsia-500 to-cyan-400 text-white flex items-center justify-center text-[10px] font-black">
+                <div className="hidden sm:flex items-center gap-2 bg-[var(--bg3)] border border-[var(--border)] rounded-full px-4 py-2">
+                  <div className="w-6 h-6 rounded-full bg-[var(--p)] text-white flex items-center justify-center text-[10px] font-black">
                     {user.username.substring(0, 2).toUpperCase()}
                   </div>
-                  <span className="text-xs font-bold text-white/90">{user.username}</span>
+                  <span className="text-xs font-bold text-[var(--t)]">{user.username}</span>
                 </div>
                 <button
                   onClick={logout}
-                  className="text-xs font-bold text-zinc-400 bg-white/5 border border-white/10 rounded-full px-5 py-2.5 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 transition duration-200"
+                  className="text-xs font-bold text-[var(--t3)] bg-[var(--bg2)] border border-[var(--border)] rounded-full px-5 py-2.5 hover:text-red-600 hover:border-red-300/40 hover:bg-red-50 transition duration-200"
                 >
                   Sign Out
                 </button>
@@ -245,7 +251,7 @@ export default function Home() {
             ) : (
               <button
                 onClick={() => loginWithDiscord()}
-                className="px-7 py-3 bg-gradient-to-r from-[#5865F2] to-[#404eed] text-white hover:brightness-110 rounded-full text-xs font-black tracking-widest uppercase transition-all duration-300 shadow-[0_0_20px_rgba(88,101,242,0.3)] hover:scale-105 flex items-center gap-2"
+                className="px-7 py-3 bg-[var(--p)] text-white hover:brightness-110 rounded-full text-xs font-black tracking-widest uppercase transition-all duration-300 shadow-[var(--s2)] hover:scale-105 flex items-center gap-2"
               >
                 Login with Discord
               </button>
@@ -266,9 +272,9 @@ export default function Home() {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 bg-[#0c082c]/65 border border-purple-500/30 rounded-full px-6 py-2.5 text-[10px] sm:text-xs font-bold tracking-widest uppercase text-purple-300 shadow-[0_0_20px_rgba(168,85,247,0.2)]"
+            className="inline-flex items-center gap-2 bg-[var(--bg3)] border border-[var(--border2)] rounded-full px-6 py-2.5 text-[10px] sm:text-xs font-bold tracking-widest uppercase text-[var(--p)] shadow-[var(--s1)]"
           >
-            <Shield className="w-3.5 h-3.5 text-fuchsia-400" />
+            <Shield className="w-3.5 h-3.5 text-[var(--p)]" />
             Secure OAuth2 Reward Authentication
           </motion.div>
 
@@ -280,7 +286,7 @@ export default function Home() {
             className="text-5xl sm:text-7xl lg:text-[85px] font-black tracking-tight leading-[0.95] text-white"
           >
             The Ultimate<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-400 to-cyan-400">
+            <span className="text-[var(--p)]">
               Discord Reward
             </span><br />
             Platform.
@@ -291,7 +297,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-xs sm:text-sm md:text-base text-zinc-300 max-w-xl mx-auto leading-relaxed"
+            className="text-xs sm:text-sm md:text-base text-[var(--t3)] max-w-xl mx-auto leading-relaxed"
           >
             Authenticate seamlessly using Discord OAuth2, input your Microsoft outlook and desired username, and paste your 25-character promo key to activate.
           </motion.p>
@@ -320,7 +326,7 @@ export default function Home() {
             )}
             <a
               href="#dashboard"
-              className="px-12 py-5 bg-white/5 border border-white/10 rounded-full text-xs font-black tracking-widest uppercase text-white hover:bg-cyan-500/10 hover:border-cyan-500/40 hover:shadow-[0_0_20px_rgba(6,182,212,0.2)] transition-all duration-200 no-underline"
+              className="px-12 py-5 bg-[var(--bg3)] border border-[var(--border2)] rounded-full text-xs font-black tracking-widest uppercase text-[var(--p)] hover:bg-[var(--p)]/10 hover:border-[var(--border2)] hover:shadow-[var(--s2)] transition-all duration-200 no-underline"
             >
               Explore Rewards
             </a>
@@ -338,19 +344,13 @@ export default function Home() {
               transition={{ duration: 0.5, delay: i * 0.1 }}
               className="card-cyber rounded-3xl p-8 text-center relative group"
             >
-              {/* Corner tech lines */}
-              <div className="absolute top-0 left-0 w-4 h-[1px] bg-fuchsia-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="absolute top-0 left-0 w-[1px] h-4 bg-fuchsia-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="absolute bottom-0 right-0 w-4 h-[1px] bg-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="absolute bottom-0 right-0 w-[1px] h-4 bg-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-              <div className="text-4xl sm:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-fuchsia-400 to-cyan-400 tracking-tight mb-2">
+              <div className="text-4xl sm:text-5xl font-black text-[var(--p)] tracking-tight mb-2">
                 {st.num}
               </div>
-              <div className="text-[10px] font-extrabold text-zinc-400 uppercase tracking-widest mb-1.5 font-mono">
+              <div className="text-[10px] font-extrabold text-[var(--t3)] uppercase tracking-widest mb-1.5 font-mono">
                 {st.label}
               </div>
-              <p className="text-xs text-zinc-400 leading-relaxed">
+              <p className="text-xs text-[var(--t3)] leading-relaxed">
                 {st.desc}
               </p>
             </motion.div>
@@ -361,40 +361,40 @@ export default function Home() {
         <section id="dashboard" className="max-w-5xl mx-auto space-y-8 pt-12">
           
           <div className="text-center space-y-2">
-            <span className="text-[10px] font-extrabold tracking-widest uppercase text-zinc-400 font-mono">Redeem Center</span>
-            <h2 className="text-4xl font-black text-white tracking-tight uppercase">Command Dashboard</h2>
-            <p className="text-xs text-zinc-400">Active reward categories connected to your Discord gaming instance.</p>
+            <span className="text-[10px] font-extrabold tracking-widest uppercase text-[var(--t3)] font-mono">Redeem Center</span>
+            <h2 className="text-4xl font-black text-[var(--t)] tracking-tight uppercase">Rewards Dashboard</h2>
+            <p className="text-xs text-[var(--t3)]">Claim gaming rewards connected to your Discord account.</p>
           </div>
 
-          <div className="bg-[#0c082c]/40 border border-purple-500/10 rounded-3xl p-6 sm:p-10 shadow-[0_30px_90px_rgba(168,85,247,0.06)] relative overflow-hidden backdrop-blur-2xl">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 sm:p-10 shadow-[var(--s1)] relative overflow-hidden">
             
             {/* Top User Account Profile Row */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 border-b border-white/5 pb-8 mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 border-b border-[var(--border)] pb-8 mb-8">
               <div className="flex items-center gap-4">
                 {/* Large Premium Avatar Block with gradient border ring */}
-                <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-purple-500 via-fuchsia-500 to-cyan-400 p-[1.5px] shadow-[0_0_20px_rgba(168,85,247,0.3)]">
+                <div className="w-16 h-16 rounded-full bg-[var(--p)] p-[1.5px] shadow-[var(--s2)]">
                   <div className="w-full h-full rounded-full bg-[var(--bg)] flex items-center justify-center text-white font-bold font-mono text-xl">
                     {isAuthenticated && user ? user.username.substring(0, 2).toUpperCase() : 'RW'}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] font-extrabold tracking-widest text-purple-300 uppercase font-mono">Connected Account</div>
-                  <h3 className="text-xl font-black text-white">
+                  <div className="text-[10px] font-extrabold tracking-widest text-[var(--p)] uppercase font-mono">Connected Account</div>
+                  <h3 className="text-xl font-black text-[var(--t)]">
                     {isAuthenticated && user ? `@${user.username}` : 'Login to connect'}
                   </h3>
-                  <div className="flex items-center gap-2 text-xs text-zinc-300 mt-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <div className="flex items-center gap-2 text-xs text-[var(--t3)] mt-1">
+                    <span className="w-2 h-2 rounded-full bg-[var(--p3)] animate-pulse" />
                     Verified Discord Session Active
                   </div>
                 </div>
               </div>
 
               {/* Status Badge */}
-              <div className="bg-[var(--bg)]/65 border border-purple-500/20 rounded-2xl px-6 py-4 flex items-center gap-3 shrink-0 shadow-[0_0_15px_rgba(183,148,244,0.1)]">
-                <Shield className="w-5 h-5 text-fuchsia-400" />
+              <div className="bg-[var(--bg2)] border border-[var(--border2)] rounded-2xl px-6 py-4 flex items-center gap-3 shrink-0 shadow-[var(--s1)]">
+                <Shield className="w-5 h-5 text-[var(--p)]" />
                 <div>
-                  <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Verification Status</div>
-                  <div className="text-xs font-black text-white tracking-wide uppercase mt-0.5 font-mono">
+                  <div className="text-[9px] font-bold text-[var(--t3)] uppercase tracking-wider">Verification Status</div>
+                  <div className="text-xs font-black text-[var(--t)] tracking-wide uppercase mt-0.5 font-mono">
                     Level 1 Authenticated
                   </div>
                 </div>
@@ -412,15 +412,15 @@ export default function Home() {
                 >
                   <div className="space-y-5">
                     <div className="flex items-center justify-between">
-                      <div className="w-14 h-14 rounded-xl bg-purple-500/5 border border-purple-500/20 flex items-center justify-center group-hover:border-cyan-400 group-hover:bg-cyan-500/5 transition-all duration-300">
+                      <div className="w-14 h-14 rounded-xl bg-[var(--p)]/5 border border-[var(--border2)] flex items-center justify-center group-hover:border-[var(--p3)] group-hover:bg-[var(--p3)]/5 transition-all duration-300">
                         {React.cloneElement(card.ico, { className: 'w-7 h-7' })}
                       </div>
-                      <span className="text-[10px] font-black text-white font-mono tracking-wider bg-zinc-800 border border-zinc-700 rounded-full px-3 py-1">{card.price}</span>
+                      <span className="text-[10px] font-black text-[var(--t)] font-mono tracking-wider bg-[var(--bg2)] border border-[var(--border)] rounded-full px-3 py-1">{card.price}</span>
                     </div>
 
                     <div className="space-y-2">
                       <h4 className="text-lg font-black text-white uppercase tracking-tight">{card.title}</h4>
-                      <p className="text-xs text-zinc-300 leading-relaxed">{card.desc}</p>
+                      <p className="text-xs text-[var(--t3)] leading-relaxed">{card.desc}</p>
                     </div>
                   </div>
 
@@ -446,15 +446,20 @@ export default function Home() {
             </div>
 
             {/* Quick Actions Panel */}
-            <div className="bg-[var(--bg)]/65 border border-cyan-500/20 rounded-2xl p-6 mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-[0_0_20px_rgba(163,191,250,0.15)] font-sans">
-              <p className="text-xs text-zinc-400 text-center sm:text-left leading-relaxed">
-                Do you hold an official 25-character premium redeem coupon code gifted by administrators?
-              </p>
+            <div className="bg-[var(--bg2)] border border-[var(--border2)] rounded-2xl p-6 mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-[var(--s1)] font-sans">
+              <div className="space-y-3 text-center sm:text-left">
+                <p className="text-xs text-[var(--t3)] leading-relaxed">
+                  Apply a valid 25-character promo code to activate your reward instantly.
+                </p>
+                <p className="text-xs text-[var(--t3)] leading-relaxed">
+                  Do you hold an official 25-character premium redeem coupon code gifted by administrators?
+                </p>
+              </div>
               <Link
                 href="/redeem/verify?category=minecraft"
-                className="px-6 py-3 bg-[var(--bg)]/65 border border-cyan-500/25 rounded-xl text-xs font-black tracking-wider uppercase hover:bg-cyan-500/10 hover:border-cyan-500/50 hover:shadow-[0_0_15px_rgba(163,191,250,0.25)] text-white transition duration-300 no-underline flex items-center gap-1.5 shrink-0"
+                className="px-6 py-3 bg-[var(--p)]/10 border border-[var(--border2)] rounded-xl text-xs font-black tracking-wider uppercase hover:bg-[var(--p)]/20 hover:border-[var(--border2)] hover:shadow-[var(--s2)] text-[var(--p)] transition duration-300 no-underline flex items-center gap-1.5 shrink-0"
               >
-                Apply Coupon Code <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
+                Apply Coupon Code <ExternalLink className="w-3.5 h-3.5 text-[var(--p)]" />
               </Link>
             </div>
 
@@ -464,9 +469,9 @@ export default function Home() {
         {/* FEATURES SECTION */}
         <section id="features" className="max-w-5xl mx-auto space-y-12 pt-12">
           <div className="text-center space-y-3">
-            <span className="text-[10px] font-extrabold tracking-widest uppercase text-purple-300 font-mono">Security & Architecture</span>
+            <span className="text-[10px] font-extrabold tracking-widest uppercase text-[var(--p)] font-mono">Security & Architecture</span>
             <h2 className="text-4xl font-black text-white tracking-tight uppercase">Enterprise Shield Infrastructure</h2>
-            <p className="text-xs text-zinc-300 max-w-md mx-auto leading-relaxed">
+            <p className="text-xs text-[var(--t3)] max-w-md mx-auto leading-relaxed">
               We leverage cloud-grade anti-bot protocols, secure session structures, and fully encrypted database ledgers.
             </p>
           </div>
@@ -477,22 +482,22 @@ export default function Home() {
                 key={i} 
                 className="card-cyber rounded-3xl p-8 relative overflow-hidden group"
               >
-                <div className="w-12 h-12 rounded-lg bg-purple-500/5 border border-purple-500/20 flex items-center justify-center mb-6 group-hover:border-cyan-400 group-hover:bg-cyan-500/5 transition-all duration-300">
+                <div className="w-12 h-12 rounded-lg bg-[var(--p)]/5 border border-[var(--border2)] flex items-center justify-center mb-6 group-hover:border-[var(--p3)] group-hover:bg-[var(--p3)]/5 transition-all duration-300">
                   {React.cloneElement(feat.ico, { className: 'w-6 h-6' })}
                 </div>
                 <h3 className="text-base font-black text-white uppercase tracking-tight mb-2.5">{feat.title}</h3>
-                <p className="text-xs text-zinc-300 leading-relaxed">{feat.desc}</p>
+                <p className="text-xs text-[var(--t3)] leading-relaxed">{feat.desc}</p>
               </div>
             ))}
           </div>
         </section>
 
         {/* CTA SECTION */}
-        <section className="bg-gradient-to-tr from-[var(--bg2)] via-[var(--bg3)] to-[var(--bg)] border border-purple-500/20 rounded-3xl p-10 md:p-14 text-center relative overflow-hidden shadow-[0_30px_90px_rgba(183,148,244,0.1)] max-w-5xl mx-auto">
+        <section className="bg-gradient-to-tr from-[var(--bg2)] via-[var(--bg3)] to-[var(--bg)] border border-[var(--border2)] rounded-3xl p-10 md:p-14 text-center relative overflow-hidden shadow-[var(--s1)] max-w-5xl mx-auto">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[radial-gradient(ellipse,rgba(168,85,247,0.1),transparent_70%)] pointer-events-none" />
           
           <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-white mb-4 uppercase">Join the Premium Circle</h2>
-          <p className="text-xs sm:text-sm text-zinc-300 max-w-sm mx-auto leading-relaxed mb-8">
+          <p className="text-xs sm:text-sm text-[var(--t3)] max-w-sm mx-auto leading-relaxed mb-8">
             Authenticate with Discord, apply 25-character codes, and claim rewards safely.
           </p>
 
@@ -512,6 +517,7 @@ export default function Home() {
                 Login with Discord <ArrowRight className="w-3.5 h-3.5 text-white" />
               </button>
             )}
+            {/* Grow popup auto-opens on page load; button intentionally removed */}
             <Link
               href="/howitworks"
               className="px-9 py-4 bg-white/5 border border-white/10 rounded-full text-xs font-black tracking-widest uppercase text-white hover:bg-cyan-500/10 hover:border-cyan-500/40 hover:shadow-[0_0_20px_rgba(6,182,212,0.2)] transition duration-300 no-underline"
@@ -773,6 +779,129 @@ export default function Home() {
                   Proceed to Secure Line <ArrowRight size={16} />
                 </button>
 
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showGrowthPopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.98 }}
+              transition={{ duration: 0.25 }}
+              className="w-full max-w-xl bg-[var(--surface)] border border-[var(--border2)] rounded-[32px] p-8 space-y-6 shadow-[0_30px_80px_rgba(45,38,32,0.25)]"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-2xl font-black text-[var(--t)]">Grow Your Server</h3>
+                  <p className="text-sm text-[var(--t3)] mt-2">
+                    If you want to grow your server using our website and bots, choose a plan and talk to owners.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowGrowthPopup(false)}
+                  className="text-[var(--t3)] hover:text-[var(--t)] transition"
+                >
+                  <X size={22} />
+                </button>
+              </div>
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!growthName.trim() || !growthEmail.trim()) return;
+
+                  // Build ticket payload asking the backend/bot to create a non-closable ticket and ping owner
+                  const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'https://riwaayat.onrender.com').replace(/\/$/, '');
+                  try {
+                    await fetch(`${API_BASE}/api/support/create-ticket`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        username: growthName,
+                        email: growthEmail,
+                        plan: growthPlan,
+                        pingOwner: true,
+                        nonClosable: true,
+                      }),
+                    });
+                  } catch (err) {
+                    // ignore network errors for now — still show confirmation
+                    console.error('Ticket submit failed', err);
+                  }
+
+                  setShowGrowthPopup(false);
+                  // Friendly confirmation — actual ticket handling occurs server-side
+                  window.alert('Request submitted. Owners will be notified and the ticket will remain open for manual handling.');
+                }}
+                className="space-y-5"
+              >
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-bold uppercase tracking-widest text-[var(--p)]">Discord Username</label>
+                  <input
+                    value={growthName}
+                    onChange={(e) => setGrowthName(e.target.value)}
+                    placeholder="e.g. Steve#1234"
+                    className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-2xl px-4 py-3 text-sm text-[var(--t)] focus:outline-none focus:border-[var(--p)]/60 transition"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-bold uppercase tracking-widest text-[var(--p)]">Email</label>
+                  <input
+                    type="email"
+                    value={growthEmail}
+                    onChange={(e) => setGrowthEmail(e.target.value)}
+                    placeholder="steve@outlook.com"
+                    className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-2xl px-4 py-3 text-sm text-[var(--t)] focus:outline-none focus:border-[var(--p)]/60 transition"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-bold uppercase tracking-widest text-[var(--p)]">Choose a Growth Plan</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {['Growth Booster', 'Server Surge', 'Owner Talk'].map((plan) => (
+                      <button
+                        key={plan}
+                        type="button"
+                        onClick={() => setGrowthPlan(plan)}
+                        className={`py-3 rounded-2xl text-sm font-bold transition ${
+                          growthPlan === plan
+                            ? 'bg-[var(--p)] text-white border border-[var(--p)]'
+                            : 'bg-[var(--bg)] border border-[var(--border)] text-[var(--t)] hover:bg-[var(--bg3)]'
+                        }`}
+                      >
+                        {plan}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-3">
+                  <button
+                    type="submit"
+                    className="w-full sm:w-auto px-8 py-3 bg-[var(--p)] text-white rounded-2xl font-black uppercase tracking-widest text-xs transition hover:bg-[var(--p2)]"
+                  >
+                    Submit Request
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGrowthName('');
+                      setGrowthEmail('');
+                      setShowGrowthPopup(false);
+                    }}
+                    className="w-full sm:w-auto px-8 py-3 bg-[var(--bg3)] border border-[var(--border)] rounded-2xl text-sm font-semibold text-[var(--t)] transition hover:bg-[var(--bg2)]"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </form>
             </motion.div>
           </div>

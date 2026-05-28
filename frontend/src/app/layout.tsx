@@ -3,7 +3,7 @@ import './globals.css';
 import { AppProvider } from '@/components/AppContext';
 
 export const metadata = {
-  title: 'Riwaayat | Premium Gaming Rewards Platform',
+  title: 'SYNQO | Premium Gaming Rewards Platform',
   description: 'Earn coins, invite friends, and redeem premium gaming rewards — Minecraft, Discord Nitro, Roblox, and more.',
 };
 

@@ -8,14 +8,14 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'cyber-black': '#05070f',
-        'cyber-dark-blue': '#0b0f19',
-        'cyber-gray': '#171d2c',
-        'cyber-cyan': '#00f0ff',
-        'cyber-purple': '#9d4ede',
-        'cyber-pink': '#ff007f',
-        'cyber-white': '#ffffff',
-        'cyber-light-gray': '#b0b7c6',
+        'human-cream': '#faf8f3',
+        'human-warm-gray': '#2c2620',
+        'human-light-gray': '#e8e3db',
+        'human-accent': '#d97706',
+        'human-teal': '#0f8b7c',
+        'human-soft-green': '#10b981',
+        'human-warm-white': '#fffdf9',
+        'human-text': '#3d3731',
       },
       // Add safe list for animations to reduce bundle size
       animation: {
@@ -33,6 +33,6 @@ module.exports = {
   plugins: [],
   // Optimize for production
   safelist: [
-    { pattern: /^(bg|text|border|shadow)-.*(cyan|purple|pink|gray).*/ },
+    { pattern: /^(bg|text|border|shadow)-.*(amber|orange|teal|green|gray).*/ },
   ],
 };
