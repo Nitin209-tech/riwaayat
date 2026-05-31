@@ -36,7 +36,7 @@ const pool = new Pool({
 });
 
 function getComponentImage(guildId, defaultUrl) {
-  if (guildId === '1236706368904233082') {
+  if (guildId === '1507448300008112179') {
     return 'https://cdn.discordapp.com/attachments/1508016269507563531/1508057501222961213/ChatGPT_Image_May_24_2026_01_18_34_AM.png?ex=6a14277e&is=6a12d5fe&hm=218ef2222c227533503d34519c066de6e0a00b439a940fa96124d586b4ea4709';
   }
   return defaultUrl;
@@ -2016,7 +2016,7 @@ client.on('interactionCreate', async (interaction) => {
 
       const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'mc_account', 'mc_code', 'robux_50', 'robux_100'];
       const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
-      const isNewServer = interaction.guild?.id === '1236706368904233082';
+      const isNewServer = interaction.guild?.id === '1507448300008112179';
       const isTargetServer = interaction.guild?.id === '1485628774178623568';
 
       const allRewards = isNewServer
@@ -2053,7 +2053,7 @@ client.on('interactionCreate', async (interaction) => {
 
       const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'mc_account', 'mc_code', 'robux_50', 'robux_100'];
       const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
-      const isNewServer = interaction.guild?.id === '1236706368904233082';
+      const isNewServer = interaction.guild?.id === '1507448300008112179';
       const isTargetServer = interaction.guild?.id === '1485628774178623568';
 
       const allRewards = isNewServer
@@ -2402,7 +2402,7 @@ client.on('interactionCreate', async (interaction) => {
                           name: "gift",
                           animated: false
                         },
-                        url: "https://discord.com/channels/1236706368904233082/1507837879781425164"
+                        url: "https://discord.com/channels/1507448300008112179/1507837879781425164"
                       },
                       {
                         style: 1,
@@ -4316,7 +4316,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
       try {
         // Parent category checks (Max 50 channels limit check)
-        const catId = db.getSetting('ticketCategoryId', interaction.guild.id === '1236706368904233082' ? '1507852451129331842' : '1485628775277269092', interaction.guild.id);
+        const catId = db.getSetting('ticketCategoryId', interaction.guild.id === '1507448300008112179' ? '1507852451129331842' : '1485628775277269092', interaction.guild.id);
         const parentCategory = interaction.guild.channels.cache.get(catId);
         let parentId = null;
         if (parentCategory && parentCategory.type === ChannelType.GuildCategory) {
@@ -4399,7 +4399,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         // Step 1: Send a super premium welcome dashboard using V2 components
         const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
         const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
-        const minRequired = is1Inv ? 1 : (interaction.guild.id === '1236706368904233082' ? 3 : (interaction.guild.id === '1485628774178623568' ? 4 : 2));
+        const minRequired = is1Inv ? 1 : (interaction.guild.id === '1507448300008112179' ? 3 : (interaction.guild.id === '1485628774178623568' ? 4 : 2));
 
         const statusEmoji = stats.valid >= minRequired ? '🟢' : '🔴';
         const statusText = stats.valid >= minRequired 
@@ -4523,7 +4523,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           // Guild-specific reward filtering
           const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'mc_account', 'mc_code', 'robux_50', 'robux_100'];
           const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
-          const isNewServer = interaction.guild.id === '1236706368904233082';
+          const isNewServer = interaction.guild.id === '1507448300008112179';
           const isTargetServer = interaction.guild.id === '1485628774178623568';
 
           const allRewards = isNewServer
@@ -4701,7 +4701,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       await interaction.deferUpdate().catch(() => {});
       const stats = db.getUserStats(interaction.user.id, interaction.guild.id);
       const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
-      const minRequired = is1Inv ? 1 : (interaction.guild.id === '1236706368904233082' ? 3 : (interaction.guild.id === '1485628774178623568' ? 4 : 2));
+      const minRequired = is1Inv ? 1 : (interaction.guild.id === '1507448300008112179' ? 3 : (interaction.guild.id === '1485628774178623568' ? 4 : 2));
 
       // 1. Post the custom V2 invite count component directly in the channel
       const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
@@ -4799,7 +4799,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         // Guild-specific reward filtering
         const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'mc_account', 'mc_code', 'robux_50', 'robux_100'];
         const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
-        const isNewServer = interaction.guild.id === '1236706368904233082';
+        const isNewServer = interaction.guild.id === '1507448300008112179';
         const isTargetServer = interaction.guild.id === '1485628774178623568';
 
         const allRewards = isNewServer
@@ -4873,7 +4873,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
       const stats = db.getUserStats(interaction.user.id, interaction.guild.id);
       const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
-      const minRequired = is1Inv ? 1 : (interaction.guild.id === '1236706368904233082' ? 3 : (interaction.guild.id === '1485628774178623568' ? 4 : 2));
+      const minRequired = is1Inv ? 1 : (interaction.guild.id === '1507448300008112179' ? 3 : (interaction.guild.id === '1485628774178623568' ? 4 : 2));
 
       const statusEmoji = stats.valid >= minRequired ? '🟢' : '🔴';
       const statusText = stats.valid >= minRequired 
@@ -4956,7 +4956,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
         const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'mc_account', 'mc_code', 'robux_50', 'robux_100'];
         const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
-        const isNewServer = interaction.guild.id === '1236706368904233082';
+        const isNewServer = interaction.guild.id === '1507448300008112179';
         const isTargetServer = interaction.guild.id === '1485628774178623568';
 
         const allRewards = isNewServer
@@ -5095,7 +5095,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
       const is2Inv = db.getSetting('event2invite', false, interaction.guild.id);
       let cost = is1Inv ? 1 : (is2Inv ? 2 : reward.invites);
-      if (interaction.guild?.id === '1236706368904233082') {
+      if (interaction.guild?.id === '1507448300008112179') {
         const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
         if (NEW_SERVER_INVITE_MAP[reward.id] !== undefined) {
           cost = is1Inv ? 1 : (is2Inv ? 2 : NEW_SERVER_INVITE_MAP[reward.id]);
@@ -5229,7 +5229,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
       const is2Inv = db.getSetting('event2invite', false, interaction.guild.id);
       let cost = is1Inv ? 1 : (is2Inv ? 2 : reward.invites);
-      if (interaction.guild?.id === '1236706368904233082') {
+      if (interaction.guild?.id === '1507448300008112179') {
         const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
         if (NEW_SERVER_INVITE_MAP[reward.id] !== undefined) {
           cost = is1Inv ? 1 : (is2Inv ? 2 : NEW_SERVER_INVITE_MAP[reward.id]);
@@ -5597,7 +5597,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
       const is2Inv = db.getSetting('event2invite', false, interaction.guild.id);
       let cost = is1Inv ? 1 : (is2Inv ? 2 : reward.invites);
-      if (interaction.guild?.id === '1236706368904233082') {
+      if (interaction.guild?.id === '1507448300008112179') {
         const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
         if (NEW_SERVER_INVITE_MAP[reward.id] !== undefined) {
           cost = is1Inv ? 1 : (is2Inv ? 2 : NEW_SERVER_INVITE_MAP[reward.id]);
@@ -6081,7 +6081,7 @@ client.on('messageCreate', async (message) => {
     // Guild-specific reward filtering
     const NS_IDS = ['nitro_basic', 'nitro_boost', 'mc_account', 'mc_code', 'robux_50', 'robux_100'];
     const NS_INV = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
-    const isNS = message.guild.id === '1236706368904233082';
+    const isNS = message.guild.id === '1507448300008112179';
     const isTargetServer = message.guild.id === '1485628774178623568';
     const msgAllRewards = isNS
       ? REWARDS.filter(r => NS_IDS.includes(r.id)).map(r => ({ ...r, invites: NS_INV[r.id] }))
