@@ -4527,7 +4527,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                               {
                                 label: "Nitro Basic (1 month)",
                                 value: "iPUmDyf4YD",
-                                description: "Requires 3 invites ",
+                                description: "Requires 2 invites ",
                                 emoji: {
                                   id: "1510922581966852096",
                                   name: "1504598957597392966",
@@ -5713,9 +5713,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       // Note: Automatic invite revocation upon successful claim has been disabled as requested.
       // Admins can manage invite revocations manually via the /revoke command.
 
-      // Legit Feedback prompt
-      await new Promise(r => setTimeout(r, 2000));
-      await interaction.channel.send('## ARE WE LEGIT??');
+
     }
 
     if (interaction.customId === 'p_303981356256333825' || interaction.customId === 'p_303981902858031113') {
@@ -5800,9 +5798,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         // Note: Automatic invite revocation upon successful claim has been disabled as requested.
         // Admins can manage invite revocations manually via the /revoke command.
 
-        // Legit Feedback prompt
-        await new Promise(r => setTimeout(r, 2000));
-        await interaction.channel.send('## ARE WE LEGIT??');
+
 
         // Clean up thread settings from DB
         const cleanDbData = db.loadDB();
@@ -5919,7 +5915,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
     if (interaction.customId === 'p_308528383904452609') {
       const selectedValue = interaction.values[0];
       const REWARD_MAP = {
-        'iPUmDyf4YD': { id: 'nitro_basic_1m', invites: 3, label: 'Nitro Basic (1 month)', category: 'NITRO_BASIC_1M' },
+        'iPUmDyf4YD': { id: 'nitro_basic_1m', invites: 2, label: 'Nitro Basic (1 month)', category: 'NITRO_BASIC_1M' },
         'HFMnyfM5LE': { id: 'nitro_boost_1m', invites: 6, label: 'Nitro Boost (1 month)', category: 'NITRO_BOOST_1M' },
         'uSO125SX3C': { id: 'nitro_basic_1y', invites: 9, label: 'Nitro Basic (1 year)', category: 'NITRO_BASIC_1Y' },
         'TmwgjHEmnA': { id: 'nitro_boost_1y', invites: 12, label: 'Nitro Boost (1 year)', category: 'NITRO_BOOST_1Y' },
@@ -5954,10 +5950,6 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                       components: [
                         {
                           type: 10,
-                          content: `# NOT ENOUGH INVITES!\n<:red_dot:1507713196184698990> You need **\`${cost}\`** invites to claim **__${selected.label}__**.\n<:red_dot:1507713196184698990> You currently have **\`${stats.valid}\`** invites.\n\n`
-                        },
-                        {
-                          type: 10,
                           content: "# NOT ENOUGH INVITES! "
                         },
                         {
@@ -5966,24 +5958,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                         },
                         {
                           type: 10,
-                          content: `<:emoji_28:1510933230230962206> You need **\`${cost}\`** invites to claim **__${selected.label}__**.\n<:emoji_28:1510933230230962206> You currently have **\`${stats.valid}\`** invites.\n\n> <:emoji_29:1510933924379885599> Click on __\"Pro Tip\"__ to learn how **to get invites faster!**\n> <:emoji_29:1510933924379885599> Invite your **Friends** We have limited stock`
-                        },
-                        {
-                          type: 1,
-                          components: [
-                            {
-                              type: 2,
-                              style: 5,
-                              label: "Pro tip",
-                              emoji: {
-                                id: "1510921902678343833",
-                                name: "1507780218884980796",
-                                animated: false
-                              },
-                              url: "https://discord.com/channels/971796852351578122/1510907761758572665",
-                              custom_id: "p_308531546812321797"
-                            }
-                          ]
+                          content: `<:emoji_28:1510933230230962206> You need **\`${cost}\`** invites to claim **__${selected.label}__**.\n<:emoji_28:1510933230230962206> You currently have **\`${stats.valid}\`** invites.\n\n> <:redArrow:1507713203574931626> Click on __\"Pro Tip\"__ to learn how **to get invites faster!**\n> <:redArrow:1507713203574931626> Invite your **Friends** We have limited stock`
                         }
                       ]
                     }
@@ -6004,10 +5979,6 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                     components: [
                       {
                         type: 10,
-                        content: `# NOT ENOUGH INVITES!\n<:red_dot:1507713196184698990> You need **\`${cost}\`** invites to claim **__${selected.label}__**.\n<:red_dot:1507713196184698990> You currently have **\`${stats.valid}\`** invites.\n\n`
-                      },
-                      {
-                        type: 10,
                         content: "# NOT ENOUGH INVITES! "
                       },
                       {
@@ -6016,24 +5987,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                       },
                       {
                         type: 10,
-                        content: `<:emoji_28:1510933230230962206> You need **\`${cost}\`** invites to claim **__${selected.label}__**.\n<:emoji_28:1510933230230962206> You currently have **\`${stats.valid}\`** invites.\n\n> <:emoji_29:1510933924379885599> Click on __\"Pro Tip\"__ to learn how **to get invites faster!**\n> <:emoji_29:1510933924379885599> Invite your **Friends** We have limited stock`
-                      },
-                      {
-                        type: 1,
-                        components: [
-                          {
-                            type: 2,
-                            style: 5,
-                            label: "Pro tip",
-                            emoji: {
-                              id: "1510921902678343833",
-                              name: "1507780218884980796",
-                              animated: false
-                            },
-                            url: "https://discord.com/channels/971796852351578122/1510907761758572665",
-                            custom_id: "p_308531546812321797"
-                          }
-                        ]
+                        content: `<:emoji_28:1510933230230962206> You need **\`${cost}\`** invites to claim **__${selected.label}__**.\n<:emoji_28:1510933230230962206> You currently have **\`${stats.valid}\`** invites.\n\n> <:redArrow:1507713203574931626> Click on __\"Pro Tip\"__ to learn how **to get invites faster!**\n> <:redArrow:1507713203574931626> Invite your **Friends** We have limited stock`
                       }
                     ]
                   }
@@ -6084,15 +6038,23 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
             body: {
               type: 4,
               data: {
-                content: payoutContent,
+                content: `🎉 **Claim Successful!** Your reward details and redeem code have been sent to your **Direct Messages (DMs)**. Please check your DMs!`,
                 flags: 64 // Ephemeral
               }
             }
           }
         );
 
-        // Also post in the ticket channel / current channel if it is a ticket channel
-        if (interaction.channel.name?.startsWith('claim-') || interaction.channel.name?.startsWith('escalated-')) {
+        // Also post in the ticket channel of this user if one exists in the server!
+        const ticketChannel = interaction.guild.channels.cache.find(c => 
+          (c.name.startsWith('claim-') || c.name.startsWith('escalated-')) &&
+          c.type === ChannelType.GuildText &&
+          c.permissionOverwrites.cache.get(interaction.user.id)?.allow.has(PermissionFlagsBits.ViewChannel)
+        );
+
+        if (ticketChannel) {
+          await ticketChannel.send({ content: payoutContent });
+        } else if (interaction.channel.name?.startsWith('claim-') || interaction.channel.name?.startsWith('escalated-')) {
           await interaction.channel.send({ content: payoutContent });
         }
 
@@ -6103,12 +6065,12 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           });
         } catch (dmErr) {
           console.warn(`[DM_FAILED] Could not send DM to @${interaction.user.username}: ${dmErr.message}`);
-          await interaction.channel.send(`⚠️ *Could not send DM to you. Please make sure your Direct Messages are turned on!*`);
+          if (ticketChannel) {
+            await ticketChannel.send(`⚠️ *Could not send DM to <@${interaction.user.id}>. The reward details have been posted in this ticket channel instead!*`);
+          } else {
+            await interaction.channel.send(`⚠️ *Could not send DM to <@${interaction.user.id}>. Please make sure your Direct Messages are turned on, or open a claim ticket!*`);
+          }
         }
-
-        // Legit Feedback prompt & Vouch proof logic (similar to existing)
-        await new Promise(r => setTimeout(r, 2000));
-        await interaction.channel.send('## ARE WE LEGIT??');
 
       } catch (err) {
         console.error('[CLAIM_SUCCESS_PROCESS_ERROR]', err.message);

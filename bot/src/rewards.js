@@ -11,7 +11,7 @@ const REWARDS = [
   { id: 'valorant_5000', label: 'Valorant 5000 Points', category: 'VALORANT_5000', invites: 4, emojiId: '1504591139695628340', emojiName: 'nyt_zvalo', animated: true },
   
   // New Event Rewards
-  { id: 'nitro_basic_1m', label: 'Nitro Basic (1 month)', category: 'NITRO_BASIC_1M', invites: 3, emojiId: '1510922581966852096', emojiName: '1504598957597392966', animated: false },
+  { id: 'nitro_basic_1m', label: 'Nitro Basic (1 month)', category: 'NITRO_BASIC_1M', invites: 2, emojiId: '1510922581966852096', emojiName: '1504598957597392966', animated: false },
   { id: 'nitro_boost_1m', label: 'Nitro Boost (1 month)', category: 'NITRO_BOOST_1M', invites: 6, emojiId: '1510926623925469185', emojiName: '1504598960944320592', animated: false },
   { id: 'nitro_basic_1y', label: 'Nitro Basic (1 year)', category: 'NITRO_BASIC_1Y', invites: 9, emojiId: '1510922581966852096', emojiName: '1504598957597392966', animated: false },
   { id: 'nitro_boost_1y', label: 'Nitro Boost (1 year)', category: 'NITRO_BOOST_1Y', invites: 12, emojiId: '1510926623925469185', emojiName: '1504598960944320592', animated: false },
