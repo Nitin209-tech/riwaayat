@@ -49,7 +49,15 @@ export default function Coins() {
     { key: 'rb100', cost: 120000000, name: 'Roblox $100 Plan', type: 'rb', inrPrice: '₹2,499', desc: '$100 plan credits for your account.', icon: '🎮', badge: 'Roblox $100', badgeStyle: 'rgba(239,68,68,0.1)' },
     { key: 'xbox', cost: 70000000, name: 'Xbox Game Pass', type: 'xbox', inrPrice: '₹1,999', desc: 'Ultimate activation for your account.', icon: '🎯', badge: 'Xbox', badgeStyle: 'rgba(16,185,129,0.1)' },
     { key: 'nitrobasic', cost: 60000000, name: 'Discord Nitro Basic Yearly', type: 'nitro', inrPrice: '₹1,199/yr', desc: 'Nitro Basic yearly plan gifted to account.', icon: '💎', badge: 'Basic Yearly', badgeStyle: 'rgba(88,101,242,0.1)' },
-    { key: 'nitroboost', cost: 200000000, name: 'Discord Nitro Boost Yearly', type: 'nitro', inrPrice: '₹5,999/yr', desc: 'Nitro Boost yearly + 2 server boosts gifted.', icon: '💎', badge: 'Boost Yearly', badgeStyle: 'rgba(88,101,242,0.1)' }
+    { key: 'nitroboost', cost: 200000000, name: 'Discord Nitro Boost Yearly', type: 'nitro', inrPrice: '₹5,999/yr', desc: 'Nitro Boost yearly + 2 server boosts gifted.', icon: '💎', badge: 'Boost Yearly', badgeStyle: 'rgba(88,101,242,0.1)' },
+    // New Event Rewards
+    { key: 'nitrobasic1m', cost: 30000000, name: 'Nitro Basic (1 month)', type: 'nitro', inrPrice: '₹499/mo', desc: 'Discord Nitro Basic for 1 month. 3 invites required.', icon: '💎', badge: 'Basic 1M', badgeStyle: 'rgba(88,101,242,0.1)' },
+    { key: 'nitroboost1m', cost: 50000000, name: 'Nitro Boost (1 month)', type: 'nitro', inrPrice: '₹999/mo', desc: 'Discord Nitro Boost for 1 month + 2 server boosts. 6 invites required.', icon: '🚀', badge: 'Boost 1M', badgeStyle: 'rgba(88,101,242,0.1)' },
+    { key: 'nitrobasic1y', cost: 90000000, name: 'Nitro Basic (1 year)', type: 'nitro', inrPrice: '₹2,999/yr', desc: 'Discord Nitro Basic for 1 year. 9 invites required.', icon: '💎', badge: 'Basic 1Y', badgeStyle: 'rgba(88,101,242,0.1)' },
+    { key: 'nitroboost1y', cost: 150000000, name: 'Nitro Boost (1 year)', type: 'nitro', inrPrice: '₹4,999/yr', desc: 'Discord Nitro Boost for 1 year + 2 server boosts. 12 invites required.', icon: '🚀', badge: 'Boost 1Y', badgeStyle: 'rgba(88,101,242,0.1)' },
+    { key: 'robux450', cost: 25000000, name: '450 Robux', type: 'rb', inrPrice: '₹449', desc: '450 Robux credited to your account. 3 invites required.', icon: '🎮', badge: '450 Robux', badgeStyle: 'rgba(239,68,68,0.1)' },
+    { key: 'robux1500', cost: 50000000, name: '1,500 Robux', type: 'rb', inrPrice: '₹999', desc: '1,500 Robux credited to your account. 6 invites required.', icon: '🎮', badge: '1500 Robux', badgeStyle: 'rgba(239,68,68,0.1)' },
+    { key: 'robux4500', cost: 90000000, name: '4,500 Robux', type: 'rb', inrPrice: '₹1,999', desc: '4,500 Robux credited to your account. 9 invites required.', icon: '🎮', badge: '4500 Robux', badgeStyle: 'rgba(239,68,68,0.1)' }
   ];
 
   const handleTileSelect = (reward: typeof rewards[0]) => {

@@ -435,7 +435,14 @@ const commands = [
           { name: '🎮 Roblox $50', value: 'ROBUX_50' },
           { name: '🎮 Roblox $100', value: 'ROBUX_100' },
           { name: '🔴 Valorant 2500 VP', value: 'VALORANT_2500' },
-          { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' }
+          { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' },
+          { name: '💎 Nitro Basic (1 Month)', value: 'NITRO_BASIC_1M' },
+          { name: '🚀 Nitro Boost (1 Month)', value: 'NITRO_BOOST_1M' },
+          { name: '💎 Nitro Basic (1 Year)', value: 'NITRO_BASIC_1Y' },
+          { name: '🚀 Nitro Boost (1 Year)', value: 'NITRO_BOOST_1Y' },
+          { name: '🎮 Roblox 450 Robux', value: 'ROBUX_450' },
+          { name: '🎮 Roblox 1500 Robux', value: 'ROBUX_1500' },
+          { name: '🎮 Roblox 4500 Robux', value: 'ROBUX_4500' }
         ))
       .addStringOption(opt => opt.setName('code').setDescription('The reward code/key').setRequired(true)))
     .addSubcommand(sub => sub.setName('generate')
@@ -452,7 +459,14 @@ const commands = [
           { name: '🎮 Roblox $50', value: 'ROBUX_50' },
           { name: '🎮 Roblox $100', value: 'ROBUX_100' },
           { name: '🔴 Valorant 2500 VP', value: 'VALORANT_2500' },
-          { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' }
+          { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' },
+          { name: '💎 Nitro Basic (1 Month)', value: 'NITRO_BASIC_1M' },
+          { name: '🚀 Nitro Boost (1 Month)', value: 'NITRO_BOOST_1M' },
+          { name: '💎 Nitro Basic (1 Year)', value: 'NITRO_BASIC_1Y' },
+          { name: '🚀 Nitro Boost (1 Year)', value: 'NITRO_BOOST_1Y' },
+          { name: '🎮 Roblox 450 Robux', value: 'ROBUX_450' },
+          { name: '🎮 Roblox 1500 Robux', value: 'ROBUX_1500' },
+          { name: '🎮 Roblox 4500 Robux', value: 'ROBUX_4500' }
         ))
       .addIntegerOption(opt => opt.setName('count').setDescription('How many codes to generate (1-50)').setRequired(true))
       .addStringOption(opt => opt.setName('password').setDescription('Access password').setRequired(false)))
@@ -471,7 +485,14 @@ const commands = [
         { name: '🎮 Roblox $50', value: 'ROBUX_50' },
         { name: '🎮 Roblox $100', value: 'ROBUX_100' },
         { name: '🔴 Valorant 2500 VP', value: 'VALORANT_2500' },
-        { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' }
+        { name: '🔥 Valorant 5000 VP', value: 'VALORANT_5000' },
+        { name: '💎 Nitro Basic (1 Month)', value: 'NITRO_BASIC_1M' },
+        { name: '🚀 Nitro Boost (1 Month)', value: 'NITRO_BOOST_1M' },
+        { name: '💎 Nitro Basic (1 Year)', value: 'NITRO_BASIC_1Y' },
+        { name: '🚀 Nitro Boost (1 Year)', value: 'NITRO_BOOST_1Y' },
+        { name: '🎮 Roblox 450 Robux', value: 'ROBUX_450' },
+        { name: '🎮 Roblox 1500 Robux', value: 'ROBUX_1500' },
+        { name: '🎮 Roblox 4500 Robux', value: 'ROBUX_4500' }
       ))
     .addStringOption(opt => opt.setName('password').setDescription('Access password').setRequired(false))
     .addIntegerOption(opt => opt.setName('count').setDescription('How many codes to generate (1-50)').setRequired(false)),
@@ -570,6 +591,10 @@ const commands = [
   new SlashCommandBuilder().setName('sendeventjson')
     .setDescription('Post a custom JSON component payload directly to this channel (Admin only)')
     .addStringOption(opt => opt.setName('json').setDescription('Raw V2 JSON component string').setRequired(true)),
+  new SlashCommandBuilder().setName('sencheckinvite')
+    .setDescription('Post the invite check panel (Admin only)'),
+  new SlashCommandBuilder().setName('nitroeventsend')
+    .setDescription('Post the Nitro Event panel (Admin only)'),
   new SlashCommandBuilder().setName('permanentwhitelist')
     .setDescription('Manage permanent whitelist users (Master Controller only)')
     .addSubcommand(sub => sub.setName('add')
@@ -2215,6 +2240,163 @@ client.on('interactionCreate', async (interaction) => {
       } catch (err) {
         console.error('[SENDEVENTJSON_ERROR]', err.message);
         return interaction.editReply({ content: `❌ **Failed to send event message**: ${err.message}` });
+      }
+    }
+
+    // /sencheckinvite
+    if (commandName === 'sencheckinvite') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      try {
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        await rest.post(`/channels/${interaction.channel.id}/messages`, {
+          body: {
+            flags: 32768,
+            components: [
+              {
+                type: 17,
+                components: [
+                  {
+                    type: 10,
+                    content: "# <:blurple_guide_large:1507780207770206391> CHECK YOUR INVITES\n> Click the **button** below to see your valid invite count."
+                  },
+                  {
+                    type: 14,
+                    divider: false,
+                    spacing: 2
+                  },
+                  {
+                    type: 1,
+                    components: [
+                      {
+                        style: 1,
+                        type: 2,
+                        label: "Check Invites",
+                        emoji: {
+                          id: "1510921821594321076",
+                          name: "1507780832310460496",
+                          animated: false
+                        },
+                        flow: {
+                          actions: []
+                        },
+                        custom_id: "p_308527763134877869"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        });
+        return interaction.editReply({ content: '🚀 **Check invites panel sent successfully!**' });
+      } catch (err) {
+        console.error('[SENCHECKINVITE_ERROR]', err.message);
+        return interaction.editReply({ content: `❌ **Failed to send check invites panel**: ${err.message}` });
+      }
+    }
+
+    // /nitroeventsend
+    if (commandName === 'nitroeventsend') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ Admin only command.', flags: MessageFlags.Ephemeral });
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      try {
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        await rest.post(`/channels/${interaction.channel.id}/messages`, {
+          body: {
+            flags: 32768,
+            components: [
+              {
+                type: 17,
+                components: [
+                  {
+                    type: 10,
+                    content: "# <:1507780205777916147:1510922914579484845> __REWARDS EVENT__<:1507780205777916147:1510922914579484845>"
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 10,
+                    content: "<:1507780378449018901:1510922896279605451> The event is live until <t:1781080740:D>. Invite now and unlock limited rewards."
+                  },
+                  {
+                    type: 14,
+                    divider: false
+                  },
+                  {
+                    type: 10,
+                    content: "<:1507799414071099573:1510922841409978408><:1507799416734482503:1510922777476075560><:1507799418974371910:1510922726431260734><:1507799424271777802:1510922706265178143><:1507799427451060424:1510922683997618176><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851>"
+                  },
+                  {
+                    type: 10,
+                    content: "<:1504599011112255659:1510922629635379210> <@&1510922989326045214> <:1504599014522228746:1510922610836508683> **Discord Nitro Basic** `(1 month)`<:1504598957597392966:1510922581966852096>\n<:1504599008361054399:1510923800286335096> <@&1510923947913252977><:1504599014522228746:1510922610836508683> **Discord Nitro Boost** `(1 month)`<:1504598960944320592:1510926623925469185>\n<:1504599011112255659:1510922629635379210> <@&1510924334569623562>  <:1504599014522228746:1510922610836508683> **Discord Nitro Basic** `(1 year)`<:1504598957597392966:1510922581966852096>\n<:1504599008361054399:1510923800286335096> <@&1510924381172531200><:1504599014522228746:1510922610836508683> **Discord Nitro Boost** `(1 year)`<:1504598960944320592:1510926623925469185>\n"
+                  },
+                  {
+                    type: 14,
+                    divider: false
+                  },
+                  {
+                    type: 10,
+                    content: "<:1507877857676754995:1510922111613534268><:1507879304749649920:1510922260985413725><:1507879304749649920:1510922260985413725><:1507879304749649920:1510922260985413725><:1507879304749649920:1510922260985413725><:1507879304749649920:1510922260985413725><:1507879304749649920:1510922260985413725><:1507879304749649920:1510922260985413725><:1507879304749649920:1510922260985413725><:1507879304749649920:1510922260985413725><:1507879304749649920:1510922260985413725><:1507879304749649920:1510922260985413725><:1507879304749649920:1510922260985413725><:1507879304749649920:1510922260985413725><:1507877862047486092:1510922236973027359>"
+                  },
+                  {
+                    type: 14,
+                    divider: false
+                  },
+                  {
+                    type: 10,
+                    content: "<:1504599003709309101:1510927207852277800> <@&1510924552614707210><:1504599014522228746:1510922610836508683> **450 Robux** <:1504598999800479905:1510922058723495968> \n<:1504599003709309101:1510927207852277800> <@&1510924609292337283><:1504599014522228746:1510922610836508683> **1,500 Robux** <:1504598999800479905:1510922058723495968> \n<:1504599003709309101:1510927207852277800> <@&1510924670042505226><:1504599014522228746:1510922610836508683>**4,500 Robux** <:1504598999800479905:1510922058723495968>"
+                  },
+                  {
+                    type: 10,
+                    content: "<:1507799433411301466:1510921998388170852><:1507799400347603177:1510921963655135293><:1507799409130213537:1510921930641903668><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851><:1507799429498011799:1510922659624652851>"
+                  },
+                  {
+                    type: 10,
+                    content: "<:1507780218884980796:1510921902678343833> Inviting alts/bot accounts will get you\n**banned.**\n<:1507780222529831022:1510921881778262118> Open **INVITE METHOD** in <#1510907757426114600> to get **FAST** and **CLEAN** invites <:1507780207770206391:1510921859280015430>"
+                  },
+                  {
+                    type: 14,
+                    spacing: 2
+                  },
+                  {
+                    type: 1,
+                    components: [
+                      {
+                        style: 2,
+                        type: 2,
+                        label: "Claim Rewards",
+                        emoji: {
+                          id: "1510929146140688466",
+                          name: "verify",
+                          animated: false
+                        },
+                        flow: {
+                          actions: []
+                        },
+                        custom_id: "p_308526015800414376"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        });
+        return interaction.editReply({ content: '🚀 **Rewards Event panel sent successfully!**' });
+      } catch (err) {
+        console.error('[NITROEVENTSEND_ERROR]', err.message);
+        return interaction.editReply({ content: `❌ **Failed to send rewards event panel**: ${err.message}` });
       }
     }
 
@@ -4235,6 +4417,204 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       return interaction.update({ embeds: panel.embeds, components: panel.components });
     }
 
+    // 🔍 Check Invites Button from new sencheckinvite command
+    if (interaction.customId === 'p_308527763134877869') {
+      const stats = db.getUserStats(interaction.user.id, interaction.guild.id);
+      try {
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        await rest.post(
+          Routes.interactionCallback(interaction.id, interaction.token),
+          {
+            body: {
+              type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+              data: {
+                flags: 32768 | 64, // Ephemeral V2
+                components: [
+                  {
+                    type: 17,
+                    components: [
+                      {
+                        type: 10,
+                        content: ""
+                      },
+                      {
+                        type: 10,
+                        content: "# <:emoji_31:1510935893870121103>  __YOUR INVITE STATS__"
+                      },
+                      {
+                        type: 14,
+                        spacing: 2
+                      },
+                      {
+                        type: 10,
+                        content: `\n<:emoji_30:1510935866921455738> **Total :** \`${stats.total}\`    <:emoji_31:1510935909426663514> **Left :** \`${stats.left}\`\n<:emoji_28:1510933230230962206> **Fake :** \`${stats.fake}\`    <:1507780378449018901:1510922896279605451> **Rejoins :** \`${stats.rejoin}\``
+                      },
+                      {
+                        type: 14,
+                        spacing: 2
+                      },
+                      {
+                        type: 1,
+                        components: [
+                          {
+                            type: 3,
+                            options: [
+                              {
+                                label: "What is Rejoin ",
+                                value: "EvSdyPRL7B"
+                              },
+                              {
+                                label: "What is Total",
+                                value: "uAAuZfqqWv"
+                              },
+                              {
+                                label: "What is Fake",
+                                value: "uprOoL7ekm"
+                              },
+                              {
+                                label: "cdfvgbrrvf",
+                                value: "kFUPS1qPQj",
+                                description: "What is Leave"
+                              }
+                            ],
+                            flows: {},
+                            custom_id: "p_308533702541971458",
+                            min_values: 1,
+                            max_values: 1
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        );
+        return;
+      } catch (err) {
+        console.error('[SENCHECKINVITE_BUTTON_ERROR]', err.message);
+      }
+    }
+
+    // 📩 Claim Rewards Button from new nitroeventsend command
+    if (interaction.customId === 'p_308526015800414376') {
+      try {
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        await rest.post(
+          Routes.interactionCallback(interaction.id, interaction.token),
+          {
+            body: {
+              type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+              data: {
+                flags: 32768 | 64, // Ephemeral V2
+                components: [
+                  {
+                    type: 12,
+                    items: [
+                      {
+                        media: {
+                          url: "https://cdn.discordapp.com/ephemeral-attachments/1502438857096826981/1510931203681947730/select-your-rw-summer.png?ex=6a1e9bd6&is=6a1d4a56&hm=9985545f5c68d0dea7e8433d6bfc7f71f9ff2aa4c6b1ffe85ee7d38c1faa933d&"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    type: 1,
+                    components: [
+                      {
+                        type: 3,
+                        options: [
+                          {
+                            label: "Nitro Basic (1 month)",
+                            value: "iPUmDyf4YD",
+                            description: "Requires 3 invites ",
+                            emoji: {
+                              id: "1510922581966852096",
+                              name: "1504598957597392966",
+                              animated: false
+                            }
+                          },
+                          {
+                            label: "Nitro Boost (1 month)",
+                            value: "HFMnyfM5LE",
+                            description: "Requires 6 invites ",
+                            emoji: {
+                              id: "1510926623925469185",
+                              name: "1504598960944320592",
+                              animated: false
+                            }
+                          },
+                          {
+                            label: "Nitro Basic (1 year)",
+                            value: "uSO125SX3C",
+                            description: "Requires 9 invites ",
+                            emoji: {
+                              id: "1510922581966852096",
+                              name: "1504598957597392966",
+                              animated: false
+                            }
+                          },
+                          {
+                            label: "Nitro Boost (1 year)",
+                            value: "TmwgjHEmnA",
+                            description: "Requires 12 invites ",
+                            emoji: {
+                              id: "1510926623925469185",
+                              name: "1504598960944320592",
+                              animated: false
+                            }
+                          },
+                          {
+                            label: "450 Robux ",
+                            value: "uk5mKfIu9d",
+                            description: "Requires 3 invites ",
+                            emoji: {
+                              id: "1510922058723495968",
+                              name: "1504598999800479905",
+                              animated: false
+                            }
+                          },
+                          {
+                            label: "1500 Robux ",
+                            value: "7PJd1LauyR",
+                            description: "Requires 6 invites ",
+                            emoji: {
+                              id: "1510922058723495968",
+                              name: "1504598999800479905",
+                              animated: false
+                            }
+                          },
+                          {
+                            label: "4500 Robux",
+                            value: "Q8x25kTFnM",
+                            description: "Requires 9 invites ",
+                            emoji: {
+                              id: "1510922058723495968",
+                              name: "1504598999800479905",
+                              animated: false
+                            }
+                          }
+                        ],
+                        placeholder: "Choose your rewards ",
+                        flows: {},
+                        custom_id: "p_308528383904452609",
+                        min_values: 1,
+                        max_values: 1
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        );
+        return;
+      } catch (err) {
+        console.error('[NITROEVENTSEND_BUTTON_ERROR]', err.message);
+      }
+    }
+
     // 🔍 Check Invites Button from Event Panel
     if (interaction.customId === 'p_303796426524069889' || interaction.customId === 'p_305651991621668946') {
       const count = db.getInviteCount(interaction.user.id, interaction.guild.id);
@@ -5493,6 +5873,245 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
   // ── SELECT MENU (REWARD CLAIM) ──
   if (interaction.isStringSelectMenu()) {
+    if (interaction.customId === 'p_308533702541971458') {
+      const selected = interaction.values[0];
+      let explanation = '';
+      if (selected === 'EvSdyPRL7B') { // Rejoin
+        explanation = "# <:ArrowBlue:1504599011112255659> **REJOINS**\n\nUsers who **have rejoined the server** __within the last **`14`** days__ after leaving. These are not counted in the total invites.";
+      } else if (selected === 'uAAuZfqqWv') { // Total/Valid
+        explanation = "# <:ArrowBlue:1504599011112255659> **VALID INVITES**\n\nYour total invites after adjusting for **fake** and **leaves**. This is what counts for claiming rewards!";
+      } else if (selected === 'uprOoL7ekm') { // Fake
+        explanation = "# <:ArrowBlue:1504599011112255659> **FAKE INVITES**\n\nAccounts created less than **`14` days ago** are flagged as suspicious and don't count toward rewards.";
+      } else if (selected === 'kFUPS1qPQj') { // Leaves
+        explanation = "# <:ArrowBlue:1504599011112255659> **LEAVES**\n\nThese are users you invited who **left the server**. They subtract from your total.";
+      }
+      try {
+        const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+        await rest.post(
+          Routes.interactionCallback(interaction.id, interaction.token),
+          {
+            body: {
+              type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+              data: {
+                flags: 32768 | 64, // Ephemeral V2
+                components: [
+                  {
+                    type: 17,
+                    components: [
+                      {
+                        type: 10,
+                        content: explanation
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        );
+        return;
+      } catch (err) {
+        console.error('[STATS_EXPLANATION_ERROR]', err.message);
+      }
+    }
+
+    if (interaction.customId === 'p_308528383904452609') {
+      const selectedValue = interaction.values[0];
+      const REWARD_MAP = {
+        'iPUmDyf4YD': { id: 'nitro_basic_1m', invites: 3, label: 'Nitro Basic (1 month)', category: 'NITRO_BASIC_1M' },
+        'HFMnyfM5LE': { id: 'nitro_boost_1m', invites: 6, label: 'Nitro Boost (1 month)', category: 'NITRO_BOOST_1M' },
+        'uSO125SX3C': { id: 'nitro_basic_1y', invites: 9, label: 'Nitro Basic (1 year)', category: 'NITRO_BASIC_1Y' },
+        'TmwgjHEmnA': { id: 'nitro_boost_1y', invites: 12, label: 'Nitro Boost (1 year)', category: 'NITRO_BOOST_1Y' },
+        'uk5mKfIu9d': { id: 'robux_450', invites: 3, label: '450 Robux', category: 'ROBUX_450' },
+        '7PJd1LauyR': { id: 'robux_1500', invites: 6, label: '1,500 Robux', category: 'ROBUX_1500' },
+        'Q8x25kTFnM': { id: 'robux_4500', invites: 9, label: '4,500 Robux', category: 'ROBUX_4500' }
+      };
+
+      const selected = REWARD_MAP[selectedValue];
+      if (!selected) return interaction.reply({ content: '❌ Invalid selection.', flags: MessageFlags.Ephemeral });
+
+      const stats = db.getUserStats(interaction.user.id, interaction.guild.id);
+      const is1Inv = db.getSetting('event1invite', false, interaction.guild.id);
+      const is2Inv = db.getSetting('event2invite', false, interaction.guild.id);
+      let cost = is1Inv ? 1 : (is2Inv ? 2 : selected.invites);
+
+      const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+
+      if (stats.valid < cost) {
+        // NOT ENOUGH INVITES
+        try {
+          await rest.post(
+            Routes.interactionCallback(interaction.id, interaction.token),
+            {
+              body: {
+                type: 4,
+                data: {
+                  flags: 32768 | 64, // Ephemeral V2
+                  components: [
+                    {
+                      type: 17,
+                      components: [
+                        {
+                          type: 10,
+                          content: `# NOT ENOUGH INVITES!\n<:red_dot:1507713196184698990> You need **\`${cost}\`** invites to claim **__${selected.label}__**.\n<:red_dot:1507713196184698990> You currently have **\`${stats.valid}\`** invites.\n\n`
+                        },
+                        {
+                          type: 10,
+                          content: "# NOT ENOUGH INVITES! "
+                        },
+                        {
+                          type: 14,
+                          spacing: 2
+                        },
+                        {
+                          type: 10,
+                          content: `<:emoji_28:1510933230230962206> You need **\`${cost}\`** invites to claim **__${selected.label}__**.\n<:emoji_28:1510933230230962206> You currently have **\`${stats.valid}\`** invites.\n\n> <:emoji_29:1510933924379885599> Click on __\"Pro Tip\"__ to learn how **to get invites faster!**\n> <:emoji_29:1510933924379885599> Invite your **Friends** We have limited stock`
+                        },
+                        {
+                          type: 1,
+                          components: [
+                            {
+                              type: 2,
+                              style: 5,
+                              label: "Pro tip",
+                              emoji: {
+                                id: "1510921902678343833",
+                                name: "1507780218884980796",
+                                animated: false
+                              },
+                              url: "https://discord.com/channels/971796852351578122/1510907761758572665",
+                              custom_id: "p_308531546812321797"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          );
+          
+          // Send the same message to the ticket channel as requested if it's a ticket channel
+          if (interaction.channel.name?.startsWith('claim-') || interaction.channel.name?.startsWith('escalated-')) {
+            await rest.post(`/channels/${interaction.channel.id}/messages`, {
+              body: {
+                flags: 32768,
+                components: [
+                  {
+                    type: 17,
+                    components: [
+                      {
+                        type: 10,
+                        content: `# NOT ENOUGH INVITES!\n<:red_dot:1507713196184698990> You need **\`${cost}\`** invites to claim **__${selected.label}__**.\n<:red_dot:1507713196184698990> You currently have **\`${stats.valid}\`** invites.\n\n`
+                      },
+                      {
+                        type: 10,
+                        content: "# NOT ENOUGH INVITES! "
+                      },
+                      {
+                        type: 14,
+                        spacing: 2
+                      },
+                      {
+                        type: 10,
+                        content: `<:emoji_28:1510933230230962206> You need **\`${cost}\`** invites to claim **__${selected.label}__**.\n<:emoji_28:1510933230230962206> You currently have **\`${stats.valid}\`** invites.\n\n> <:emoji_29:1510933924379885599> Click on __\"Pro Tip\"__ to learn how **to get invites faster!**\n> <:emoji_29:1510933924379885599> Invite your **Friends** We have limited stock`
+                      },
+                      {
+                        type: 1,
+                        components: [
+                          {
+                            type: 2,
+                            style: 5,
+                            label: "Pro tip",
+                            emoji: {
+                              id: "1510921902678343833",
+                              name: "1507780218884980796",
+                              animated: false
+                            },
+                            url: "https://discord.com/channels/971796852351578122/1510907761758572665",
+                            custom_id: "p_308531546812321797"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            });
+          }
+          return;
+        } catch (err) {
+          console.error('[CLAIM_NOT_ENOUGH_ERROR]', err.message);
+        }
+      }
+
+      // SUFFICIENT INVITES - CLAIM SUCCESSFUL
+      const deducted = db.deductInvites(interaction.user.id, cost, interaction.guild.id);
+      if (!deducted) {
+        return interaction.reply({ content: '❌ Failed to process invite deduction. Please try again.', flags: MessageFlags.Ephemeral });
+      }
+
+      // Generate reward code
+      const code = db.generateCode();
+
+      // Save local redemption log
+      const dbData = db.loadDB();
+      if (!dbData.redemptions) dbData.redemptions = [];
+      dbData.redemptions.push({
+        discordId: interaction.user.id,
+        username: interaction.user.username,
+        category: selected.category,
+        reward: selected.label,
+        code: code,
+        date: new Date().toISOString()
+      });
+      db.saveDB(dbData);
+
+      // Sync code to backend
+      syncCodeToBackend(code, selected.category);
+
+      const payoutContent = `<a:Event:1504576267788357742> **REWARD CLAIMED — ${selected.label.toUpperCase()}**\n\n**REDEEM CODE =** || \`${code}\` ||\n**CLAIM WEBSITE = ** || https://riwaayat-roan.vercel.app/ ||`;
+
+      try {
+        await rest.post(
+          Routes.interactionCallback(interaction.id, interaction.token),
+          {
+            body: {
+              type: 4,
+              data: {
+                content: payoutContent,
+                flags: 64 // Ephemeral
+              }
+            }
+          }
+        );
+
+        // Also post in the ticket channel / current channel if it is a ticket channel
+        if (interaction.channel.name?.startsWith('claim-') || interaction.channel.name?.startsWith('escalated-')) {
+          await interaction.channel.send({ content: payoutContent });
+        }
+
+        // Send to user's DMs
+        try {
+          await interaction.user.send({
+            content: `🎉 **Claim Successful!** Here is your premium reward details:\n\n${payoutContent}`
+          });
+        } catch (dmErr) {
+          console.warn(`[DM_FAILED] Could not send DM to @${interaction.user.username}: ${dmErr.message}`);
+          await interaction.channel.send(`⚠️ *Could not send DM to you. Please make sure your Direct Messages are turned on!*`);
+        }
+
+        // Legit Feedback prompt & Vouch proof logic (similar to existing)
+        await new Promise(r => setTimeout(r, 2000));
+        await interaction.channel.send('## ARE WE LEGIT??');
+
+      } catch (err) {
+        console.error('[CLAIM_SUCCESS_PROCESS_ERROR]', err.message);
+      }
+      return;
+    }
+
     if (interaction.customId === 'bm_active_bot_select') {
       if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
         return interaction.reply({ content: '❌ Admin only.', flags: MessageFlags.Ephemeral });
