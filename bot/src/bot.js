@@ -4443,7 +4443,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                       },
                       {
                         type: 10,
-                        content: `\n<:emoji_30:1510935866921455738> **Total :** \`${stats.total}\`    <:emoji_31:1510935909426663514> **Left :** \`${stats.left}\`\n<:emoji_28:1510933230230962206> **Fake :** \`${stats.fake}\`    <:1507780378449018901:1510922896279605451> **Rejoins :** \`${stats.rejoin}\``
+                        content: `\n<:emoji_30:1510935866921455738> **Invites (Valid) :** \`${stats.valid}\`\n\n<:emoji_30:1510935866921455738> **Total :** \`${stats.total}\`    <:emoji_31:1510935909426663514> **Left :** \`${stats.left}\`\n<:emoji_28:1510933230230962206> **Fake :** \`${stats.fake}\`    <:1507780378449018901:1510922896279605451> **Rejoins :** \`${stats.rejoin}\``
                       },
                       {
                         type: 14,
@@ -4460,7 +4460,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                                 value: "EvSdyPRL7B"
                               },
                               {
-                                label: "What is Total",
+                                label: "What is Valid Invites",
                                 value: "uAAuZfqqWv"
                               },
                               {
@@ -4468,9 +4468,9 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                                 value: "uprOoL7ekm"
                               },
                               {
-                                label: "cdfvgbrrvf",
+                                label: "What is Leave",
                                 value: "kFUPS1qPQj",
-                                description: "What is Leave"
+                                description: "Users who left the server"
                               }
                             ],
                             flows: {},
@@ -5878,13 +5878,13 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       const selected = interaction.values[0];
       let explanation = '';
       if (selected === 'EvSdyPRL7B') { // Rejoin
-        explanation = "# <:ArrowBlue:1504599011112255659> **REJOINS**\n\nUsers who **have rejoined the server** __within the last **`14`** days__ after leaving. These are not counted in the total invites.";
+        explanation = "# <:1504599011112255659:1510922629635379210> **REJOINS**\n\nUsers who **have rejoined the server** __within the last **`14`** days__ after leaving. These are not counted in the total invites.";
       } else if (selected === 'uAAuZfqqWv') { // Total/Valid
-        explanation = "# <:ArrowBlue:1504599011112255659> **VALID INVITES**\n\nYour total invites after adjusting for **fake** and **leaves**. This is what counts for claiming rewards!";
+        explanation = "# <:1504599011112255659:1510922629635379210> **VALID INVITES**\n\nYour total invites after adjusting for **fake** and **leaves**. This is what counts for claiming rewards!";
       } else if (selected === 'uprOoL7ekm') { // Fake
-        explanation = "# <:ArrowBlue:1504599011112255659> **FAKE INVITES**\n\nAccounts created less than **`14` days ago** are flagged as suspicious and don't count toward rewards.";
+        explanation = "# <:1504599011112255659:1510922629635379210> **FAKE INVITES**\n\nAccounts created less than **`14` days ago** are flagged as suspicious and don't count toward rewards.";
       } else if (selected === 'kFUPS1qPQj') { // Leaves
-        explanation = "# <:ArrowBlue:1504599011112255659> **LEAVES**\n\nThese are users you invited who **left the server**. They subtract from your total.";
+        explanation = "# <:1504599011112255659:1510922629635379210> **LEAVES**\n\nThese are users you invited who **left the server**. They subtract from your total.";
       }
       try {
         const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
@@ -6053,8 +6053,11 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         return interaction.reply({ content: '❌ Failed to process invite deduction. Please try again.', flags: MessageFlags.Ephemeral });
       }
 
-      // Generate reward code
-      const code = db.generateCode();
+      // Claim code/account from stock OR dynamically generate
+      let code = db.claimFromStock(selected.category, interaction.user.id);
+      if (!code) {
+        code = db.generateCode();
+      }
 
       // Save local redemption log
       const dbData = db.loadDB();
