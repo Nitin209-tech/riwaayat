@@ -2041,12 +2041,16 @@ client.on('interactionCreate', async (interaction) => {
 
       const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'mc_account', 'mc_code', 'robux_50', 'robux_100'];
       const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
+      const EVENT_REWARD_IDS = ['nitro_basic_1m', 'nitro_boost_1m', 'nitro_basic_1y', 'nitro_boost_1y', 'robux_450', 'robux_1500', 'robux_4500'];
       const isNewServer = interaction.guild?.id === '1507448300008112179';
       const isTargetServer = interaction.guild?.id === '1485628774178623568';
+      const isEventServer = interaction.guild?.id === '971796852351578122';
 
-      const allRewards = isNewServer
-        ? REWARDS.filter(r => NEW_SERVER_REWARD_IDS.includes(r.id)).map(r => ({ ...r, invites: NEW_SERVER_INVITE_MAP[r.id] }))
-        : (isTargetServer ? REWARDS.map(r => ({ ...r, invites: r.invites * 2 })) : REWARDS);
+      const allRewards = isEventServer
+        ? REWARDS.filter(r => EVENT_REWARD_IDS.includes(r.id))
+        : (isNewServer
+          ? REWARDS.filter(r => NEW_SERVER_REWARD_IDS.includes(r.id)).map(r => ({ ...r, invites: NEW_SERVER_INVITE_MAP[r.id] }))
+          : (isTargetServer ? REWARDS.map(r => ({ ...r, invites: r.invites * 2 })) : REWARDS));
 
       const embed = new EmbedBuilder()
         .setColor('#1d4ed8')
@@ -2078,12 +2082,16 @@ client.on('interactionCreate', async (interaction) => {
 
       const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'mc_account', 'mc_code', 'robux_50', 'robux_100'];
       const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
+      const EVENT_REWARD_IDS = ['nitro_basic_1m', 'nitro_boost_1m', 'nitro_basic_1y', 'nitro_boost_1y', 'robux_450', 'robux_1500', 'robux_4500'];
       const isNewServer = interaction.guild?.id === '1507448300008112179';
       const isTargetServer = interaction.guild?.id === '1485628774178623568';
+      const isEventServer = interaction.guild?.id === '971796852351578122';
 
-      const allRewards = isNewServer
-        ? REWARDS.filter(r => NEW_SERVER_REWARD_IDS.includes(r.id)).map(r => ({ ...r, invites: NEW_SERVER_INVITE_MAP[r.id] }))
-        : (isTargetServer ? REWARDS.map(r => ({ ...r, invites: r.invites * 2 })) : REWARDS);
+      const allRewards = isEventServer
+        ? REWARDS.filter(r => EVENT_REWARD_IDS.includes(r.id))
+        : (isNewServer
+          ? REWARDS.filter(r => NEW_SERVER_REWARD_IDS.includes(r.id)).map(r => ({ ...r, invites: NEW_SERVER_INVITE_MAP[r.id] }))
+          : (isTargetServer ? REWARDS.map(r => ({ ...r, invites: r.invites * 2 })) : REWARDS));
 
       const options = allRewards.map(r => {
         const cost = is1Inv ? 1 : (is2Inv ? 2 : r.invites);
@@ -4919,12 +4927,16 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
           // Guild-specific reward filtering
           const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'mc_account', 'mc_code', 'robux_50', 'robux_100'];
           const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
+          const EVENT_REWARD_IDS = ['nitro_basic_1m', 'nitro_boost_1m', 'nitro_basic_1y', 'nitro_boost_1y', 'robux_450', 'robux_1500', 'robux_4500'];
           const isNewServer = interaction.guild.id === '1507448300008112179';
           const isTargetServer = interaction.guild.id === '1485628774178623568';
+          const isEventServer = interaction.guild.id === '971796852351578122';
 
-          const allRewards = isNewServer
-            ? REWARDS.filter(r => NEW_SERVER_REWARD_IDS.includes(r.id)).map(r => ({ ...r, invites: NEW_SERVER_INVITE_MAP[r.id] }))
-            : (isTargetServer ? REWARDS.map(r => ({ ...r, invites: r.invites * 2 })) : REWARDS);
+          const allRewards = isEventServer
+            ? REWARDS.filter(r => EVENT_REWARD_IDS.includes(r.id))
+            : (isNewServer
+              ? REWARDS.filter(r => NEW_SERVER_REWARD_IDS.includes(r.id)).map(r => ({ ...r, invites: NEW_SERVER_INVITE_MAP[r.id] }))
+              : (isTargetServer ? REWARDS.map(r => ({ ...r, invites: r.invites * 2 })) : REWARDS));
 
           const eligible = allRewards.filter(r => {
             const cost = is1Inv ? 1 : r.invites;
@@ -5195,12 +5207,16 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         // Guild-specific reward filtering
         const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'mc_account', 'mc_code', 'robux_50', 'robux_100'];
         const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
+        const EVENT_REWARD_IDS = ['nitro_basic_1m', 'nitro_boost_1m', 'nitro_basic_1y', 'nitro_boost_1y', 'robux_450', 'robux_1500', 'robux_4500'];
         const isNewServer = interaction.guild.id === '1507448300008112179';
         const isTargetServer = interaction.guild.id === '1485628774178623568';
+        const isEventServer = interaction.guild.id === '971796852351578122';
 
-        const allRewards = isNewServer
-          ? REWARDS.filter(r => NEW_SERVER_REWARD_IDS.includes(r.id)).map(r => ({ ...r, invites: NEW_SERVER_INVITE_MAP[r.id] }))
-          : (isTargetServer ? REWARDS.map(r => ({ ...r, invites: r.invites * 2 })) : REWARDS);
+        const allRewards = isEventServer
+          ? REWARDS.filter(r => EVENT_REWARD_IDS.includes(r.id))
+          : (isNewServer
+            ? REWARDS.filter(r => NEW_SERVER_REWARD_IDS.includes(r.id)).map(r => ({ ...r, invites: NEW_SERVER_INVITE_MAP[r.id] }))
+            : (isTargetServer ? REWARDS.map(r => ({ ...r, invites: r.invites * 2 })) : REWARDS));
 
         const eligible = allRewards.filter(r => {
           const cost = is1Inv ? 1 : r.invites;
@@ -5352,12 +5368,16 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
 
         const NEW_SERVER_REWARD_IDS = ['nitro_basic', 'nitro_boost', 'mc_account', 'mc_code', 'robux_50', 'robux_100'];
         const NEW_SERVER_INVITE_MAP = { 'nitro_basic': 3, 'nitro_boost': 6, 'mc_account': 3, 'mc_code': 6, 'robux_50': 3, 'robux_100': 6 };
+        const EVENT_REWARD_IDS = ['nitro_basic_1m', 'nitro_boost_1m', 'nitro_basic_1y', 'nitro_boost_1y', 'robux_450', 'robux_1500', 'robux_4500'];
         const isNewServer = interaction.guild.id === '1507448300008112179';
         const isTargetServer = interaction.guild.id === '1485628774178623568';
+        const isEventServer = interaction.guild.id === '971796852351578122';
 
-        const allRewards = isNewServer
-          ? REWARDS.filter(r => NEW_SERVER_REWARD_IDS.includes(r.id)).map(r => ({ ...r, invites: NEW_SERVER_INVITE_MAP[r.id] }))
-          : (isTargetServer ? REWARDS.map(r => ({ ...r, invites: r.invites * 2 })) : REWARDS);
+        const allRewards = isEventServer
+          ? REWARDS.filter(r => EVENT_REWARD_IDS.includes(r.id))
+          : (isNewServer
+            ? REWARDS.filter(r => NEW_SERVER_REWARD_IDS.includes(r.id)).map(r => ({ ...r, invites: NEW_SERVER_INVITE_MAP[r.id] }))
+            : (isTargetServer ? REWARDS.map(r => ({ ...r, invites: r.invites * 2 })) : REWARDS));
 
         const eligible = allRewards.filter(r => {
           const cost = is1Inv ? 1 : r.invites;
