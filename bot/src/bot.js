@@ -5958,7 +5958,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                         },
                         {
                           type: 10,
-                          content: `<:emoji_28:1510933230230962206> You need **\`${cost}\`** invites to claim **__${selected.label}__**.\n<:emoji_28:1510933230230962206> You currently have **\`${stats.valid}\`** invites.\n\n> <:redArrow:1507713203574931626> Click on __\"Pro Tip\"__ to learn how **to get invites faster!**\n> <:redArrow:1507713203574931626> Invite your **Friends** We have limited stock`
+                          content: `<:emoji_28:1510933230230962206> You need **\`${cost}\`** invites to claim **__${selected.label}__**.\n<:emoji_28:1510933230230962206> You currently have **\`${stats.valid}\`** invites.\n\n> <:emoji_29:1510933924379885599> Click on __\"Pro Tip\"__ to learn how **to get invites faster!**\n> <:emoji_29:1510933924379885599> Invite your **Friends** We have limited stock`
                         }
                       ]
                     }
@@ -5987,7 +5987,7 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                       },
                       {
                         type: 10,
-                        content: `<:emoji_28:1510933230230962206> You need **\`${cost}\`** invites to claim **__${selected.label}__**.\n<:emoji_28:1510933230230962206> You currently have **\`${stats.valid}\`** invites.\n\n> <:redArrow:1507713203574931626> Click on __\"Pro Tip\"__ to learn how **to get invites faster!**\n> <:redArrow:1507713203574931626> Invite your **Friends** We have limited stock`
+                        content: `<:emoji_28:1510933230230962206> You need **\`${cost}\`** invites to claim **__${selected.label}__**.\n<:emoji_28:1510933230230962206> You currently have **\`${stats.valid}\`** invites.\n\n> <:emoji_29:1510933924379885599> Click on __\"Pro Tip\"__ to learn how **to get invites faster!**\n> <:emoji_29:1510933924379885599> Invite your **Friends** We have limited stock`
                       }
                     ]
                   }
