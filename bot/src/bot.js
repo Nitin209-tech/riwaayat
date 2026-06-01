@@ -4685,11 +4685,26 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       // Enforce strict 1-ticket limit per user using permission overwrites
-      const existing = interaction.guild.channels.cache.find(c => 
+      // Fetch channels first to ensure cache is fully populated
+      try {
+        await interaction.guild.channels.fetch();
+      } catch (fetchErr) {
+        console.warn('[CHANNELS_FETCH_FAILED_OPEN]', fetchErr.message);
+      }
+
+      let existing = interaction.guild.channels.cache.find(c => 
         (c.name.startsWith('claim-') || c.name.startsWith('escalated-')) &&
         c.type === ChannelType.GuildText &&
         c.permissionOverwrites.cache.get(interaction.user.id)?.allow.has(PermissionFlagsBits.ViewChannel)
       );
+
+      // Fallback topic check
+      if (!existing) {
+        existing = interaction.guild.channels.cache.find(c => 
+          c.type === ChannelType.GuildText &&
+          c.topic?.includes(`riwaayat-ticket-${interaction.user.id}`)
+        );
+      }
 
       if (existing) {
         return interaction.editReply({ content: `❌ You already have an open ticket: ${existing}` });
@@ -6046,11 +6061,27 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
         );
 
         // Also post in the ticket channel of this user if one exists in the server!
-        const ticketChannel = interaction.guild.channels.cache.find(c => 
+        // Fetch channels first to ensure cache is fully populated
+        try {
+          await interaction.guild.channels.fetch();
+        } catch (fetchErr) {
+          console.warn('[CHANNELS_FETCH_FAILED_CLAIM]', fetchErr.message);
+        }
+
+        // First try: permission overwrites lookup
+        let ticketChannel = interaction.guild.channels.cache.find(c => 
           (c.name.startsWith('claim-') || c.name.startsWith('escalated-')) &&
           c.type === ChannelType.GuildText &&
           c.permissionOverwrites.cache.get(interaction.user.id)?.allow.has(PermissionFlagsBits.ViewChannel)
         );
+
+        // Fallback: search by channel topic (more reliable across bot restarts)
+        if (!ticketChannel) {
+          ticketChannel = interaction.guild.channels.cache.find(c => 
+            c.type === ChannelType.GuildText &&
+            c.topic?.includes(`riwaayat-ticket-${interaction.user.id}`)
+          );
+        }
 
         if (ticketChannel) {
           await ticketChannel.send({ content: payoutContent });
