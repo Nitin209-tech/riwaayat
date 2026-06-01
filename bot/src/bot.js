@@ -2262,7 +2262,7 @@ client.on('interactionCreate', async (interaction) => {
                 components: [
                   {
                     type: 10,
-                    content: "# <:blurple_guide_large:1507780207770206391> CHECK YOUR INVITES\n> Click the **button** below to see your valid invite count."
+                    content: "# <:emoji_31:1510935893870121103> CHECK YOUR INVITES\n> Click the **button** below to see your valid invite count."
                   },
                   {
                     type: 14,
@@ -4435,10 +4435,6 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                     components: [
                       {
                         type: 10,
-                        content: ""
-                      },
-                      {
-                        type: 10,
                         content: "# <:emoji_31:1510935893870121103>  __YOUR INVITE STATS__"
                       },
                       {
@@ -4510,97 +4506,102 @@ Watching <#1506004593841274920>  who is doing new invites 👀`;
                 flags: 32768 | 64, // Ephemeral V2
                 components: [
                   {
-                    type: 12,
-                    items: [
-                      {
-                        media: {
-                          url: "https://cdn.discordapp.com/ephemeral-attachments/1502438857096826981/1510931203681947730/select-your-rw-summer.png?ex=6a1e9bd6&is=6a1d4a56&hm=9985545f5c68d0dea7e8433d6bfc7f71f9ff2aa4c6b1ffe85ee7d38c1faa933d&"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    type: 1,
+                    type: 17,
                     components: [
                       {
-                        type: 3,
-                        options: [
+                        type: 12,
+                        items: [
                           {
-                            label: "Nitro Basic (1 month)",
-                            value: "iPUmDyf4YD",
-                            description: "Requires 3 invites ",
-                            emoji: {
-                              id: "1510922581966852096",
-                              name: "1504598957597392966",
-                              animated: false
-                            }
-                          },
-                          {
-                            label: "Nitro Boost (1 month)",
-                            value: "HFMnyfM5LE",
-                            description: "Requires 6 invites ",
-                            emoji: {
-                              id: "1510926623925469185",
-                              name: "1504598960944320592",
-                              animated: false
-                            }
-                          },
-                          {
-                            label: "Nitro Basic (1 year)",
-                            value: "uSO125SX3C",
-                            description: "Requires 9 invites ",
-                            emoji: {
-                              id: "1510922581966852096",
-                              name: "1504598957597392966",
-                              animated: false
-                            }
-                          },
-                          {
-                            label: "Nitro Boost (1 year)",
-                            value: "TmwgjHEmnA",
-                            description: "Requires 12 invites ",
-                            emoji: {
-                              id: "1510926623925469185",
-                              name: "1504598960944320592",
-                              animated: false
-                            }
-                          },
-                          {
-                            label: "450 Robux ",
-                            value: "uk5mKfIu9d",
-                            description: "Requires 3 invites ",
-                            emoji: {
-                              id: "1510922058723495968",
-                              name: "1504598999800479905",
-                              animated: false
-                            }
-                          },
-                          {
-                            label: "1500 Robux ",
-                            value: "7PJd1LauyR",
-                            description: "Requires 6 invites ",
-                            emoji: {
-                              id: "1510922058723495968",
-                              name: "1504598999800479905",
-                              animated: false
-                            }
-                          },
-                          {
-                            label: "4500 Robux",
-                            value: "Q8x25kTFnM",
-                            description: "Requires 9 invites ",
-                            emoji: {
-                              id: "1510922058723495968",
-                              name: "1504598999800479905",
-                              animated: false
+                            media: {
+                              url: "https://cdn.discordapp.com/ephemeral-attachments/1502438857096826981/1510931203681947730/select-your-rw-summer.png?ex=6a1e9bd6&is=6a1d4a56&hm=9985545f5c68d0dea7e8433d6bfc7f71f9ff2aa4c6b1ffe85ee7d38c1faa933d&"
                             }
                           }
-                        ],
-                        placeholder: "Choose your rewards ",
-                        flows: {},
-                        custom_id: "p_308528383904452609",
-                        min_values: 1,
-                        max_values: 1
+                        ]
+                      },
+                      {
+                        type: 1,
+                        components: [
+                          {
+                            type: 3,
+                            options: [
+                              {
+                                label: "Nitro Basic (1 month)",
+                                value: "iPUmDyf4YD",
+                                description: "Requires 3 invites ",
+                                emoji: {
+                                  id: "1510922581966852096",
+                                  name: "1504598957597392966",
+                                  animated: false
+                                }
+                              },
+                              {
+                                label: "Nitro Boost (1 month)",
+                                value: "HFMnyfM5LE",
+                                description: "Requires 6 invites ",
+                                emoji: {
+                                  id: "1510926623925469185",
+                                  name: "1504598960944320592",
+                                  animated: false
+                                }
+                              },
+                              {
+                                label: "Nitro Basic (1 year)",
+                                value: "uSO125SX3C",
+                                description: "Requires 9 invites ",
+                                emoji: {
+                                  id: "1510922581966852096",
+                                  name: "1504598957597392966",
+                                  animated: false
+                                }
+                              },
+                              {
+                                label: "Nitro Boost (1 year)",
+                                value: "TmwgjHEmnA",
+                                description: "Requires 12 invites ",
+                                emoji: {
+                                  id: "1510926623925469185",
+                                  name: "1504598960944320592",
+                                  animated: false
+                                }
+                              },
+                              {
+                                label: "450 Robux ",
+                                value: "uk5mKfIu9d",
+                                description: "Requires 3 invites ",
+                                emoji: {
+                                  id: "1510922058723495968",
+                                  name: "1504598999800479905",
+                                  animated: false
+                                }
+                              },
+                              {
+                                label: "1500 Robux ",
+                                value: "7PJd1LauyR",
+                                description: "Requires 6 invites ",
+                                emoji: {
+                                  id: "1510922058723495968",
+                                  name: "1504598999800479905",
+                                  animated: false
+                                }
+                              },
+                              {
+                                label: "4500 Robux",
+                                value: "Q8x25kTFnM",
+                                description: "Requires 9 invites ",
+                                emoji: {
+                                  id: "1510922058723495968",
+                                  name: "1504598999800479905",
+                                  animated: false
+                                }
+                              }
+                            ],
+                            placeholder: "Choose your rewards ",
+                            flows: {},
+                            custom_id: "p_308528383904452609",
+                            min_values: 1,
+                            max_values: 1
+                          }
+                        ]
                       }
                     ]
                   }
