@@ -36,7 +36,8 @@ async function captureVisitor(req, res) {
  * Perform Discord OAuth callback handling & auto joining guild
  */
 async function handleDiscordCallback(req, res) {
-  const { code, redirect_uri } = req.query;
+  const { code } = req.query;
+const redirect_uri = "https://riwaayat.onrender.com/api/auth/callback";
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
   if (!code) {
